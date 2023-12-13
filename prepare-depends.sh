@@ -10,10 +10,11 @@ DEPINST=/usr
 mkdir -p $DEPSRC
 
 cd $DEPSRC
-[ ! -d libsnark ] && git clone git://github.com/jkroll/libsnark
+[ ! -d libsnark ] && git clone git://github.com/kejace/libsnark
 cd libsnark
 ./prepare-depends.sh
-make
+make -j
+# make check
 sudo make install PREFIX=$DEPINST
 
 

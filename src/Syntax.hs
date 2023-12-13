@@ -409,6 +409,8 @@ instance ( Typeable f
                  ; roll x
                  }
 
+instance Zippable ('TArr ty) where
+  zip_vals _ x _ = return x
 
 ----------------------------------------------------
 --

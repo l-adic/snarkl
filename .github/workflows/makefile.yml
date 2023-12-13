@@ -1,0 +1,57 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: fix git
+      run: git config --global url.https://github.com/.insteadOf git://github.com/
+
+    - name: install dependencies
+      run: sudo apt-get install -y build-essential git libgmp3-dev libprocps-dev libgtest-dev python-markdown libboost-dev libboost-all-dev
+
+    - name: dependencies
+      run: ./prepare-depends.sh
+
+    - name: build snarky
+      run: cd cppsrc && make -j && make test
+ 
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: '8.8.4'
+        cabal-version: '3.4'
+
+    - name: Cache
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-cabal
+      with:
+        path: ~/.cabal
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/cabal.project') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        cabal update
+        cabal build --only-dependencies
+    - name: Build
+      run: cabal build
+    - name: Run tests
+      run: cabal test --enable-tests
+    - name: Show tests
+      run: cat /home/runner/work/snarkl/snarkl/dist-newstyle/build/x86_64-linux/ghc-8.8.4/snarkl-0.1.0.0/t/hspec/test/snarkl-0.1.0.0-hspec.log
