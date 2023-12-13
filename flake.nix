@@ -27,13 +27,13 @@
       in flake // rec
            { legacyPackages = pkgs;
               packages =  
-                { examples = flake.packages."straw:test:examples";
-                  lib = flake.packages."straw:lib:straw";
+                { test = flake.packages."snarkl:test:hspec";
+                  lib = flake.packages."snarkl:lib:snarkl";
                   all = pkgs.symlinkJoin {
                     name = "all";
                     paths = with packages;
                       [ lib
-                        examples
+                        test
                       ];
                   };
                   default = packages.all;
