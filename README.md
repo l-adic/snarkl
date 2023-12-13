@@ -1,6 +1,6 @@
 # Snårkl 
 
-![CI](https://github.com/kejace/snarkl/actions/workflows/makefile.yml/badge.svg)
+![CI](https://github.com/martyall/snarkl/actions/workflows/makefile.yml/badge.svg)
 
 An Embedded DSL for Verifiable Computing
 
