@@ -1,13 +1,13 @@
 Phase	Elaborate	Constraints	Simplify	R1CS	Witness		Crypto
-FixedMatrix-Compile	0.2489		2.631		8.93		2.2	-	-
+FixedMatrix-Snarkl.Compile	0.2489		2.631		8.93		2.2	-	-
 FixedMatrix-Witgen	-		-		-		-	1.1	-
 FixedMatrix-Crypto	-		-		-		-	-	1.15
-InputMatrices-Compile	0.5167		2.625		5.935		2.913	-	-
+InputMatrices-Snarkl.Compile	0.5167		2.625		5.935		2.913	-	-
 InputMatrices-Witgen	-		-		-		-	6.68	-
 InputMatrices-Crypto	-		-		-		-	-	71.89
-Keccak-Compile	0.8149		1.4761		3.238		0.126	-	-
+Keccak-Snarkl.Compile	0.8149		1.4761		3.238		0.126	-	-
 Keccak-Witgen	-		-		-		-	1.928	-
 Keccak-Crypto	-		-		-		-	-	6.155
-List-Compile	0.01208		0.10842		0.3802		0.0387	-	-
+List-Snarkl.Compile	0.01208		0.10842		0.3802		0.0387	-	-
 List-Witgen	-		-		-		-	2.3136	-
 List-Crypto	-		-		-		-	-	2.476
