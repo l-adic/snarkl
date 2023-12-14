@@ -14,5 +14,9 @@ jobs:
       - uses: haskell-actions/run-ormolu@v14
         with:
           mode: check
-          pattern: src/**/*.hs
+          pattern: |
+            src/**/*.hs
+            examples/**/*.hs
+            tests/**/*.hs
+            benchmarks/**/*.hs
           version: 0.5.2.0
