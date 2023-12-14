@@ -106,7 +106,13 @@ benchmark criterion
     , snarkl      >=0.1.0.0
 
 library
-  ghc-options:        -Wall -Werror -funbox-strict-fields -rtsopts -optc-O3
+  ghc-options: 
+    -Wall 
+    -Wredundant-constraints
+    -Werror 
+    -funbox-strict-fields 
+    -rtsopts 
+    -optc-O3
 
   -- -threaded
   exposed-modules:

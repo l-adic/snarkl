@@ -89,7 +89,6 @@ import qualified Prelude as P
 -- | Using the executable semantics for the 'TExp' language, execute
 -- the computation on the provided inputs, returning the 'Rational' result.
 comp_interp ::
-  (Typeable ty) =>
   Comp ty ->
   [Rational] ->
   Rational
@@ -123,7 +122,6 @@ data TExpPkg ty = TExpPkg
 --   the input vars,
 --   the 'TExp'.
 texp_of_comp ::
-  (Typeable ty) =>
   Comp ty ->
   TExpPkg ty
 texp_of_comp mf =

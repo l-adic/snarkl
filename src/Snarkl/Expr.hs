@@ -122,7 +122,7 @@ const_prop e =
             Nothing -> EVar x0
             Just c -> EVal c
         )
-    add_bind :: (Field a) => (Int, a) -> State (IntMap a) (Exp a)
+    add_bind :: (Int, a) -> State (IntMap a) (Exp a)
     add_bind (x0, c0) =
       do
         modify (IntMap.insert x0 c0)

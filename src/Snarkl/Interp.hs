@@ -145,9 +145,7 @@ interp_val v =
     VLoc _ -> raise_err $ ErrMsg "location in source program"
 
 interp_texp ::
-  ( Eq a,
-    Show a,
-    Field a
+  ( Field a
   ) =>
   TExp ty1 a ->
   InterpM a (Maybe a)
@@ -179,5 +177,5 @@ interp_texp e =
         interp_texp e2
     TEBot -> return Nothing
 
-interp :: (Eq a, Show a, Field a) => IntMap a -> TExp ty a -> Either ErrMsg (Env a, Maybe a)
+interp :: (Field a) => IntMap a -> TExp ty a -> Either ErrMsg (Env a, Maybe a)
 interp rho e = runInterpM (interp_texp e) $ IntMap.map Just rho

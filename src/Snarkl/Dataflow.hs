@@ -26,7 +26,7 @@ number_constraints cs =
       go (n + 1) (Map.insert n c m) cs'
 
 -- | Map variables to the indices of the constraints in which the vars appear.
-gather_vars :: (Ord a) => IntMap (Constraint a) -> IntMap (Set Int)
+gather_vars :: IntMap (Constraint a) -> IntMap (Set Int)
 gather_vars constr_map =
   go Map.empty (Map.toList constr_map)
   where
@@ -46,7 +46,7 @@ add_root :: Var -> State (DEnv a) ()
 add_root x = modify (\s -> s {df_roots = Set.insert x (df_roots s)})
 
 remove_unreachable ::
-  (Show a, Ord a) =>
+  (Ord a) =>
   ConstraintSystem a ->
   ConstraintSystem a
 remove_unreachable cs =

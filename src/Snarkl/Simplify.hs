@@ -117,7 +117,6 @@ subst_constr !constr = case constr of
 
 -- | Is 'constr' a tautology?
 is_taut ::
-  (Field a) =>
   Constraint a ->
   State (SEnv a) Bool
 is_taut constr =

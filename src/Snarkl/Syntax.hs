@@ -336,8 +336,7 @@ instance
 instance
   ( Typeable ty1,
     Derive ty1,
-    Typeable ty2,
-    Derive ty2
+    Typeable ty2
   ) =>
   Derive ('TSum ty1 ty2)
   where
@@ -410,8 +409,7 @@ fuel :: Int
 fuel = 1
 
 check_bots ::
-  ( Typeable ty,
-    Derive ty
+  ( Derive ty
   ) =>
   Comp ty ->
   TExp 'TBool Rational ->
@@ -503,16 +501,11 @@ unsafe_cast :: TExp ty1 Rational -> TExp ty2 Rational
 unsafe_cast = unsafeCoerce
 
 unroll ::
-  ( Typeable (Rep f ('TMu f))
-  ) =>
   TExp ('TMu f) Rational ->
   Comp (Rep f ('TMu f))
 unroll te = return $ unsafe_cast te
 
 roll ::
-  ( Typeable f,
-    Typeable (Rep f ('TMu f))
-  ) =>
   TExp (Rep f ('TMu f)) Rational ->
   Comp ('TMu f)
 roll te = return $ unsafe_cast te
@@ -629,7 +622,6 @@ negate e = -1.0 * e
 ----------------------------------------------------
 
 iter ::
-  (Typeable ty) =>
   Int ->
   (Int -> TExp ty Rational -> TExp ty Rational) ->
   TExp ty Rational ->

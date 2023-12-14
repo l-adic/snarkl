@@ -174,7 +174,7 @@ true = TEVal VTrue
  Arrays
 ------------------------------------------------}
 
-arr :: (Typeable ty) => Int -> Comp ('TArr ty)
+arr :: Int -> Comp ('TArr ty)
 arr 0 = raise_err $ ErrMsg "array must have size > 0"
 arr len =
   State
@@ -201,7 +201,7 @@ arr len =
         )
 
 -- Like 'arr', but declare fresh array variables as inputs.
-input_arr :: (Typeable ty) => Int -> Comp ('TArr ty)
+input_arr :: Int -> Comp ('TArr ty)
 input_arr 0 = raise_err $ ErrMsg "array must have size > 0"
 input_arr len =
   State
@@ -228,7 +228,7 @@ input_arr len =
 
     new_vars s = [next_var s .. ((P.+) (next_var s) ((P.-) len 1))]
 
-get_addr :: (Typeable ty) => (Loc, Int) -> Comp ty
+get_addr :: (Loc, Int) -> Comp ty
 get_addr (l, i) =
   State
     ( \s -> case Map.lookup (l, i) (obj_map s) of
@@ -366,17 +366,14 @@ pair te1 te2 =
         te_assert x2 e2
 
 fst_pair ::
-  ( Typeable ty1,
-    Typeable ty2
-  ) =>
+  (Typeable ty1) =>
   TExp ('TProd ty1 ty2) Rational ->
   Comp ty1
 fst_pair TEBot = return TEBot
 fst_pair e = guarded_get_addr e 0
 
 snd_pair ::
-  ( Typeable ty1,
-    Typeable ty2
+  ( Typeable ty2
   ) =>
   TExp ('TProd ty1 ty2) Rational ->
   Comp ty2
