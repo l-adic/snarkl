@@ -9,4 +9,4 @@ scripts/hspec.inputs
 scripts/hspec.r1cs
 scripts/hspec.wits
 scripts/run-r1cs.log
-
+result/
