@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Main where
 
 import Data.Foldable (traverse_)
@@ -51,11 +53,16 @@ main = do
     ]
   where
     printProg (name, prog) = do
-      let doc = pretty $ texp_of_comp prog
-          layout = layoutPretty defaultLayoutOptions doc
-      putStrLn (replicate 80 '-')
-      putStrLn "\n"
-      putStrLn ("--| " <> name)
-      putStrLn "\n"
-      putStrLn $ renderString layout
-      putStrLn "\n"
+      let texp = texp_of_comp prog
+      -- this is just a sanity check because of the new Eq instances
+      if texp /= texp
+        then putStrLn ("--| " <> name <> " (FAILED)")
+        else do
+          let doc = pretty texp
+              layout = layoutPretty defaultLayoutOptions doc
+          putStrLn (replicate 80 '-')
+          putStrLn "\n"
+          putStrLn ("--| " <> name)
+          putStrLn "\n"
+          putStrLn $ renderString layout
+          putStrLn "\n"

@@ -1,3 +1,5 @@
+{-# LANGUAGE InstanceSigs #-}
+
 module Snarkl.Toplevel
   ( -- * Interpret Snarkl Computations
     comp_interp,
@@ -120,6 +122,8 @@ data TExpPkg ty = TExpPkg
 
 instance (Typeable ty) => Pretty (TExpPkg ty) where
   pretty (TExpPkg _ _ e) = pretty e
+
+deriving instance (Eq (TExp ty Rational)) => Eq (TExpPkg ty)
 
 -- | Desugar a 'Comp'utation to a pair of:
 --   the total number of vars,
