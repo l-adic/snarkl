@@ -46,6 +46,7 @@
                       haskell-language-server = "2.4.0.0";
                     };
                     buildInputs = with pkgs; [
+                      haskellPackages.ormolu_0_5_2_0
                       libsnark 
                     ];
                   };

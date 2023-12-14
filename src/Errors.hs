@@ -1,21 +1,18 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving
-           , DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Errors where
 
-import Data.Typeable
 import Control.Exception
+import Data.Typeable
 
-newtype ErrMsg = ErrMsg { errMsg :: String }
+newtype ErrMsg = ErrMsg {errMsg :: String}
   deriving (Typeable)
 
 instance Show ErrMsg where
   show (ErrMsg msg) = msg
 
-instance Exception ErrMsg           
+instance Exception ErrMsg
 
 fail_with :: ErrMsg -> a
 fail_with e = throw e
-
-
-

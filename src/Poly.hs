@@ -1,10 +1,11 @@
-{-# LANGUAGE GADTs,TypeSynonymInstances,FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Poly where
 
-import qualified Data.IntMap.Lazy as Map
-
 import Common
+import qualified Data.IntMap.Lazy as Map
 import Field
 
 data Poly a where
@@ -18,8 +19,11 @@ const_poly :: Field a => a -> Poly a
 const_poly c = Poly $ Map.insert (-1) c Map.empty
 
 -- | The polynomial equal variable 'x'
-var_poly :: Field a
-         => (a,Var) -- ^ Variable, with coeff
-         -> Poly a -- ^ Resulting polynomial
-var_poly (coeff,x)
-  = Poly $ Map.insert x coeff Map.empty    
+var_poly ::
+  Field a =>
+  -- | Variable, with coeff
+  (a, Var) ->
+  -- | Resulting polynomial
+  Poly a
+var_poly (coeff, x) =
+  Poly $ Map.insert x coeff Map.empty
