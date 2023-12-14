@@ -1,4 +1,4 @@
-name: formatter
+name: lint
 
 on:
   push:
@@ -14,4 +14,5 @@ jobs:
       - uses: haskell-actions/run-ormolu@v14
         with:
           mode: check
+          pattern: src/**/*.hs
           version: 0.5.2.0
