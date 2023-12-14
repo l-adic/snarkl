@@ -167,3 +167,34 @@ library
 
   hs-source-dirs:     src
   default-language:   Haskell2010
+
+executable printer-test
+  type:               exitcode-stdio-1.0
+  main-is:            Main.hs
+  other-modules:
+    Snarkl.Example.Basic
+    Snarkl.Example.Games
+    Snarkl.Example.Keccak
+    Snarkl.Example.Lam
+    Snarkl.Example.List
+    Snarkl.Example.Matrix
+    Snarkl.Example.Peano
+    Snarkl.Example.Queue
+    Snarkl.Example.Stack
+    Snarkl.Example.Tree
+    UnitTests
+
+  default-extensions:
+    DataKinds
+    GADTs
+    KindSignatures
+    RankNTypes
+    ScopedTypeVariables
+
+  hs-source-dirs:     printer-tests examples tests
+  default-language:   Haskell2010
+  build-depends:
+      base        >=4.7
+    , prettyprinter
+    , containers
+    , snarkl      >=0.1.0.0
