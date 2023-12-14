@@ -59,7 +59,7 @@ snarkl/
   cppsrc/              -- a C++ wrapper around 'libsnark'
   scripts/             -- shell scripts
   src/                 
-    Toplevel.hs        -- compiler
+    Snarkl.Toplevel.hs        -- compiler
     ... 
     examples/          -- some example Snårkl programs that exercise inductive types
      Peano.hs          
@@ -117,7 +117,7 @@ snarkl/
 Snårkl programs are shallowly embedded in Haskell through the use of 
 
 * Snårkl's `Syntax` and `SyntaxMonad` modules, which define the combinators of the Snårkl language, and 
-* the Snårkl `Toplevel`, which exposes the API of the Snårkl compiler.
+* the Snårkl `Snarkl.Toplevel`, which exposes the API of the Snårkl compiler.
  
 The easiest way to interact with these libraries is in Emacs, using [Haskell's Interactive Mode](https://github.com/haskell/haskell-mode/wiki/Haskell-Interactive-Mode-Setup). Assuming you have a modern `cabal`, set your REPL to `cabal-repl` by adding the following to your `.emacs`:
 
@@ -168,10 +168,10 @@ import Prelude hiding
 import Syntax
 import SyntaxMonad
 import TExpr
-import Toplevel                                                         
+import Snarkl.Toplevel                                                         
 ```
 
-When importing the Haskell `Prelude` we hide the standard definitions of functions re-implemented by Snårkl (you'll find the definitions of these functions in `Syntax` and `SyntaxMonad`). `TExpr` gives the deeply embedded typed expression language manipulated by high-level Snårkl programs. `Toplevel` imports the Snårkl compiler and its API.
+When importing the Haskell `Prelude` we hide the standard definitions of functions re-implemented by Snårkl (you'll find the definitions of these functions in `Syntax` and `SyntaxMonad`). `TExpr` gives the deeply embedded typed expression language manipulated by high-level Snårkl programs. `Snarkl.Toplevel` imports the Snårkl compiler and its API.
 
 ## Builtin Types
 
@@ -206,7 +206,7 @@ Here we sequence imperative computation steps using Haskell's `do` notation.
 
 ## Desugaring
 
-The `Toplevel` provides support for "desugaring" high-level Snårkl computations. 
+The `Snarkl.Toplevel` provides support for "desugaring" high-level Snårkl computations. 
 
 ```
 p1 = arr_ex 1.0
@@ -261,7 +261,7 @@ in which variable `0` is marked as an explicit input. When interpreting an expre
 
 # Compiling and Evaluating Rank-1 Constraints
 
-The Snårkl toplevel makes it relatively easy to compile a Snårkl computation to R1CS-form (using `r1cs_of_comp`) and then to "execute" the result (`snarkify_comp`). 
+The Snårkl Snarkl.Toplevel makes it relatively easy to compile a Snårkl computation to R1CS-form (using `r1cs_of_comp`) and then to "execute" the result (`snarkify_comp`). 
 
 For example,
 

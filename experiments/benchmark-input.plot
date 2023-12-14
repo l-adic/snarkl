@@ -10,7 +10,7 @@ set style data histograms
 set xtics border in scale 0,0 nomirror rotate by -25  autojustify
 set xtics norangelimit
 set xtics ("Simpl" 0, "NoSimpl" 1, "Interp" 2)
-set title "Compiler Phases"
+set title "Snarkl.Compiler Phases"
 set yrange [ 0 : 105 ] noreverse nowriteback
 set ylabel "sec"
 set style fill pattern border
