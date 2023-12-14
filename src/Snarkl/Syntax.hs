@@ -583,15 +583,18 @@ int_of_exp e = case e of
   _ -> failWith $ ErrMsg $ "expected field elem " ++ show e
 
 ifThenElse_aux ::
+  (Eq a) =>
   TExp 'TBool a ->
   TExp ty a ->
   TExp ty a ->
   TExp ty a
-ifThenElse_aux b e1 e2 =
-  case b of
-    TEVal VFalse -> e2
-    TEVal VTrue -> e1
-    _ -> TEIf b e1 e2
+ifThenElse_aux b e1 e2
+  | e1 == e2 = e1
+  | otherwise =
+      case b of
+        TEVal VFalse -> e2
+        TEVal VTrue -> e1
+        _ -> TEIf b e1 e2
 
 ifThenElse ::
   ( Zippable ty,

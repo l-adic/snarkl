@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Snarkl.TExpr
@@ -21,8 +22,8 @@ module Snarkl.TExpr
 where
 
 import Data.Kind (Type)
-import Data.Typeable (Proxy (..), Typeable, typeOf, typeRep)
-import Prettyprinter (Pretty (pretty), parens, (<+>))
+import Data.Typeable (Proxy (..), Typeable, eqT, typeOf, typeRep, type (:~:) (Refl))
+import Prettyprinter (Pretty (pretty), line, parens, (<+>))
 import Snarkl.Common (Op, UnOp, Var)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Expr
@@ -58,6 +59,20 @@ data Ty where
   TUnit :: Ty
   deriving (Typeable)
 
+deriving instance Typeable 'TField
+
+deriving instance Typeable 'TBool
+
+deriving instance Typeable 'TArr
+
+deriving instance Typeable 'TProd
+
+deriving instance Typeable 'TSum
+
+deriving instance Typeable 'TMu
+
+deriving instance Typeable 'TUnit
+
 instance Pretty Ty where
   pretty ty = case ty of
     TField -> "Field"
@@ -83,7 +98,7 @@ type instance Rep ('TFComp f g) x = Rep f (Rep g x)
 newtype TVar (ty :: Ty) = TVar Var deriving (Eq, Show)
 
 instance Pretty (TVar ty) where
-  pretty (TVar x) = "var_" <+> pretty x
+  pretty (TVar x) = "var_" <> pretty x
 
 varIsBoolean :: (Typeable ty) => TVar ty -> Bool
 varIsBoolean x =
@@ -94,7 +109,7 @@ type Loc = Int
 newtype TLoc (ty :: Ty) = TLoc Loc deriving (Eq, Show)
 
 instance Pretty (TLoc ty) where
-  pretty (TLoc x) = "loc_" <+> pretty x
+  pretty (TLoc x) = "loc_" <> pretty x
 
 data TUnop :: Ty -> Ty -> Type where
   TUnop :: forall ty1 ty. UnOp -> TUnop ty1 ty
@@ -153,21 +168,27 @@ data TExp :: Ty -> Type -> Type where
 
 deriving instance (Show a) => Show (TExp (b :: Ty) a)
 
--- instance (Eq a) => Eq (TExp (b :: Ty) a) where
---  TEVar x == TEVar y = x == y
---  TEVal a == TEVal b = a == b
---  TEUnop op e1 == TEUnop op' e1' =
---    op == op' && e1 == e1'
---  TEBinop (op :: TOp ty1 ty2 ty) (e1 :: TExp ty1 a) (e2 :: TExp ty2 a) == TEBinop (op' :: TOp ty1 ty2 ty) e1' e2' =
---    op == op' && e1 == e1' && e2 == e2'
---  TEIf e e1 e2 == TEIf e' e1' e2' =
---    e == e' && e1 == e1' && e2 == e2'
---  TEAssert e1 e2 == TEAssert e1' e2' =
---    e1 == e1' && e2 == e2'
---  TESeq e1 e2 == TESeq e1' e2' =
---    e1 == e1' && e2 == e2'
---  TEBot == TEBot = True
---  _ == _ = False
+instance (Eq a) => Eq (TExp (b :: Ty) a) where
+  TEVar x == TEVar y = x == y
+  TEVal a == TEVal b = a == b
+  TEUnop (op :: TUnop ty1 ty) e1 == TEUnop (op' :: TUnop ty2 ty) e1' =
+    case eqT @ty1 @ty2 of
+      Just Refl -> op == op' && e1 == e1'
+      Nothing -> False
+  TEBinop (op :: TOp ty1 ty2 ty) (e1 :: TExp ty1 a) (e2 :: TExp ty2 a) == TEBinop (op' :: TOp ty3 ty4 ty) e1' e2' =
+    case (eqT @ty1 @ty3, eqT @ty2 @ty4) of
+      (Just Refl, Just Refl) -> op == op' && e1 == e1' && e2 == e2'
+      _ -> False
+  TEIf e e1 e2 == TEIf e' e1' e2' =
+    e == e' && e1 == e1' && e2 == e2'
+  TEAssert (e1 :: TExp ty1 a) (e2 :: TExp ty1 a) == TEAssert (e1' :: TExp ty2 a) (e2' :: TExp ty2 a) =
+    case eqT @ty1 @ty2 of
+      Just Refl -> e1 == e1' && e2 == e2'
+      Nothing -> False
+  TESeq e1 e2 == TESeq e1' e2' =
+    e1 == e1' && e2 == e2'
+  TEBot == TEBot = True
+  _ == _ = False
 
 expOfVal :: (Field a) => Val ty a -> Exp a
 expOfVal v = case v of
@@ -233,12 +254,12 @@ lastSeq te = case te of
   TESeq _ te2 -> lastSeq te2
   _ -> te
 
-instance (Pretty a) => Pretty (TExp ty a) where
-  pretty (TEVar var) = "Var" <+> pretty var
+instance (Pretty a, Typeable ty) => Pretty (TExp ty a) where
+  pretty (TEVar var) = pretty var
   pretty (TEVal val) = pretty val
   pretty (TEUnop unop _exp) = pretty unop <+> pretty _exp
   pretty (TEBinop binop exp1 exp2) = pretty exp1 <+> pretty binop <+> pretty exp2
   pretty (TEIf condExp thenExp elseExp) = "if" <+> pretty condExp <+> "then" <+> pretty thenExp <+> "else" <+> pretty elseExp
   pretty (TEAssert exp1 exp2) = pretty exp1 <+> ":=" <+> pretty exp2
-  pretty (TESeq exp1 exp2) = parens (pretty exp1 <+> ";" <+> pretty exp2)
+  pretty (TESeq exp1 exp2) = pretty exp1 <> line <> pretty exp2
   pretty TEBot = "⊥"

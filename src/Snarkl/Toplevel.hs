@@ -57,6 +57,7 @@ import qualified Data.IntMap.Lazy as IntMap
 import Data.List (sort)
 import qualified Data.Map.Strict as Map
 import Data.Typeable
+import Prettyprinter
 import Snarkl.Common
 import Snarkl.Compile
 import Snarkl.Constraints
@@ -116,6 +117,9 @@ data TExpPkg ty = TExpPkg
     comp_texp :: TExp ty Rational
   }
   deriving (Show)
+
+instance (Typeable ty) => Pretty (TExpPkg ty) where
+  pretty (TExpPkg _ _ e) = pretty e
 
 -- | Desugar a 'Comp'utation to a pair of:
 --   the total number of vars,
