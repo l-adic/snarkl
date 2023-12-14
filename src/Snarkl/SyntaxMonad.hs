@@ -47,6 +47,7 @@ module Snarkl.SyntaxMonad
 where
 
 import qualified Data.Map.Strict as Map
+import Data.String (IsString (..))
 import Data.Typeable
 import Snarkl.Common
 import Snarkl.Errors
@@ -97,7 +98,7 @@ raise_err msg = State (\_ -> Left msg)
           Left err -> Left err
           Right (e, s') -> case runState (g e) s' of
             Left err -> Left err
-            Right (e', s'') -> Right (e `te_seq` e', s'')
+            Right (e', s'') -> Right (e `teSeq` e', s'')
     )
 
 (>>) ::
@@ -109,7 +110,7 @@ raise_err msg = State (\_ -> Left msg)
 (>>) mf g = do _ <- mf; g
 
 return :: TExp ty a -> State s (TExp ty a)
-return e = State (\s -> Right (last_seq e, s))
+return e = State (\s -> Right (lastSeq e, s))
 
 -- | At elaboration time, we maintain an environment containing
 --    (i) next_var:  the next free variable
@@ -255,7 +256,7 @@ guard f e =
     case b of
       TEVal VTrue -> return TEBot
       TEVal VFalse -> f e
-      _ -> fail_with $ ErrMsg "internal error in guard"
+      _ -> failWith $ ErrMsg "internal error in guard"
 
 guarded_get_addr ::
   (Typeable ty2) =>
@@ -263,7 +264,7 @@ guarded_get_addr ::
   Int ->
   State Env (TExp ty2 Rational)
 guarded_get_addr e i =
-  guard (\e0 -> get_addr (loc_of_texp e0, i)) e
+  guard (\e0 -> get_addr (locOfTexp e0, i)) e
 
 get :: (Typeable ty) => (TExp ('TArr ty) Rational, Int) -> Comp ty
 get (TEBot, _) = return TEBot
@@ -282,7 +283,7 @@ te_assert x@(TEVar _) e =
       (_, _, TEVal VTrue) -> assert_false x >> return (TEAssert x e)
       _ -> return $ TEAssert x e
 te_assert _ e =
-  fail_with $
+  failWith $
     ErrMsg $
       "in te_assert, expected var but got " ++ show e
 
@@ -311,7 +312,7 @@ set_addr (TEVal (VLoc (TLoc l)), i) (TEVal (VLoc (TLoc l'))) =
 set_addr (TEVal (VLoc (TLoc l)), i) e =
   do
     x <- fresh_var
-    _ <- add_objects [((l, i), ObjVar (var_of_texp x))]
+    _ <- add_objects [((l, i), ObjVar (varOfTExp x))]
     te_assert x e
 
 -- Err: expression does not satisfy [INVARIANT].
@@ -335,7 +336,7 @@ pair ::
 pair te1 te2 =
   do
     l <- fresh_loc
-    _ <- add_binds (loc_of_texp l) (last_seq te1) (last_seq te2)
+    _ <- add_binds (locOfTexp l) (lastSeq te1) (lastSeq te2)
     return l
   where
     add_binds l (TEVal (VLoc (TLoc l1))) (TEVal (VLoc (TLoc l2))) =
@@ -343,12 +344,12 @@ pair te1 te2 =
     add_binds l (TEVal (VLoc (TLoc l1))) e2 =
       do
         x2 <- fresh_var
-        _ <- add_objects [((l, 0), ObjLoc l1), ((l, 1), ObjVar $ var_of_texp x2)]
+        _ <- add_objects [((l, 0), ObjLoc l1), ((l, 1), ObjVar $ varOfTExp x2)]
         te_assert x2 e2
     add_binds l e1 (TEVal (VLoc (TLoc l2))) =
       do
         x1 <- fresh_var
-        _ <- add_objects [((l, 0), ObjVar $ var_of_texp x1), ((l, 1), ObjLoc l2)]
+        _ <- add_objects [((l, 0), ObjVar $ varOfTExp x1), ((l, 1), ObjLoc l2)]
         te_assert x1 e1
     add_binds l e1 e2 =
       do
@@ -356,10 +357,10 @@ pair te1 te2 =
         x2 <- fresh_var
         _ <-
           add_objects
-            [ ((l, 0), ObjVar $ var_of_texp x1),
-              ((l, 1), ObjVar $ var_of_texp x2)
+            [ ((l, 0), ObjVar $ varOfTExp x1),
+              ((l, 1), ObjVar $ varOfTExp x2)
             ]
-        -- NOTE: return e ~~> return (last_seq e). So we rely on the
+        -- NOTE: return e ~~> return (lastSeq e). So we rely on the
         -- slightly weird semantics of (>>=) to do the sequencing of
         -- the two assertions for us.
         _ <- te_assert x1 e1
@@ -457,7 +458,7 @@ is_bool e@(TEVar _) b =
   State
     ( \s ->
         Right
-          ( case Map.lookup (var_of_texp e) (anal_map s) of
+          ( case Map.lookup (varOfTExp e) (anal_map s) of
               Nothing -> false
               Just (AnalBool b') | b /= b' -> false
               Just (AnalBool b') | b == b' -> true
@@ -489,7 +490,7 @@ var_is_bot e@(TEVar (TVar _)) =
   State
     ( \s ->
         Right
-          ( case Map.lookup (var_of_texp e) (anal_map s) of
+          ( case Map.lookup (varOfTExp e) (anal_map s) of
               Nothing -> false
               Just AnalBot -> true
               Just _ -> false,

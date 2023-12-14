@@ -1,16 +1,20 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Snarkl.Common where
 
 import qualified Data.IntMap.Lazy as Map
+import Data.Ratio
+import Prettyprinter
 
 type Var = Int
 
 type Assgn a = Map.IntMap a
 
 data UnOp = ZEq
-  deriving (Eq)
+  deriving (Eq, Show)
 
-instance Show UnOp where
-  show ZEq = "(== 0)"
+instance Pretty UnOp where
+  pretty ZEq = "isZero"
 
 data Op
   = Add
@@ -22,21 +26,21 @@ data Op
   | XOr
   | Eq
   | BEq
-  deriving (Eq)
+  deriving (Eq, Show)
 
-instance Show Op where
-  show Add = "+"
-  show Sub = "-"
-  show Mult = "*"
-  show Div = "-*"
-  show And = "&&"
-  show Or = "||"
-  show XOr = "xor"
-  show Eq = "=="
-  show BEq = "=b="
+instance Pretty Op where
+  pretty Add = "+"
+  pretty Sub = "-"
+  pretty Mult = "*"
+  pretty Div = "-*"
+  pretty And = "&&"
+  pretty Or = "||"
+  pretty XOr = "xor"
+  pretty Eq = "=="
+  pretty BEq = "=b="
 
-is_boolean :: Op -> Bool
-is_boolean op = case op of
+isBoolean :: Op -> Bool
+isBoolean op = case op of
   Add -> False
   Sub -> False
   Mult -> False
@@ -47,8 +51,8 @@ is_boolean op = case op of
   Eq -> True
   BEq -> True
 
-is_assoc :: Op -> Bool
-is_assoc op = case op of
+isAssoc :: Op -> Bool
+isAssoc op = case op of
   Add -> True
   Sub -> False
   Mult -> True
@@ -58,3 +62,8 @@ is_assoc op = case op of
   XOr -> True
   Eq -> True
   BEq -> True
+
+instance Pretty Rational where
+  pretty r
+    | denominator r == 1 = pretty (numerator r)
+    | otherwise = pretty (numerator r) <> "/" <> pretty (denominator r)

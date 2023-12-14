@@ -228,7 +228,7 @@ beta t1 t2 =
   case_term
     t1
     -- Var(_)
-    (\_ -> fail_with $ ErrMsg "beta expects an abstraction")
+    (\_ -> failWith $ ErrMsg "beta expects an abstraction")
     -- Lam t1'
     ( \t1' ->
         do
@@ -237,7 +237,7 @@ beta t1 t2 =
           subst_term sigma t1'
     )
     -- App _ _
-    (\_ _ -> fail_with $ ErrMsg "beta expects an abstraction")
+    (\_ _ -> failWith $ ErrMsg "beta expects an abstraction")
 
 step :: TExp TTerm Rational -> Comp TTerm
 step t =
@@ -255,7 +255,7 @@ whnf t = fix go t
         t' <- step t0
         case_term
           t'
-          (\_ -> fail_with $ ErrMsg "unbound variable")
+          (\_ -> failWith $ ErrMsg "unbound variable")
           (\_ -> return t')
           (\_ _ -> self t')
 

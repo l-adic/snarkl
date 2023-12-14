@@ -33,7 +33,7 @@ solve cs env =
    in if all_assigned all_vars assgn
         then assgn
         else
-          fail_with $
+          failWith $
             ErrMsg
               ( "unassigned variables,\n  "
                   ++ show (unassigned all_vars assgn)

@@ -14,7 +14,7 @@ flatten_rat r =
       b = denominator r
    in case mod_inv b field_p of
         Nothing ->
-          fail_with $ ErrMsg ("expected " ++ show b ++ " to be invertible")
+          failWith $ ErrMsg ("expected " ++ show b ++ " to be invertible")
         Just b_inv -> int_p (a * b_inv)
 
 serialize_assgn :: Assgn Rational -> String

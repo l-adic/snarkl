@@ -56,7 +56,7 @@ instance Show IntP where
 int_p :: Integer -> IntP
 int_p i =
   if i >= field_p
-    then fail_with $ ErrMsg (show i ++ " exceeds field size")
+    then failWith $ ErrMsg (show i ++ " exceeds field size")
     else IntP $ i `mod` field_p
 
 -- | The finite field of integers mod 'field_p'.

@@ -152,7 +152,7 @@ learn = go
         then return ()
         else case inv c of
           Nothing ->
-            fail_with $
+            failWith $
               ErrMsg (show c ++ " not invertible")
           Just c' -> bind_var (x, neg a `mult` c')
     go (CAdd a (CoeffList [(x, c), (y, d)]))

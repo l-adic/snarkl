@@ -1,3 +1,5 @@
+{-# LANGUAGE InstanceSigs #-}
+
 module Snarkl.Toplevel
   ( -- * Interpret Snarkl Computations
     comp_interp,
@@ -57,6 +59,7 @@ import qualified Data.IntMap.Lazy as IntMap
 import Data.List (sort)
 import qualified Data.Map.Strict as Map
 import Data.Typeable
+import Prettyprinter
 import Snarkl.Common
 import Snarkl.Compile
 import Snarkl.Constraints
@@ -96,8 +99,8 @@ comp_interp mf inputs =
   let TExpPkg _ in_vars e = texp_of_comp mf
       input_map = IntMap.fromList $ zip in_vars inputs
    in case interp input_map e of
-        Left err -> fail_with err
-        Right (_, Nothing) -> fail_with $ ErrMsg $ show e ++ " evaluated to bot"
+        Left err -> failWith err
+        Right (_, Nothing) -> failWith $ ErrMsg $ show e ++ " evaluated to bot"
         Right (_, Just v) -> v
 
 ------------------------------------------------------
@@ -117,6 +120,11 @@ data TExpPkg ty = TExpPkg
   }
   deriving (Show)
 
+instance (Typeable ty) => Pretty (TExpPkg ty) where
+  pretty (TExpPkg _ _ e) = pretty e
+
+deriving instance (Eq (TExp ty Rational)) => Eq (TExpPkg ty)
+
 -- | Desugar a 'Comp'utation to a pair of:
 --   the total number of vars,
 --   the input vars,
@@ -126,7 +134,7 @@ texp_of_comp ::
   TExpPkg ty
 texp_of_comp mf =
   case run mf of
-    Left err -> fail_with err
+    Left err -> failWith err
     Right (e, rho) ->
       let nv = next_var rho
           in_vars = sort $ input_vars rho
@@ -202,7 +210,7 @@ wit_of_r1cs inputs r1cs =
       f = r1cs_gen_witness r1cs . IntMap.fromList
    in case length in_vars /= length inputs of
         True ->
-          fail_with $
+          failWith $
             ErrMsg
               ( "expected "
                   ++ show (length in_vars)
@@ -479,7 +487,7 @@ execute simpl mf inputs =
       wit = wit_of_r1cs inputs r1cs
       out = case IntMap.lookup out_var wit of
         Nothing ->
-          fail_with $
+          failWith $
             ErrMsg
               ( "output variable "
                   ++ show out_var
@@ -494,7 +502,7 @@ execute simpl mf inputs =
       result = case out_interp == out of
         True -> sat_r1cs wit r1cs
         False ->
-          fail_with $
+          failWith $
             ErrMsg $
               "interpreter result "
                 ++ show out_interp

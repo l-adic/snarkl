@@ -19,7 +19,7 @@ test_interp mf inputs =
 
 -- Just elaborate to TExp.
 test_texp :: (Typeable ty) => Comp ty -> IO ()
-test_texp mf = (hPutStrLn stderr . show . extract_rat . last_seq . comp_texp . texp_of_comp) mf
+test_texp mf = (hPutStrLn stderr . show . extract_rat . lastSeq . comp_texp . texp_of_comp) mf
   where
     extract_rat :: TExp ty Rational -> Int
     extract_rat te =
@@ -74,7 +74,7 @@ test_keygen simpl mf inputs =
     exit <- keygen_comp "test" simpl mf (map fromIntegral inputs)
     case exit of
       ExitSuccess -> Prelude.return ()
-      ExitFailure err -> fail_with $ ErrMsg $ "test_full failed with " ++ show err
+      ExitFailure err -> failWith $ ErrMsg $ "test_full failed with " ++ show err
 
 test_proofgen :: (Typeable ty) => SimplParam -> Comp ty -> [Int] -> IO ()
 test_proofgen simpl mf inputs =
@@ -82,7 +82,7 @@ test_proofgen simpl mf inputs =
     exit <- proofgen_comp "test" simpl mf (map fromIntegral inputs)
     case exit of
       ExitSuccess -> Prelude.return ()
-      ExitFailure err -> fail_with $ ErrMsg $ "test_full failed with " ++ show err
+      ExitFailure err -> failWith $ ErrMsg $ "test_full failed with " ++ show err
 
 -- Run libsnark on the resulting files.
 test_crypto :: (Typeable ty) => SimplParam -> Comp ty -> [Int] -> IO ()
@@ -91,7 +91,7 @@ test_crypto simpl mf inputs =
     exit <- snarkify_comp "test" simpl mf (map fromIntegral inputs)
     case exit of
       ExitSuccess -> Prelude.return ()
-      ExitFailure err -> fail_with $ ErrMsg $ "test_full failed with " ++ show err
+      ExitFailure err -> failWith $ ErrMsg $ "test_full failed with " ++ show err
 
 -- This function "executes" the comp two ways, once by interpreting
 -- the resulting TExp and second by interpreting the resulting circuit
