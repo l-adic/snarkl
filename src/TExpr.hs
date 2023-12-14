@@ -1,4 +1,3 @@
-{-# LANGUAGE AutoDeriveTypeable #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -69,7 +68,7 @@ type instance Rep ('TFComp f g) x = Rep f (Rep g x)
 
 newtype TVar (ty :: Ty) = TVar Var
 
-var_is_boolean :: Typeable ty => TVar ty -> Bool
+var_is_boolean :: (Typeable ty) => TVar ty -> Bool
 var_is_boolean x =
   typeOf x == typeOf (undefined :: TVar 'TBool)
 
@@ -98,7 +97,7 @@ data TOp :: Ty -> Ty -> Ty -> * where
   deriving (Eq)
 
 data Val :: Ty -> * -> * where
-  VField :: Field a => a -> Val 'TField a
+  VField :: (Field a) => a -> Val 'TField a
   VTrue :: Val 'TBool a
   VFalse :: Val 'TBool a
   VUnit :: Val 'TUnit a
@@ -122,11 +121,11 @@ data TExp :: Ty -> * -> * where
     TExp ty2 a ->
     TExp ty a
   TEIf :: TExp 'TBool a -> TExp ty a -> TExp ty a -> TExp ty a
-  TEAssert :: Typeable ty => TExp ty a -> TExp ty a -> TExp 'TUnit a
+  TEAssert :: (Typeable ty) => TExp ty a -> TExp ty a -> TExp 'TUnit a
   TESeq :: TExp 'TUnit a -> TExp ty2 a -> TExp ty2 a
-  TEBot :: Typeable ty => TExp ty a
+  TEBot :: (Typeable ty) => TExp ty a
 
-exp_of_val :: Field a => Val ty a -> Exp a
+exp_of_val :: (Field a) => Val ty a -> Exp a
 exp_of_val v = case v of
   VField c -> EVal c
   VTrue -> EVal one
@@ -142,7 +141,7 @@ instance
   where
   v1 == v2 = exp_of_val v1 == exp_of_val v2
 
-exp_of_texp :: Field a => TExp ty a -> Exp a
+exp_of_texp :: (Field a) => TExp ty a -> Exp a
 exp_of_texp te = case te of
   TEVar (TVar x) -> EVar x
   TEVal v -> exp_of_val v
@@ -168,16 +167,16 @@ instance
 -- | Smart constructor for 'TESeq'.  Simplify 'TESeq te1 te2' to 'te2'
 -- whenever the normal form of 'te1' (with seq's reassociated right)
 -- is *not* equal 'TEAssert _ _'.
-te_seq :: Typeable ty1 => TExp ty1 a -> TExp ty2 a -> TExp ty2 a
+te_seq :: (Typeable ty1) => TExp ty1 a -> TExp ty2 a -> TExp ty2 a
 te_seq te1 te2 = case (te1, te2) of
   (TEAssert _ _, _) -> TESeq te1 te2
   (TESeq tx ty, _) -> te_seq tx (te_seq ty te2)
   (_, _) -> te2
 
-boolean_vars_of_texp :: Typeable ty => TExp ty a -> [Var]
+boolean_vars_of_texp :: (Typeable ty) => TExp ty a -> [Var]
 boolean_vars_of_texp = go []
   where
-    go :: Typeable ty => [Var] -> TExp ty a -> [Var]
+    go :: (Typeable ty) => [Var] -> TExp ty a -> [Var]
     go vars (TEVar t@(TVar x)) =
       if var_is_boolean t
         then x : vars
@@ -191,12 +190,12 @@ boolean_vars_of_texp = go []
     go vars (TESeq e1 e2) = go (go vars e1) e2
     go vars TEBot = vars
 
-var_of_texp :: Show a => TExp ty a -> Var
+var_of_texp :: (Show a) => TExp ty a -> Var
 var_of_texp te = case last_seq te of
   TEVar (TVar x) -> x
   _ -> fail_with $ ErrMsg ("var_of_texp: expected var: " ++ show te)
 
-loc_of_texp :: Show a => TExp ty a -> Var
+loc_of_texp :: (Show a) => TExp ty a -> Var
 loc_of_texp te = case last_seq te of
   TEVal (VLoc (TLoc l)) -> l
   _ -> fail_with $ ErrMsg ("loc_of_texp: expected loc: " ++ show te)
@@ -212,14 +211,14 @@ instance Show (TUnop ty1 ty) where
 instance Show (TOp ty1 ty2 ty) where
   show (TOp op) = show op
 
-instance Show a => Show (Val ty a) where
+instance (Show a) => Show (Val ty a) where
   show (VField c) = show c
   show VTrue = "true"
   show VFalse = "false"
   show VUnit = "()"
   show (VLoc l) = "loc_" ++ show l
 
-instance Show a => Show (TExp ty a) where
+instance (Show a) => Show (TExp ty a) where
   show (TEVar x) = "var " ++ show x
   show (TEVal c) = show c
   show (TEUnop op e1) = show op ++ show e1

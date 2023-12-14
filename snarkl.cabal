@@ -27,6 +27,18 @@ source-repository head
 test-suite hspec
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
+  other-modules:
+    Basic,
+    Keccak,
+    Lam,
+    List,
+    Matrix,
+    Peano,
+    Queue,
+    Stack,
+    Tree,
+    UnitTests
+
   hs-source-dirs:   src/testsuite/tests,
                     src/examples
   default-language: Haskell2010
@@ -44,6 +56,30 @@ test-suite hspec
 benchmark criterion
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
+  other-modules:
+    Common,
+    Compile,
+    Constraints,
+    Dataflow,
+    Errors,
+    Expr,
+    Field,
+    Interp,
+    Keccak,
+    List,
+    Matrix,
+    Poly,
+    R1CS,
+    Serialize,
+    SimplMonad,
+    Simplify,
+    Solve,
+    Syntax,
+    SyntaxMonad,
+    TExpr,
+    Toplevel,
+    UnionFind,
+    Harness
   hs-source-dirs:   src,
                     src/testsuite/benchmarks,
                     src/examples
@@ -79,8 +115,19 @@ library
   
   -- Modules included in this library but not exported.
   other-modules:       
-    Constraints, Field, Interp, Poly, SimplMonad, UnionFind, Expr,
-    Solve, Simplify, Dataflow, Common, Serialize, Games
+    Constraints, 
+    Field, 
+    Interp, 
+    Poly, 
+    SimplMonad, 
+    UnionFind, 
+    Expr,
+    Solve, 
+    Simplify, 
+    Dataflow, 
+    Common, 
+    Serialize, 
+    Games
   
   other-extensions: 
     GADTs, TypeSynonymInstances, FlexibleInstances, BangPatterns,
