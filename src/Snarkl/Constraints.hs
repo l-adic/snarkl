@@ -104,7 +104,7 @@ compare_add !(CAdd c m) !(CAdd c' m') =
     then compare (asList m) (asList m')
     else if c < c' then LT else GT
 compare_add !_ !_ =
-  fail_with $ ErrMsg "internal error: compare_add"
+  failWith $ ErrMsg "internal error: compare_add"
 
 compare_mult :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_mult #-}
@@ -124,7 +124,7 @@ compare_mult
           else if y < y' then LT else GT
       else if x < x' then LT else GT
 compare_mult !_ !_ =
-  fail_with $ ErrMsg "internal error: compare_mult"
+  failWith $ ErrMsg "internal error: compare_mult"
 
 compare_constr :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_constr #-}
@@ -231,7 +231,7 @@ renumber_constraints cs =
     renum_f x =
       case Map.lookup x var_map of
         Nothing ->
-          fail_with $
+          failWith $
             ErrMsg
               ( "can't find a binding for variable "
                   ++ show x

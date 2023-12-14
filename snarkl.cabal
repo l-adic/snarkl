@@ -145,6 +145,7 @@ library
     GADTs
     GeneralizedNewtypeDeriving
     KindSignatures
+    OverloadedStrings
     PolyKinds
     RankNTypes
     ScopedTypeVariables
@@ -161,6 +162,7 @@ library
     , hspec       >=2.0
     , mtl         >=2.2  && <2.3
     , parallel    >=3.2  && <3.3
+    , prettyprinter
     , process     >=1.2
 
   hs-source-dirs:     src

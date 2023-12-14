@@ -6,7 +6,7 @@ module Snarkl.Compile
     get_constraints,
     constraints_of_texp,
     r1cs_of_constraints,
-    exp_of_texp,
+    expOfTExp,
   )
 where
 
@@ -184,7 +184,7 @@ encode_zneq (x, y) =
                 return True
               else case inv c of
                 Nothing ->
-                  fail_with $
+                  failWith $
                     ErrMsg
                       ( "expected "
                           ++ show x0
@@ -197,7 +197,7 @@ encode_zneq (x, y) =
                     bind_var (m0, c')
                     return True
     mf _ =
-      fail_with $
+      failWith $
         ErrMsg "internal error in 'encode_zeq'"
 
 -- | Constraint 'y == x==0:1?0'
@@ -320,7 +320,7 @@ cs_of_exp out e = case e of
           do
             labels <- go_linear (e1 : es')
             case labels of
-              [] -> fail_with $ ErrMsg "internal error in go_sub"
+              [] -> failWith $ ErrMsg "internal error in go_sub"
               k : ls -> return $ k : rev_pol ls
 
         rev_pol [] = []
@@ -340,7 +340,7 @@ cs_of_exp out e = case e of
             return $ e1_out : labels
 
         encode_labels [] = return ()
-        encode_labels (_ : []) = fail_with $ ErrMsg ("wrong arity in " ++ show e)
+        encode_labels (_ : []) = failWith $ ErrMsg ("wrong arity in " ++ show e)
         encode_labels (l1 : l2 : []) = encode_binop op (l1, l2, out)
         encode_labels (l1 : l2 : labels') =
           do
@@ -388,7 +388,7 @@ cs_of_exp out e = case e of
       x <- fresh_var -- x is garbage
       go x le
     where
-      go _ [] = fail_with $ ErrMsg "internal error: empty ESeq"
+      go _ [] = failWith $ ErrMsg "internal error: empty ESeq"
       go _ [e1] = cs_of_exp out e1
       go garbage_var (e1 : le') =
         do
@@ -464,8 +464,8 @@ constraints_of_texp out in_vars te =
       let boolean_in_vars =
             Set.toList $
               Set.fromList in_vars
-                `Set.intersection` Set.fromList (boolean_vars_of_texp te)
-          e0 = exp_of_texp te
+                `Set.intersection` Set.fromList (booleanVarsOfTexp te)
+          e0 = expOfTExp te
           e = do_const_prop e0
       -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
       cs_of_exp out e

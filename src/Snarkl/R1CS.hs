@@ -66,7 +66,7 @@ sat_r1cs w cs = all id $ is_sat (r1cs_clauses cs)
       if sat_r1c w c
         then True
         else
-          fail_with $
+          failWith $
             ErrMsg
               ( "witness\n  "
                   ++ show w

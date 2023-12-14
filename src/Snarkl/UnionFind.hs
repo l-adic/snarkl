@@ -51,7 +51,7 @@ merge_extras uf x y =
       if c == d
         then uf
         else
-          fail_with $
+          failWith $
             ErrMsg
               ( "in UnionFind, extra data doesn't match:\n  "
                   ++ show (x, c)

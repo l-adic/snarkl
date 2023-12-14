@@ -132,7 +132,7 @@ interp_binop op e1 e2 =
               TOp Or -> b1 || b2
               TOp XOr -> (b1 && not b2) || (b2 && not b1)
               TOp BEq -> b1 == b2
-              _ -> fail_with $ ErrMsg "internal error in interp_binop"
+              _ -> failWith $ ErrMsg "internal error in interp_binop"
          in return $ field_of_bool b
 
 interp_val :: (Field a) => Val ty a -> InterpM a a

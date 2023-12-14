@@ -89,9 +89,9 @@ fail_game :: (Typeable ty) => Game ty
 fail_game =
   Single
     ( Iso
-        (\_ -> fail_with $ ErrMsg "fail-games can't encode")
+        (\_ -> failWith $ ErrMsg "fail-games can't encode")
         ( \(_ :: TExp 'TField Rational) ->
-            fail_with $ ErrMsg "fail-games can't decode"
+            failWith $ ErrMsg "fail-games can't decode"
         )
     )
 

@@ -44,7 +44,7 @@ instance (Eq a) => Eq (Exp a) where
 var_of_exp :: (Show a) => Exp a -> Var
 var_of_exp e = case e of
   EVar x -> x
-  _ -> fail_with $ ErrMsg ("var_of_exp: expected variable: " ++ show e)
+  _ -> failWith $ ErrMsg ("var_of_exp: expected variable: " ++ show e)
 
 -- | Smart constructor for EBinop, ensuring all expressions (involving
 --  associative operations) are flattened to top level.
@@ -52,13 +52,13 @@ exp_binop :: Op -> Exp a -> Exp a -> Exp a
 exp_binop op e1 e2 =
   case (e1, e2) of
     (EBinop op1 l1, EBinop op2 l2)
-      | op1 == op2 && op2 == op && is_assoc op ->
+      | op1 == op2 && op2 == op && isAssoc op ->
           EBinop op (l1 ++ l2)
     (EBinop op1 l1, _)
-      | op1 == op && is_assoc op ->
+      | op1 == op && isAssoc op ->
           EBinop op (l1 ++ [e2])
     (_, EBinop op2 l2)
-      | op2 == op && is_assoc op ->
+      | op2 == op && isAssoc op ->
           EBinop op (e1 : l2)
     (_, _) -> EBinop op [e1, e2]
 

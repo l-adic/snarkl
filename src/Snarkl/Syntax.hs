@@ -58,10 +58,10 @@ module Snarkl.Syntax
   )
 where
 
+import Data.String (IsString (..))
 import Data.Typeable
 import Snarkl.Common
 import Snarkl.Errors
-import Snarkl.R1CS
 import Snarkl.SyntaxMonad
 import Snarkl.TExpr
 import Unsafe.Coerce
@@ -580,22 +580,18 @@ exp_of_int i = TEVal (VField $ fromIntegral i)
 int_of_exp :: TExp 'TField Rational -> Int
 int_of_exp e = case e of
   TEVal (VField r) -> truncate r
-  _ -> fail_with $ ErrMsg $ "expected field elem " ++ show e
+  _ -> failWith $ ErrMsg $ "expected field elem " ++ show e
 
 ifThenElse_aux ::
-  (Field a) =>
   TExp 'TBool a ->
   TExp ty a ->
   TExp ty a ->
   TExp ty a
-ifThenElse_aux b e1 e2
-  | e1 == e2 =
-      e1
-  | otherwise =
-      case b of
-        TEVal VFalse -> e2
-        TEVal VTrue -> e1
-        _ -> TEIf b e1 e2
+ifThenElse_aux b e1 e2 =
+  case b of
+    TEVal VFalse -> e2
+    TEVal VTrue -> e1
+    _ -> TEIf b e1 e2
 
 ifThenElse ::
   ( Zippable ty,
