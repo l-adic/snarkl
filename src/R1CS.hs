@@ -1,5 +1,3 @@
-{-# LANGUAGE GADTs #-}
-
 module R1CS
   ( Field,
     Poly,
@@ -23,9 +21,9 @@ import Poly
 ----------------------------------------------------------------
 
 data R1C a where
-  R1C :: Field a => (Poly a, Poly a, Poly a) -> R1C a
+  R1C :: (Field a) => (Poly a, Poly a, Poly a) -> R1C a
 
-instance Show a => Show (R1C a) where
+instance (Show a) => Show (R1C a) where
   show (R1C (aV, bV, cV)) = show aV ++ "*" ++ show bV ++ "==" ++ show cV
 
 data R1CS a = R1CS
@@ -36,19 +34,19 @@ data R1CS a = R1CS
     r1cs_gen_witness :: Assgn a -> Assgn a
   }
 
-instance Show a => Show (R1CS a) where
+instance (Show a) => Show (R1CS a) where
   show (R1CS cs nvs ivs ovs _) = show (cs, nvs, ivs, ovs)
 
 num_constraints :: R1CS a -> Int
 num_constraints = length . r1cs_clauses
 
 -- sat_r1c: Does witness 'w' satisfy constraint 'c'?
-sat_r1c :: Field a => Assgn a -> R1C a -> Bool
+sat_r1c :: (Field a) => Assgn a -> R1C a -> Bool
 sat_r1c w c
   | R1C (aV, bV, cV) <- c =
       inner aV w `mult` inner bV w == inner cV w
   where
-    inner :: Field a => Poly a -> Assgn a -> a
+    inner :: (Field a) => Poly a -> Assgn a -> a
     inner (Poly v) w' =
       let c0 = Map.findWithDefault zero (-1) v
        in Map.foldlWithKey (f w') c0 v
@@ -57,7 +55,7 @@ sat_r1c w c
       (v_val `mult` Map.findWithDefault zero v_key w') `add` acc
 
 -- sat_r1cs: Does witness 'w' satisfy constraint set 'cs'?
-sat_r1cs :: Field a => Assgn a -> R1CS a -> Bool
+sat_r1cs :: (Field a) => Assgn a -> R1CS a -> Bool
 sat_r1cs w cs = all id $ is_sat (r1cs_clauses cs)
   where
     is_sat cs0 = map g cs0 `using` parListChunk (chunk_sz cs0) rseq

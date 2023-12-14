@@ -1,8 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module SyntaxMonad
   ( -- | Computation monad
@@ -90,7 +86,7 @@ raise_err msg = State (\_ -> Left msg)
 -- of the results of 'mf', 'g' (not just whatever 'g' returns)
 (>>=) ::
   forall (ty1 :: Ty) (ty2 :: Ty) s a.
-  Typeable ty1 =>
+  (Typeable ty1) =>
   State s (TExp ty1 a) ->
   (TExp ty1 a -> State s (TExp ty2 a)) ->
   State s (TExp ty2 a)
@@ -106,7 +102,7 @@ raise_err msg = State (\_ -> Left msg)
 
 (>>) ::
   forall (ty1 :: Ty) (ty2 :: Ty) s a.
-  Typeable ty1 =>
+  (Typeable ty1) =>
   State s (TExp ty1 a) ->
   State s (TExp ty2 a) ->
   State s (TExp ty2 a)
@@ -178,7 +174,7 @@ true = TEVal VTrue
  Arrays
 ------------------------------------------------}
 
-arr :: Typeable ty => Int -> Comp ('TArr ty)
+arr :: (Typeable ty) => Int -> Comp ('TArr ty)
 arr 0 = raise_err $ ErrMsg "array must have size > 0"
 arr len =
   State
@@ -205,7 +201,7 @@ arr len =
         )
 
 -- Like 'arr', but declare fresh array variables as inputs.
-input_arr :: Typeable ty => Int -> Comp ('TArr ty)
+input_arr :: (Typeable ty) => Int -> Comp ('TArr ty)
 input_arr 0 = raise_err $ ErrMsg "array must have size > 0"
 input_arr len =
   State
@@ -232,7 +228,7 @@ input_arr len =
 
     new_vars s = [next_var s .. ((P.+) (next_var s) ((P.-) len 1))]
 
-get_addr :: Typeable ty => (Loc, Int) -> Comp ty
+get_addr :: (Typeable ty) => (Loc, Int) -> Comp ty
 get_addr (l, i) =
   State
     ( \s -> case Map.lookup (l, i) (obj_map s) of
@@ -249,7 +245,7 @@ get_addr (l, i) =
     )
 
 guard ::
-  Typeable ty2 =>
+  (Typeable ty2) =>
   (TExp ty Rational -> State Env (TExp ty2 Rational)) ->
   TExp ty Rational ->
   State Env (TExp ty2 Rational)
@@ -262,17 +258,18 @@ guard f e =
       _ -> fail_with $ ErrMsg "internal error in guard"
 
 guarded_get_addr ::
-  Typeable ty2 =>
+  (Typeable ty2) =>
   TExp ty Rational ->
   Int ->
   State Env (TExp ty2 Rational)
 guarded_get_addr e i = guard (\e0 -> get_addr (loc_of_texp e0, i)) e
 
-get :: Typeable ty => (TExp ('TArr ty) Rational, Int) -> Comp ty
+get :: (Typeable ty) => (TExp ('TArr ty) Rational, Int) -> Comp ty
 get (TEBot, _) = return TEBot
 get (a, i) = guarded_get_addr a i
 
 -- | Smart constructor for TEAssert
+te_assert :: (Typeable ty) => TExp ty Rational -> TExp ty Rational -> Comp 'TUnit
 te_assert x@(TEVar _) e =
   do
     e_bot <- is_bot e
@@ -292,7 +289,7 @@ te_assert _ e =
 -- variable and location expressions, because they're representable untyped
 -- in the object map.
 set_addr ::
-  Typeable ty =>
+  (Typeable ty) =>
   (TExp ('TArr ty) Rational, Int) ->
   TExp ty Rational ->
   Comp 'TUnit
@@ -306,20 +303,21 @@ set_addr (TEVal (VLoc (TLoc l)), i) (TEVar (TVar x)) =
 -- some location l.
 set_addr (TEVal (VLoc (TLoc l)), i) (TEVal (VLoc (TLoc l'))) =
   do
-    add_objects [((l, i), ObjLoc l')]
+    _ <- add_objects [((l, i), ObjLoc l')]
     return unit
 
 -- Default:
 set_addr (TEVal (VLoc (TLoc l)), i) e =
   do
     x <- fresh_var
-    add_objects [((l, i), ObjVar (var_of_texp x))]
+    _ <- add_objects [((l, i), ObjVar (var_of_texp x))]
     te_assert x e
 
 -- Err: expression does not satisfy [INVARIANT].
 set_addr (e1, _) _ =
   raise_err $ ErrMsg ("expected " ++ show e1 ++ " a loc")
 
+set :: (Typeable ty) => (TExp ('TArr ty) Rational, Int) -> TExp ty Rational -> Comp 'TUnit
 set (a, i) e = set_addr (a, i) e
 
 {-----------------------------------------------
@@ -336,7 +334,7 @@ pair ::
 pair te1 te2 =
   do
     l <- fresh_loc
-    add_binds (loc_of_texp l) (last_seq te1) (last_seq te2)
+    _ <- add_binds (loc_of_texp l) (last_seq te1) (last_seq te2)
     return l
   where
     add_binds l (TEVal (VLoc (TLoc l1))) (TEVal (VLoc (TLoc l2))) =
@@ -344,25 +342,26 @@ pair te1 te2 =
     add_binds l (TEVal (VLoc (TLoc l1))) e2 =
       do
         x2 <- fresh_var
-        add_objects [((l, 0), ObjLoc l1), ((l, 1), ObjVar $ var_of_texp x2)]
+        _ <- add_objects [((l, 0), ObjLoc l1), ((l, 1), ObjVar $ var_of_texp x2)]
         te_assert x2 e2
     add_binds l e1 (TEVal (VLoc (TLoc l2))) =
       do
         x1 <- fresh_var
-        add_objects [((l, 0), ObjVar $ var_of_texp x1), ((l, 1), ObjLoc l2)]
+        _ <- add_objects [((l, 0), ObjVar $ var_of_texp x1), ((l, 1), ObjLoc l2)]
         te_assert x1 e1
     add_binds l e1 e2 =
       do
         x1 <- fresh_var
         x2 <- fresh_var
-        add_objects
-          [ ((l, 0), ObjVar $ var_of_texp x1),
-            ((l, 1), ObjVar $ var_of_texp x2)
-          ]
+        _ <-
+          add_objects
+            [ ((l, 0), ObjVar $ var_of_texp x1),
+              ((l, 1), ObjVar $ var_of_texp x2)
+            ]
         -- NOTE: return e ~~> return (last_seq e). So we rely on the
         -- slightly weird semantics of (>>=) to do the sequencing of
         -- the two assertions for us.
-        te_assert x1 e1
+        _ <- te_assert x1 e1
         te_assert x2 e2
 
 fst_pair ::

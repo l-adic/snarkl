@@ -1,8 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-
 module Constraints
   ( CoeffList (..),
     coeff_insert,
@@ -77,7 +72,7 @@ data Constraint a
   | CMagic Var [Var] ([Var] -> State (SEnv a) Bool)
 
 -- | Smart constructor enforcing CoeffList invariant
-cadd :: Field a => a -> [(Var, a)] -> Constraint a
+cadd :: (Field a) => a -> [(Var, a)] -> Constraint a
 cadd !a !l = CAdd a (remove_zeros $ coeff_merge $ CoeffList l)
 
 type ConstraintSet a = Set.Set (Constraint a)
@@ -90,7 +85,7 @@ data ConstraintSystem a = ConstraintSystem
   }
   deriving (Show)
 
-instance Eq a => Eq (Constraint a) where
+instance (Eq a) => Eq (Constraint a) where
   CAdd c m == CAdd c' m' =
     c == c' && m == m'
   CMult cx dy emz == CMult cx' dy' emz' =
@@ -102,7 +97,7 @@ instance Eq a => Eq (Constraint a) where
   CMagic _ _ _ == _ = False
   _ == CMagic _ _ _ = False
 
-compare_add :: Ord a => Constraint a -> Constraint a -> Ordering
+compare_add :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_add #-}
 compare_add !(CAdd c m) !(CAdd c' m') =
   if c == c'
@@ -111,7 +106,7 @@ compare_add !(CAdd c m) !(CAdd c' m') =
 compare_add !_ !_ =
   fail_with $ ErrMsg "internal error: compare_add"
 
-compare_mult :: Ord a => Constraint a -> Constraint a -> Ordering
+compare_mult :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_mult #-}
 compare_mult
   !(CMult (c, x) (d, y) (e, mz))
@@ -131,7 +126,7 @@ compare_mult
 compare_mult !_ !_ =
   fail_with $ ErrMsg "internal error: compare_mult"
 
-compare_constr :: Ord a => Constraint a -> Constraint a -> Ordering
+compare_constr :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_constr #-}
 compare_constr !(CAdd _ _) !(CMult _ _ _) = LT
 compare_constr !(CMult _ _ _) !(CAdd _ _) = GT
@@ -143,11 +138,11 @@ compare_constr !(CMagic nm _ _) !(CMagic nm' _ _) = compare nm nm'
 compare_constr !_ !(CMagic _ _ _) = LT
 compare_constr !(CMagic _ _ _) !_ = GT
 
-instance Ord a => Ord (Constraint a) where
+instance (Ord a) => Ord (Constraint a) where
   {-# SPECIALIZE instance Ord (Constraint Rational) #-}
   compare = compare_constr
 
-instance Show a => Show (Constraint a) where
+instance (Show a) => Show (Constraint a) where
   show (CAdd a m) = show a ++ " + " ++ go (asList m)
     where
       go [] = " == 0"
@@ -169,7 +164,7 @@ instance Show a => Show (Constraint a) where
 ----------------------------------------------------------------
 
 r1cs_of_cs ::
-  Field a =>
+  (Field a) =>
   -- | Constraints
   ConstraintSystem a ->
   -- | Witness generator
@@ -213,7 +208,7 @@ constraint_vars cs =
 --   variables in the (renumbered) constraint set and the (possibly
 --   renumbered) in and out variables.
 renumber_constraints ::
-  Field a =>
+  (Field a) =>
   ConstraintSystem a ->
   ( Var -> Var,
     ConstraintSystem a

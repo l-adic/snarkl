@@ -1,6 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
 module Interp
   ( interp,
   )
@@ -35,12 +32,15 @@ instance Applicative (InterpM a) where
   pure = return
   mf <*> ma = ap mf ma
 
+raise_err :: ErrMsg -> InterpM a b
 raise_err err =
   InterpM (\_ -> Left err)
 
+add_binds :: [(Var, Maybe a)] -> InterpM a (Maybe b)
 add_binds binds =
   InterpM (\rho -> Right (IntMap.union (IntMap.fromList binds) rho, Nothing))
 
+lookup_var :: (Show a) => Var -> InterpM a (Maybe a)
 lookup_var x =
   InterpM
     ( \rho -> case IntMap.lookup x rho of
@@ -54,10 +54,10 @@ lookup_var x =
         Just v -> Right (rho, v)
     )
 
-field_of_bool :: Field a => Bool -> a
+field_of_bool :: (Field a) => Bool -> a
 field_of_bool b = if b then one else zero
 
-case_of_field :: Field a => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
+case_of_field :: (Field a) => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
 case_of_field Nothing f = f Nothing
 case_of_field (Just v) f =
   if v == zero
@@ -67,7 +67,7 @@ case_of_field (Just v) f =
         then f $ Just True
         else raise_err $ ErrMsg $ "expected " ++ show v ++ " to be boolean"
 
-bool_of_field :: Field a => a -> InterpM a Bool
+bool_of_field :: (Field a) => a -> InterpM a Bool
 bool_of_field v =
   case_of_field
     (Just v)
@@ -77,7 +77,7 @@ bool_of_field v =
     )
 
 interp_unop ::
-  Field a =>
+  (Field a) =>
   TUnop ty1 ty2 ->
   TExp ty1 a ->
   InterpM a (Maybe a)
@@ -91,7 +91,7 @@ interp_unop op e2 =
           TUnop ZEq -> return $ Just $ field_of_bool (v2 == zero)
 
 interp_binop ::
-  Field a =>
+  (Field a) =>
   TOp ty1 ty2 ty3 ->
   TExp ty1 a ->
   TExp ty2 a ->
@@ -135,7 +135,7 @@ interp_binop op e1 e2 =
               _ -> fail_with $ ErrMsg "internal error in interp_binop"
          in return $ field_of_bool b
 
-interp_val :: Field a => Val ty a -> InterpM a a
+interp_val :: (Field a) => Val ty a -> InterpM a a
 interp_val v =
   case v of
     VField v' -> return v'
@@ -175,8 +175,9 @@ interp_texp e =
         (_, _) -> raise_err $ ErrMsg $ show e1 ++ " not a variable"
     TESeq e1 e2 ->
       do
-        interp_texp e1
+        _ <- interp_texp e1
         interp_texp e2
     TEBot -> return Nothing
 
+interp :: (Eq a, Show a, Field a) => IntMap a -> TExp ty a -> Either ErrMsg (Env a, Maybe a)
 interp rho e = runInterpM (interp_texp e) $ IntMap.map Just rho

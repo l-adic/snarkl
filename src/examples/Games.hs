@@ -1,9 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Games where
 
@@ -90,7 +85,7 @@ bool_game =
 unit_game :: Game 'TUnit
 unit_game = Single (Iso (\_ -> return 1.0) (\_ -> return unit))
 
-fail_game :: Typeable ty => Game ty
+fail_game :: (Typeable ty) => Game ty
 fail_game =
   Single
     ( Iso
@@ -168,7 +163,7 @@ prodI (Iso f g) (Iso f' g') =
         pair y1 y2
     )
 
-seqI :: Typeable b => ISO a b -> ISO b c -> ISO a c
+seqI :: (Typeable b) => ISO a b -> ISO b c -> ISO a c
 seqI (Iso f g) (Iso f' g') = Iso (\a -> f a >>= f') (\c -> g' c >>= g)
 
 prodLInputI ::
@@ -317,5 +312,5 @@ instance
   where
   mkGame = sum_game mkGame mkGame
 
-gdecode :: Gameable t => Comp t
+gdecode :: (Gameable t) => Comp t
 gdecode = decode mkGame

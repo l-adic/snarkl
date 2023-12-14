@@ -1,6 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-
 module Expr
   ( Exp (..),
     exp_binop,
@@ -15,12 +12,13 @@ import Common
 import Control.Monad.State
 import Data.IntMap.Lazy (IntMap)
 import qualified Data.IntMap.Lazy as IntMap
+import Data.Kind (Type)
 import Errors
 import Field
 
-data Exp :: * -> * where
+data Exp :: Type -> Type where
   EVar :: Var -> Exp a
-  EVal :: Field a => a -> Exp a
+  EVal :: (Field a) => a -> Exp a
   EUnop :: UnOp -> Exp a -> Exp a
   EBinop :: Op -> [Exp a] -> Exp a
   EIf :: Exp a -> Exp a -> Exp a -> Exp a
@@ -28,7 +26,7 @@ data Exp :: * -> * where
   ESeq :: [Exp a] -> Exp a
   EUnit :: Exp a
 
-instance Eq a => Eq (Exp a) where
+instance (Eq a) => Eq (Exp a) where
   EVar x == EVar y = x == y
   EVal a == EVal b = a == b
   EUnop op e1 == EUnop op' e1' =
@@ -43,7 +41,7 @@ instance Eq a => Eq (Exp a) where
   EUnit == EUnit = True
   _ == _ = False
 
-var_of_exp :: Show a => Exp a -> Var
+var_of_exp :: (Show a) => Exp a -> Var
 var_of_exp e = case e of
   EVar x -> x
   _ -> fail_with $ ErrMsg ("var_of_exp: expected variable: " ++ show e)
@@ -86,7 +84,7 @@ is_pure e =
     ESeq es -> all is_pure es
     EUnit -> True
 
-const_prop :: Field a => Exp a -> State (IntMap a) (Exp a)
+const_prop :: (Field a) => Exp a -> State (IntMap a) (Exp a)
 const_prop e =
   case e of
     EVar x -> lookup_var x
@@ -117,23 +115,23 @@ const_prop e =
         return $ ESeq es'
     EUnit -> return EUnit
   where
-    lookup_var :: Field a => Int -> State (IntMap a) (Exp a)
+    lookup_var :: (Field a) => Int -> State (IntMap a) (Exp a)
     lookup_var x0 =
       gets
         ( \m -> case IntMap.lookup x0 m of
             Nothing -> EVar x0
             Just c -> EVal c
         )
-    add_bind :: Field a => (Int, a) -> State (IntMap a) (Exp a)
+    add_bind :: (Field a) => (Int, a) -> State (IntMap a) (Exp a)
     add_bind (x0, c0) =
       do
         modify (IntMap.insert x0 c0)
         return EUnit
 
-do_const_prop :: Field a => Exp a -> Exp a
+do_const_prop :: (Field a) => Exp a -> Exp a
 do_const_prop e = fst $ runState (const_prop e) IntMap.empty
 
-instance Show a => Show (Exp a) where
+instance (Show a) => Show (Exp a) where
   show (EVar x) = "var " ++ show x
   show (EVal c) = show c
   show (EUnop op e1) = show op ++ show e1

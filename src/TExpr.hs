@@ -1,13 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module TExpr
@@ -31,6 +21,7 @@ module TExpr
 where
 
 import Common
+import Data.Kind (Type)
 import Data.Typeable
 import Errors
 import Expr
@@ -88,22 +79,22 @@ instance Eq (TLoc ty) where
 instance Show (TLoc ty) where
   show (TLoc x) = "loc_" ++ show x
 
-data TUnop :: Ty -> Ty -> * where
+data TUnop :: Ty -> Ty -> Type where
   TUnop :: forall ty1 ty. UnOp -> TUnop ty1 ty
   deriving (Eq)
 
-data TOp :: Ty -> Ty -> Ty -> * where
+data TOp :: Ty -> Ty -> Ty -> Type where
   TOp :: forall ty1 ty2 ty. Op -> TOp ty1 ty2 ty
   deriving (Eq)
 
-data Val :: Ty -> * -> * where
+data Val :: Ty -> Type -> Type where
   VField :: (Field a) => a -> Val 'TField a
   VTrue :: Val 'TBool a
   VFalse :: Val 'TBool a
   VUnit :: Val 'TUnit a
   VLoc :: TLoc ty -> Val ty a
 
-data TExp :: Ty -> * -> * where
+data TExp :: Ty -> Type -> Type where
   TEVar :: TVar ty -> TExp ty a
   TEVal :: Val ty a -> TExp ty a
   TEUnop ::

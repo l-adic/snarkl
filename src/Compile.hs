@@ -1,5 +1,3 @@
-{-# LANGUAGE GADTs #-}
-
 module Compile
   ( CEnv (CEnv),
     SimplParam (..),
@@ -39,7 +37,7 @@ data CEnv a = CEnv
     next_var :: Var
   }
 
-add_constraint :: Ord a => Constraint a -> State (CEnv a) ()
+add_constraint :: (Ord a) => Constraint a -> State (CEnv a) ()
 add_constraint c =
   modify (\cenv -> cenv {cur_cs = Set.insert c $ cur_cs cenv})
 
@@ -66,25 +64,25 @@ fresh_var =
     return next
 
 -- | Add constraint 'x = y'
-ensure_equal :: Field a => (Var, Var) -> State (CEnv a) ()
+ensure_equal :: (Field a) => (Var, Var) -> State (CEnv a) ()
 ensure_equal (x, y) =
   add_constraint $
     cadd zero [(x, one), (y, neg one)]
 
 -- | Add constraint 'x = c'
-ensure_const :: Field a => (Var, a) -> State (CEnv a) ()
+ensure_const :: (Field a) => (Var, a) -> State (CEnv a) ()
 ensure_const (x, c) =
   add_constraint $
     cadd c [(x, neg one)]
 
 -- | Add constraint 'b^2 = b'.
-ensure_boolean :: Field a => Var -> State (CEnv a) ()
+ensure_boolean :: (Field a) => Var -> State (CEnv a) ()
 ensure_boolean b =
   encode_binop Mult (b, b, b)
 
 -- | Constraint 'x \/ y = z'.
 -- The encoding is: x+y - z = x*y; assumes x and y are boolean.
-encode_or :: Field a => (Var, Var, Var) -> State (CEnv a) ()
+encode_or :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_or (x, y, z) =
   do
     x_mult_y <- fresh_var
@@ -100,7 +98,7 @@ encode_or (x, y, z) =
 
 -- | Constraint 'x xor y = z'.
 -- The encoding is: x+y - z = 2(x*y); assumes x and y are boolean.
-encode_xor :: Field a => (Var, Var, Var) -> State (CEnv a) ()
+encode_xor :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_xor (x, y, z) =
   do
     x_mult_y <- fresh_var
@@ -127,7 +125,7 @@ encode_xor (x, y, z) =
 
 -- | Constraint 'x == y = z' ASSUMING x, y are boolean.
 -- The encoding is: x*y + (1-x)*(1-y) = z.
-encode_boolean_eq :: Field a => (Var, Var, Var) -> State (CEnv a) ()
+encode_boolean_eq :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_boolean_eq (x, y, z) = cs_of_exp z e
   where
     e =
@@ -143,7 +141,7 @@ encode_boolean_eq (x, y, z) = cs_of_exp z e
 
 -- | Constraint 'x == y = z'.
 -- The encoding is: z = (x-y == 0).
-encode_eq :: Field a => (Var, Var, Var) -> State (CEnv a) ()
+encode_eq :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_eq (x, y, z) = cs_of_exp z e
   where
     e =
@@ -157,7 +155,7 @@ encode_eq (x, y, z) = cs_of_exp z e
 --    x*m = y
 -- /\ (1-y)*x = 0
 -- Cf. p7. of [pinnochio-sp13], which follows [setty-usenix12].
-encode_zneq :: Field a => (Var, Var) -> State (CEnv a) ()
+encode_zneq :: (Field a) => (Var, Var) -> State (CEnv a) ()
 encode_zneq (x, y) =
   do
     m <- fresh_var
@@ -203,7 +201,7 @@ encode_zneq (x, y) =
         ErrMsg "internal error in 'encode_zeq'"
 
 -- | Constraint 'y == x==0:1?0'
-encode_zeq :: Field a => (Var, Var) -> State (CEnv a) ()
+encode_zeq :: (Field a) => (Var, Var) -> State (CEnv a) ()
 encode_zeq (x, y) =
   do
     neg_y <- fresh_var
@@ -211,13 +209,13 @@ encode_zeq (x, y) =
     cs_of_exp y (EBinop Sub [EVal one, EVar neg_y])
 
 -- | Encode the constraint 'un_op x = y'
-encode_unop :: Field a => UnOp -> (Var, Var) -> State (CEnv a) ()
+encode_unop :: (Field a) => UnOp -> (Var, Var) -> State (CEnv a) ()
 encode_unop op (x, y) = go op
   where
     go ZEq = encode_zeq (x, y)
 
 -- | Encode the constraint 'x op y = z'.
-encode_binop :: Field a => Op -> (Var, Var, Var) -> State (CEnv a) ()
+encode_binop :: (Field a) => Op -> (Var, Var, Var) -> State (CEnv a) ()
 encode_binop op (x, y, z) = go op
   where
     go And = encode_binop Mult (x, y, z)
@@ -238,7 +236,7 @@ encode_binop op (x, y, z) = go op
       add_constraint $
         CMult (one, y) (one, z) (one, Just x)
 
-encode_linear :: Field a => Var -> [Either (Var, a) a] -> State (CEnv a) ()
+encode_linear :: (Field a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
 encode_linear out xs =
   let c = foldl (\acc d -> d `add` acc) zero $ map (either (\_ -> zero) id) xs
    in add_constraint $
@@ -250,7 +248,7 @@ encode_linear out xs =
     remove_consts (Left p : l) = p : remove_consts l
     remove_consts (Right _ : l) = remove_consts l
 
-cs_of_exp :: Field a => Var -> Exp a -> State (CEnv a) ()
+cs_of_exp :: (Field a) => Var -> Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
   EVar x ->
     do
@@ -405,10 +403,12 @@ data SimplParam
   | Simplify
   | SimplifyDataflow
 
+must_simplify :: SimplParam -> Bool
 must_simplify NoSimplify = False
 must_simplify Simplify = True
 must_simplify SimplifyDataflow = True
 
+must_dataflow :: SimplParam -> Bool
 must_dataflow NoSimplify = False
 must_dataflow Simplify = False
 must_dataflow SimplifyDataflow = True
@@ -417,7 +417,7 @@ must_dataflow SimplifyDataflow = True
 -- system.  Takes as input the constraints, the input variables, and
 -- the output variables, and return the corresponding R1CS.
 r1cs_of_constraints ::
-  Field a =>
+  (Field a) =>
   SimplParam ->
   ConstraintSystem a ->
   R1CS a
@@ -470,7 +470,7 @@ constraints_of_texp out in_vars te =
       -- Compile 'e' to constraints 'cs', with output wire 'out'.
       cs_of_exp out e
       -- Add boolean constraints
-      mapM ensure_boolean boolean_in_vars
+      _ <- mapM ensure_boolean boolean_in_vars
       cs <- get_constraints
       let constraint_set = Set.fromList cs
           num_constraint_vars =

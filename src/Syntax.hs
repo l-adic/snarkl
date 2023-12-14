@@ -1,12 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Syntax
   ( Zippable,
@@ -102,71 +94,131 @@ dec n = (P.-) n 1
 
 -- | 2-d arrays. 'width' is the size, in "bits" (#field elements), of
 -- each array element.
-arr2 :: Typeable ty => Int -> Int -> Comp ('TArr ('TArr ty))
+arr2 :: (Typeable ty) => Int -> Int -> Comp ('TArr ('TArr ty))
 arr2 len width =
   do
     a <- arr len
-    forall
-      [0 .. dec len]
-      ( \i ->
-          do
-            ai <- arr width
-            set (a, i) ai
-      )
+    _ <-
+      forall
+        [0 .. dec len]
+        ( \i ->
+            do
+              ai <- arr width
+              set (a, i) ai
+        )
     return a
 
 -- | 3-d arrays.
-arr3 :: Typeable ty => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty)))
+arr3 :: (Typeable ty) => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty)))
 arr3 len width height =
   do
     a <- arr2 len width
-    forall2
-      ([0 .. dec len], [0 .. dec width])
-      ( \i j ->
-          do
-            aij <- arr height
-            set2 (a, i, j) aij
-      )
+    _ <-
+      forall2
+        ([0 .. dec len], [0 .. dec width])
+        ( \i j ->
+            do
+              aij <- arr height
+              set2 (a, i, j) aij
+        )
     return a
 
-input_arr2 :: Typeable ty => Int -> Int -> Comp ('TArr ('TArr ty))
+input_arr2 :: (Typeable ty) => Int -> Int -> Comp ('TArr ('TArr ty))
 input_arr2 0 _ = raise_err $ ErrMsg "array must have size > 0"
 input_arr2 len width =
   do
     a <- arr len
-    forall
-      [0 .. dec len]
-      ( \i ->
-          do
-            ai <- input_arr width
-            set (a, i) ai
-      )
+    _ <-
+      forall
+        [0 .. dec len]
+        ( \i ->
+            do
+              ai <- input_arr width
+              set (a, i) ai
+        )
     return a
 
-input_arr3 :: Typeable ty => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty)))
+input_arr3 :: (Typeable ty) => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty)))
 input_arr3 len width height =
   do
     a <- arr2 len width
-    forall2
-      ([0 .. dec len], [0 .. dec width])
-      ( \i j ->
-          do
-            aij <- input_arr height
-            set2 (a, i, j) aij
-      )
+    _ <-
+      forall2
+        ([0 .. dec len], [0 .. dec width])
+        ( \i j ->
+            do
+              aij <- input_arr height
+              set2 (a, i, j) aij
+        )
     return a
 
-set2 (a, i, j) e = do a' <- get (a, i); set (a', j) e
+set2 :: (Typeable ty) => (TExp ('TArr ('TArr ty)) Rational, Int, Int) -> TExp ty Rational -> State Env (TExp 'TUnit Rational)
+set2 (a, i, j) e = do
+  a' <- get (a, i)
+  set (a', j) e
 
-set3 (a, i, j, k) e = do a' <- get2 (a, i, j); set (a', k) e
+set3 ::
+  (Typeable ty) =>
+  ( TExp ('TArr ('TArr ('TArr ('TArr ty)))) Rational,
+    Int,
+    Int,
+    Int
+  ) ->
+  TExp ('TArr ty) Rational ->
+  State Env (TExp 'TUnit Rational)
+set3 (a, i, j, k) e = do
+  a' <- get2 (a, i, j)
+  set (a', k) e
 
-set4 (a, i, j, k, l) e = do a' <- get3 (a, i, j, k); set (a', l) e
+set4 ::
+  (Typeable ty) =>
+  ( TExp ('TArr ('TArr ('TArr ('TArr ty)))) Rational,
+    Int,
+    Int,
+    Int,
+    Int
+  ) ->
+  TExp ty Rational ->
+  State Env (TExp 'TUnit Rational)
+set4 (a, i, j, k, l) e = do
+  a' <- get3 (a, i, j, k)
+  set (a', l) e
 
-get2 (a, i, j) = do a' <- get (a, i); get (a', j)
+get2 ::
+  (Typeable ty) =>
+  ( TExp ('TArr ('TArr ('TArr ('TArr ty)))) Rational,
+    Int,
+    Int
+  ) ->
+  State Env (TExp ('TArr ('TArr ty)) Rational)
+get2 (a, i, j) = do
+  a' <- get (a, i)
+  get (a', j)
 
-get3 (a, i, j, k) = do a' <- get2 (a, i, j); get (a', k)
+get3 ::
+  (Typeable ty) =>
+  ( TExp ('TArr ('TArr ('TArr ('TArr ty)))) Rational,
+    Int,
+    Int,
+    Int
+  ) ->
+  State Env (TExp ('TArr ty) Rational)
+get3 (a, i, j, k) = do
+  a' <- get2 (a, i, j)
+  get (a', k)
 
-get4 (a, i, j, k, l) = do a' <- get3 (a, i, j, k); get (a', l)
+get4 ::
+  (Typeable ty) =>
+  ( TExp ('TArr ('TArr ('TArr ('TArr ty)))) Rational,
+    Int,
+    Int,
+    Int,
+    Int
+  ) ->
+  State Env (TExp ty Rational)
+get4 (a, i, j, k, l) = do
+  a' <- get3 (a, i, j, k)
+  get (a', l)
 
 ----------------------------------------------------
 --
@@ -196,10 +248,10 @@ inl te1 =
     let v2 = TEBot
     y <- pair te1 v2
     v2_var <- snd_pair y
-    assert_bot v2_var
+    _ <- assert_bot v2_var
     z <- pair (TEVal VFalse) y
     z_fst <- fst_pair z
-    assert_false z_fst
+    _ <- assert_false z_fst
     return $ unrep_sum z
 
 inr ::
@@ -214,10 +266,10 @@ inr te2 =
     let v1 = TEBot
     y <- pair v1 te2
     v1_var <- fst_pair y
-    assert_bot v1_var
+    _ <- assert_bot v1_var
     z <- pair (TEVal VTrue) y
     z_fst <- fst_pair z
-    assert_true z_fst
+    _ <- assert_true z_fst
     return $ unrep_sum z
 
 case_sum ::
@@ -270,7 +322,7 @@ instance (Typeable ty, Derive ty) => Derive ('TArr ty) where
     do
       a <- arr 1
       v <- derive n
-      set (a, 0) v
+      _ <- set (a, 0) v
       return a
 
 instance
@@ -315,7 +367,7 @@ instance
     | otherwise =
         do
           x <- fresh_var
-          assert_bot x
+          _ <- assert_bot x
           return x
 
 -- | Types for which conditional branches can be pushed to the leaves
@@ -330,6 +382,7 @@ class Zippable ty where
 instance Zippable 'TUnit where
   zip_vals _ _ _ = return unit
 
+zip_base :: (Typeable ty) => TExp 'TBool Rational -> TExp ty Rational -> TExp ty Rational -> Comp ty
 zip_base TEBot _ _ = return TEBot
 zip_base _ TEBot e2 = return e2
 zip_base _ e1 TEBot = return e1
@@ -471,7 +524,7 @@ roll ::
 roll te = return $ unsafe_cast te
 
 fixN ::
-  Typeable ty2 =>
+  (Typeable ty2) =>
   Int ->
   ( (TExp ty1 Rational -> Comp ty2) ->
     TExp ty1 Rational ->
@@ -486,7 +539,7 @@ fixN depth f e = go depth e
     go n e0 = f (go (dec n)) e0
 
 fix ::
-  Typeable ty2 =>
+  (Typeable ty2) =>
   ( (TExp ty1 Rational -> Comp ty2) ->
     TExp ty1 Rational ->
     Comp ty2
@@ -528,7 +581,7 @@ xor e1 e2 = TEBinop (TOp XOr) e1 e2
 beq :: TExp 'TBool Rational -> TExp 'TBool Rational -> TExp 'TBool Rational
 beq e1 e2 = TEBinop (TOp BEq) e1 e2
 
-eq :: Typeable ty => TExp ty Rational -> TExp ty Rational -> TExp 'TBool Rational
+eq :: (Typeable ty) => TExp ty Rational -> TExp ty Rational -> TExp 'TBool Rational
 eq e1 e2 = TEBinop (TOp Eq) e1 e2
 
 fromRational :: Rational -> TExp 'TField Rational
@@ -543,7 +596,7 @@ int_of_exp e = case e of
   _ -> fail_with $ ErrMsg $ "expected field elem " ++ show e
 
 ifThenElse_aux ::
-  Field a =>
+  (Field a) =>
   TExp 'TBool a ->
   TExp ty a ->
   TExp ty a ->
@@ -582,7 +635,7 @@ negate e = -1.0 * e
 ----------------------------------------------------
 
 iter ::
-  Typeable ty =>
+  (Typeable ty) =>
   Int ->
   (Int -> TExp ty Rational -> TExp ty Rational) ->
   TExp ty Rational ->
@@ -593,7 +646,7 @@ iter n f e = g n f e
     g m f' e' = f' m $ g (dec m) f' e'
 
 iterM ::
-  Typeable ty =>
+  (Typeable ty) =>
   Int ->
   (Int -> TExp ty Rational -> Comp ty) ->
   TExp ty Rational ->
@@ -622,9 +675,11 @@ forall as mf = g as mf
     g (a : as') mf' =
       do _ <- mf' a; g as' mf'
 
+forall2 :: ([a], [b]) -> (a -> b -> Comp 'TUnit) -> Comp 'TUnit
 forall2 (as1, as2) mf =
   forall as1 (\a1 -> forall as2 (\a2 -> mf a1 a2))
 
+forall3 :: ([a], [b], [c]) -> (a -> b -> c -> Comp 'TUnit) -> Comp 'TUnit
 forall3 (as1, as2, as3) mf =
   forall2 (as1, as2) (\a1 a2 -> forall as3 (\a3 -> mf a1 a2 a3))
 

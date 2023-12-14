@@ -28,6 +28,7 @@ test-suite hspec
   main-is:          Main.hs
   other-modules:
     Basic
+    Games
     Keccak
     Lam
     List
@@ -93,9 +94,7 @@ benchmark criterion
     , snarkl      >=0.1.0.0
 
 library
-  ghc-options:
-    -Wall -fno-warn-missing-signatures -fno-warn-unused-do-bind
-    -funbox-strict-fields -rtsopts -optc-O3
+  ghc-options:        -Wall -Werror -funbox-strict-fields -rtsopts -optc-O3
 
   -- -threaded
   exposed-modules:
@@ -114,7 +113,6 @@ library
     Dataflow
     Expr
     Field
-    Games
     Interp
     Poly
     Serialize
@@ -123,8 +121,7 @@ library
     Solve
     UnionFind
 
-  other-extensions:
-    AutoDeriveTypeable
+  default-extensions:
     BangPatterns
     DataKinds
     DeriveDataTypeable
@@ -135,7 +132,6 @@ library
     KindSignatures
     PolyKinds
     RankNTypes
-    RebindableSyntax
     ScopedTypeVariables
     StandaloneDeriving
     TypeFamilies
@@ -155,4 +151,4 @@ library
   hs-source-dirs:
     src src/testsuite/tests src/testsuite/benchmarks src/examples
 
-  default-language: Haskell2010
+  default-language:   Haskell2010
