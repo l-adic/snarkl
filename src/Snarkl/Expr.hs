@@ -12,6 +12,7 @@ import Control.Monad.State
 import Data.IntMap.Lazy (IntMap)
 import qualified Data.IntMap.Lazy as IntMap
 import Data.Kind (Type)
+import Prettyprinter
 import Snarkl.Common
 import Snarkl.Errors
 import Snarkl.Field
@@ -26,20 +27,9 @@ data Exp :: Type -> Type where
   ESeq :: [Exp a] -> Exp a
   EUnit :: Exp a
 
-instance (Eq a) => Eq (Exp a) where
-  EVar x == EVar y = x == y
-  EVal a == EVal b = a == b
-  EUnop op e1 == EUnop op' e1' =
-    op == op' && e1 == e1'
-  EBinop op es == EBinop op' es' =
-    op == op' && es == es'
-  EIf e e1 e2 == EIf e' e1' e2' =
-    e == e' && e1 == e1' && e2 == e2'
-  EAssert e1 e2 == EAssert e1' e2' =
-    e1 == e1' && e2 == e2'
-  ESeq es == ESeq es' = es == es'
-  EUnit == EUnit = True
-  _ == _ = False
+deriving instance (Eq a) => Eq (Exp a)
+
+deriving instance (Show a) => Show (Exp a)
 
 var_of_exp :: (Show a) => Exp a -> Var
 var_of_exp e = case e of
@@ -131,21 +121,14 @@ const_prop e =
 do_const_prop :: (Field a) => Exp a -> Exp a
 do_const_prop e = fst $ runState (const_prop e) IntMap.empty
 
-instance (Show a) => Show (Exp a) where
-  show (EVar x) = "var " ++ show x
-  show (EVal c) = show c
-  show (EUnop op e1) = show op ++ show e1
-  show (EBinop op es) = go es
-    where
-      go [] = ""
-      go (e1 : []) = show e1
-      go (e1 : es') = show e1 ++ show op ++ go es'
-  show (EIf b e1 e2) =
-    "if " ++ show b ++ " then " ++ show e1 ++ " else " ++ show e2
-  show (EAssert e1 e2) = show e1 ++ " := " ++ show e2
-  show (ESeq es) = "(" ++ go es ++ ")"
-    where
-      go [] = ""
-      go (e1 : []) = show e1
-      go (e1 : es') = show e1 ++ "; " ++ go es'
-  show EUnit = "()"
+instance (Pretty a) => Pretty (Exp a) where
+  pretty (EVar x) = "var_" <> pretty x
+  pretty (EVal c) = pretty c
+  pretty (EUnop op e1) = pretty op <> parens (pretty e1)
+  pretty (EBinop op es) =
+    foldl (\a b -> a <+> pretty op <+> pretty b) mempty es
+  pretty (EIf b e1 e2) =
+    "if" <+> pretty b <+> "then" <+> pretty e1 <+> "else" <+> pretty e2
+  pretty (EAssert e1 e2) = pretty e1 <+> ":=" <+> pretty e2
+  pretty (ESeq es) = parens $ hsep $ punctuate ";" $ map pretty es
+  pretty EUnit = "()"

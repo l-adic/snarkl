@@ -261,5 +261,5 @@ instance (Pretty a, Typeable ty) => Pretty (TExp ty a) where
   pretty (TEBinop binop exp1 exp2) = pretty exp1 <+> pretty binop <+> pretty exp2
   pretty (TEIf condExp thenExp elseExp) = "if" <+> pretty condExp <+> "then" <+> pretty thenExp <+> "else" <+> pretty elseExp
   pretty (TEAssert exp1 exp2) = pretty exp1 <+> ":=" <+> pretty exp2
-  pretty (TESeq exp1 exp2) = pretty exp1 <> line <> pretty exp2
+  pretty (TESeq exp1 exp2) = parens (pretty exp1 <+> ";" <> line <> pretty exp2)
   pretty TEBot = "⊥"
