@@ -27,7 +27,7 @@
       in flake // rec
            { legacyPackages = pkgs;
               packages =  
-                { test = flake.packages."snarkl:test:hspec";
+                { test = flake.packages."snarkl:test:spec";
                   lib = flake.packages."snarkl:lib:snarkl";
                   all = pkgs.symlinkJoin {
                     name = "all";
@@ -48,6 +48,7 @@
                     buildInputs = with pkgs; [
                       haskellPackages.ormolu_0_5_2_0
                       haskellPackages.cabal-fmt
+                      haskellPackages.hspec-discover
                       libsnark 
                     ];
                   };

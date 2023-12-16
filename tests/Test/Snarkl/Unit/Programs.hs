@@ -1,8 +1,9 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
 
-module UnitTests where
+module Test.Snarkl.Unit.Programs where
 
+import Snarkl.Compile
+import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
 import Snarkl.Example.List
 import Snarkl.Example.Peano
@@ -10,6 +11,8 @@ import Snarkl.Example.Tree
 import Snarkl.Syntax
 import Snarkl.SyntaxMonad
 import Snarkl.TExpr
+import Snarkl.Toplevel
+import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Prelude hiding
   ( fromRational,
     negate,

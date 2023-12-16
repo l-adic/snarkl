@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
 module Snarkl.SimplMonad
   ( SEnv (..),
     unite_vars,
@@ -11,10 +14,11 @@ module Snarkl.SimplMonad
 where
 
 import Control.Monad.State
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.IntMap as IntMap
+import qualified Data.Map as Map
 import Snarkl.Common
 import Snarkl.Field
-import Snarkl.UnionFind
+import qualified Snarkl.UnionFind as UF
 
 ----------------------------------------------------------------
 --                  Simplifier State Monad                    --
@@ -28,7 +32,7 @@ data SEnv a = SEnv
     -- together with a partial map from variables
     -- to constants (hidden inside the "Snarkl.UnionFind"
     -- data structure).
-    eqs :: UnionFind a,
+    eqs :: UF.UnionFind Var a,
     -- | Use Magic only in 'solve_mode'.
     -- In simplify mode, only forced equalities
     -- should be propagated.
@@ -39,7 +43,7 @@ data SEnv a = SEnv
 -- | Unify variables 'x' and 'y'.
 unite_vars :: (Field a) => Var -> Var -> State (SEnv a) ()
 unite_vars x y =
-  do modify (\senv -> senv {eqs = unite (eqs senv) x y})
+  do modify (\senv -> senv {eqs = UF.unite (eqs senv) x y})
 
 -- | Bind variable 'x' to 'c'.
 bind_var :: (Field a) => (Var, a) -> State (SEnv a) ()
@@ -47,7 +51,7 @@ bind_var (x, c) =
   do
     rx <- root_of_var x
     senv <- get
-    let eqs' = (eqs senv) {extras = Map.insert rx c (extras $ eqs senv)}
+    let eqs' = (eqs senv) {UF.extras = Map.insert rx c (UF.extras $ eqs senv)}
     put $ senv {eqs = eqs'}
 
 -- | Return 'x''s root (the representative of its equivalence class).
@@ -55,7 +59,7 @@ root_of_var :: (Field a) => Var -> State (SEnv a) Var
 root_of_var x =
   do
     senv <- get
-    let (rx, eqs') = root (eqs senv) x
+    let (rx, eqs') = UF.root (eqs senv) x
     put (senv {eqs = eqs'})
     return rx
 
@@ -66,7 +70,7 @@ bind_of_var x =
   do
     rx <- root_of_var x
     senv <- get
-    case extra_of (eqs senv) rx of
+    case UF.extraOf (eqs senv) rx of
       Nothing -> return $ Left rx
       Just c -> return $ Right c
 
@@ -76,7 +80,7 @@ assgn_of_vars vars =
   do
     binds <- mapM bind_of_var vars
     return
-      $ Map.fromList
+      $ IntMap.fromList
       $ concatMap
         ( \(x, ec) -> case ec of
             Left _ -> []
