@@ -27,13 +27,14 @@
       in flake // rec
            { legacyPackages = pkgs;
               packages =  
-                { test = flake.packages."snarkl:test:spec";
+                { 
                   lib = flake.packages."snarkl:lib:snarkl";
+                  print = flake.packages."snarkl:exe:print-examples";
                   all = pkgs.symlinkJoin {
                     name = "all";
                     paths = with packages;
                       [ lib
-                        test
+                        print
                       ];
                   };
                   default = packages.all;

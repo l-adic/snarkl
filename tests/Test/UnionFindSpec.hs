@@ -8,12 +8,6 @@
 
 module Test.UnionFindSpec where
 
-import Control.Monad.State (StateT, modify)
-import Control.Monad.Trans.Class (MonadTrans)
-import qualified Data.IntMap as IntMap
-import Data.List (nub)
-import qualified Data.Map as Map
-import Data.Maybe
 import Snarkl.Common
 import Snarkl.Errors
 import Snarkl.UnionFind

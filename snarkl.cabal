@@ -191,5 +191,6 @@ executable print-examples
   build-depends:
       base           >=4.7
     , containers
+    , hspec       >=2.0
     , prettyprinter
     , snarkl         >=0.1.0.0
