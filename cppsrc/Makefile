@@ -9,7 +9,7 @@ CXXFLAGS += -O3 -Wall -Wextra -Wno-unused-parameter -Wno-comment -march=native -
 
 DEPSRC=../depsrc
 
-LDFLAGS += -L $(DEPSRC)/libsnark/src -Wl,-rpath $(DEPSRC)/libsnark/src
+LDFLAGS += -L $(DEPSRC)/libsnark/src -Wl,-rpath $(DEPSRC)/libsnark/src -static
 LDLIBS += -lgmpxx -lgmp -lsnark -lzm
 CXXFLAGS += -I $(DEPSRC)/libsnark/src -DUSE_ASM -DCURVE_BN128 -DBN_SUPPORT_SNARK -g
 

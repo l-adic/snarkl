@@ -13,8 +13,11 @@ cd $DEPSRC
 [ ! -d libsnark ] && git clone git://github.com/kejace/libsnark
 cd libsnark
 ./prepare-depends.sh
-make -j
+make -j NO_PROCPS=1
+make lib NO_PROCPS=1
+make lib STATIC=1 NO_PROCPS=1
 # make check
 sudo make install PREFIX=$DEPINST
+sudo cp libsnark.a /usr/lib/libsnark.a
 
 

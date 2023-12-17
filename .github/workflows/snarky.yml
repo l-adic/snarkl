@@ -1,0 +1,39 @@
+name: snarky
+
+on:
+  push:
+    paths:
+      - 'cppsrc/**.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: fix git
+      run: git config --global url.https://github.com/.insteadOf git://github.com/
+
+    - name: install dependencies
+      run: sudo apt-get install -y build-essential git libgmp3-dev libprocps-dev libgtest-dev python-markdown libboost-dev libboost-all-dev
+
+    - name: dependencies
+      run: ./prepare-depends.sh
+
+    - name: build snarky
+      run: cd cppsrc && make -j && make test
+
+    - run: ./cppsrc/bin/snarky
+
+    - uses: actions/upload-artifact@v4
+      with:
+        # Name of the artifact to upload.
+        # Optional. Default is 'artifact'
+        name: snarky
+
+        # A file, directory or wildcard pattern that describes what to upload
+        # Required.
+        path: cppsrc/bin/snarky

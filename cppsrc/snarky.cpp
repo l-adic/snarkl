@@ -208,6 +208,7 @@ int main(int argc, char* const* argv)
     {
         option_char = getopt_long(argc, argv, "gpvrq:f:k:w:i:", long_options, &option_index);
         if (option_char == -1) {
+            cout << "snarky - no arguments provided\n";
             break;
         }
         switch (option_char) {
