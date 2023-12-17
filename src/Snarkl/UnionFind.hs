@@ -1,48 +1,52 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Snarkl.UnionFind
   ( root,
     unite,
-    new_uf,
-    extra_of,
-    UnionFind (..),
+    empty,
+    extraOf,
+    extras,
+    UnionFind,
+    -- exported for tests
+    insert,
   )
 where
 
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.Map as Map
 import Data.Maybe
-import Snarkl.Common
 import Snarkl.Errors
 
-data UnionFind a = UnionFind
-  { ids :: Map.IntMap Var,
-    sizes :: Map.IntMap Int,
-    extras :: Map.IntMap a
+data UnionFind node a = UnionFind
+  { ids :: Map.Map node node,
+    sizes :: Map.Map node Int,
+    extras :: Map.Map node a
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
-new_uf :: UnionFind a
-new_uf = UnionFind Map.empty Map.empty Map.empty
+empty :: UnionFind node a
+empty = UnionFind Map.empty Map.empty Map.empty
 
-id_of :: UnionFind a -> Var -> Var
-id_of uf x = fromMaybe x $ Map.lookup x (ids uf)
+idOf :: (Ord node) => UnionFind node a -> node -> node
+idOf (UnionFind {ids}) x = fromMaybe x $ Map.lookup x ids
 
-size_of :: UnionFind a -> Var -> Int
-size_of uf x = fromMaybe 1 $ Map.lookup x (sizes uf)
+sizeOf :: (Ord node) => UnionFind node a -> node -> Int
+sizeOf (UnionFind {sizes}) x = fromMaybe 1 $ Map.lookup x sizes
 
-extra_of :: UnionFind a -> Var -> Maybe a
-extra_of uf x = Map.lookup x (extras uf)
+extraOf :: (Ord node) => UnionFind node a -> node -> Maybe a
+extraOf (UnionFind {extras}) x = Map.lookup x extras
 
-root :: (Show a, Eq a) => UnionFind a -> Var -> (Var, UnionFind a)
+root :: (Show a, Eq a, Ord node, Show node) => UnionFind node a -> node -> (node, UnionFind node a)
 root uf x =
-  let px = id_of uf x
+  let px = idOf uf x
    in if px == x
         then (x, uf)
         else
-          let gpx = id_of uf px
-              uf' = merge_extras uf x gpx
+          let gpx = idOf uf px
+              uf' = mergeExtras uf x gpx
            in root (uf' {ids = Map.insert x gpx (ids uf)}) px
 
-merge_extras :: (Show a, Eq a) => UnionFind a -> Var -> Var -> UnionFind a
-merge_extras uf x y =
+mergeExtras :: (Show a, Eq a, Ord node, Show node) => UnionFind node a -> node -> node -> UnionFind node a
+mergeExtras uf x y =
   case (Map.lookup x (extras uf), Map.lookup y (extras uf)) of
     (Nothing, Nothing) -> uf
     (Nothing, Just d) -> uf {extras = Map.insert x d (extras uf)}
@@ -63,7 +67,7 @@ merge_extras uf x y =
 -- a heuristic that biases toward pinned variables, many of which are
 -- low-numbered input vars. This way, we avoid introducing pinned
 -- eqns. in some cases.
-unite :: (Show a, Eq a) => UnionFind a -> Var -> Var -> UnionFind a
+unite :: (Show a, Eq a, Ord node, Show node) => UnionFind node a -> node -> node -> UnionFind node a
 unite uf x y
   | x < y =
       go x y
@@ -76,8 +80,8 @@ unite uf x y
     go x0 y0 =
       let (rx, uf2) = root uf x0
           (ry, uf') = root uf2 y0
-          sz_rx = size_of uf' rx
-          sz_ry = size_of uf' ry
+          sz_rx = sizeOf uf' rx
+          sz_ry = sizeOf uf' ry
        in if sz_rx >= sz_ry
             then
               uf'
@@ -89,3 +93,10 @@ unite uf x y
                 { ids = Map.insert x0 ry (ids uf'),
                   sizes = Map.insert y0 (sz_rx + sz_ry) (sizes uf')
                 }
+
+-- | Bind variable 'x' to 'c'.
+insert :: (Ord node, Show node, Eq a, Show a) => node -> a -> UnionFind node a -> UnionFind node a
+insert x c uf =
+  do
+    let (rx, uf') = root uf x
+    uf' {extras = Map.insert rx c (extras uf')}

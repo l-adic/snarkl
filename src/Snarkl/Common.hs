@@ -2,13 +2,14 @@
 
 module Snarkl.Common where
 
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.IntMap.Lazy as IntMap
+import qualified Data.Map as Map
 import Data.Ratio
 import Prettyprinter
 
 type Var = Int
 
-type Assgn a = Map.IntMap a
+type Assgn a = IntMap.IntMap a
 
 data UnOp = ZEq
   deriving (Eq, Show)
@@ -67,3 +68,6 @@ instance Pretty Rational where
   pretty r
     | denominator r == 1 = pretty (numerator r)
     | otherwise = pretty (numerator r) <> "/" <> pretty (denominator r)
+
+intMapToMap :: IntMap.IntMap v -> Map.Map Int v
+intMapToMap = Map.fromList . IntMap.toList

@@ -6,7 +6,7 @@ import Data.Foldable (traverse_)
 import Prettyprinter
 import Prettyprinter.Render.String (renderString)
 import Snarkl.Toplevel (texp_of_comp)
-import UnitTests
+import Test.Snarkl.Unit.Programs
 
 main :: IO ()
 main = do
