@@ -102,20 +102,18 @@ exploreVars ::
   Env a ->
   [Var] ->
   State (Roots a) ()
-exploreVars Env {constraints, varMap} = go
+exploreVars _ [] = pure ()
+exploreVars env@(Env {constraints, varMap}) (r : rest) =
+  case IntMap.lookup r varMap of
+    Nothing -> exploreVars env rest
+    Just cids ->
+      do
+        let vars = getVars (Set.toList cids)
+        currentRoots <- gets dfRoots
+        let newRoots = filter (\v -> not $ Set.member v currentRoots) vars
+        mapM_ addRoot newRoots
+        exploreVars env (newRoots <> rest)
   where
-    go [] = return ()
-    go (r : rest) =
-      case IntMap.lookup r varMap of
-        Nothing -> go rest
-        Just cids ->
-          do
-            let vars = getVars (Set.toList cids)
-            currentRoots <- gets dfRoots
-            let newRoots = filter (\v -> not $ Set.member v currentRoots) vars
-            mapM_ addRoot newRoots
-            go (newRoots <> rest)
-
     getVars :: [ConstraintId] -> [Var]
     getVars vars =
       let f cid =
