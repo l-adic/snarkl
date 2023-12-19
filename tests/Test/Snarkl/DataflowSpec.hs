@@ -10,8 +10,7 @@ import Snarkl.Constraint.Constraints
     ConstraintSystem (..),
   )
 import Snarkl.Constraint.Dataflow
-  ( numberConstraints,
-    removeUnreachable,
+  ( removeUnreachable,
   )
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -62,11 +61,6 @@ expectedResult =
 spec :: Spec
 spec = do
   describe "Snarkl.Constraint.Dataflow" $ do
-    describe "numberConstraints" $ do
-      it "assigns unique identifiers to each constraint" $ do
-        let numbered = numberConstraints exampleConstraintSystem
-        Map.size numbered `shouldBe` Set.size (cs_constraints exampleConstraintSystem)
-
     describe "removeUnreachable" $ do
       it "doesn't do anything if all variables are reached from output variables" $ do
         removeUnreachable exampleConstraintSystem

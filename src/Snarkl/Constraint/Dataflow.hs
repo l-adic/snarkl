@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Snarkl.Constraint.Dataflow where
+module Snarkl.Constraint.Dataflow (removeUnreachable) where
 
 import Control.Monad.State
   ( State,
