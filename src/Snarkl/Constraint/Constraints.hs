@@ -85,7 +85,7 @@ data ConstraintSystem a = ConstraintSystem
     cs_in_vars :: [Var],
     cs_out_vars :: [Var]
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance (Eq a) => Eq (Constraint a) where
   CAdd c m == CAdd c' m' =

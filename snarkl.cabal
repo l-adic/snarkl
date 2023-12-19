@@ -101,6 +101,7 @@ test-suite spec
     Snarkl.Example.Tree
     Test.Snarkl.Unit.Programs
     Test.Snarkl.UnitSpec
+    Test.Snarkl.DataflowSpec
     Test.UnionFindSpec
 
   default-extensions:

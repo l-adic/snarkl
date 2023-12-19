@@ -1,122 +1,125 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
-{-# HLINT ignore "Use camelCase" #-}
-module Snarkl.Constraint.Dataflow
-  ( remove_unreachable,
-  )
-where
+module Snarkl.Constraint.Dataflow where
 
 import Control.Monad.State
+  ( State,
+    evalState,
+    gets,
+    modify,
+  )
+import qualified Data.IntMap as IntMap
 import Data.IntMap.Lazy (IntMap)
-import qualified Data.IntMap.Lazy as Map
 import Data.List (foldl')
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Snarkl.Common
+import Snarkl.Common (Var)
 import Snarkl.Constraint.Constraints
+  ( Constraint,
+    ConstraintSystem (cs_constraints, cs_out_vars),
+    constraint_vars,
+  )
 
-number_constraints :: ConstraintSystem a -> IntMap (Constraint a)
-number_constraints cs =
-  go 0 Map.empty (Set.toList $ cs_constraints cs)
+newtype ConstraintId = ConstraintId Int
+  deriving (Eq, Ord)
+
+-- | Give a unique number (i.e. and index) to each constraint
+numberConstraints :: ConstraintSystem a -> Map ConstraintId (Constraint a)
+numberConstraints cs =
+  foldl' (\m (i, c) -> Map.insert (ConstraintId i) c m) Map.empty (zip [0 ..] (Set.toList $ cs_constraints cs))
+
+-- | Creates a mapping from variables to the set of constraint IDs in which each variable appears.
+-- Implicitly uses the type alias 'Var' for the keys.
+gatherVars :: Map ConstraintId (Constraint a) -> IntMap (Set ConstraintId)
+gatherVars constr_map =
+  let f m (cid, constr) =
+        let vars = constraint_vars (Set.singleton constr)
+         in foldl' (\acc x -> addVar x cid acc) m vars
+   in foldl' f IntMap.empty (Map.toList constr_map)
   where
-    go ::
-      Int ->
-      IntMap (Constraint a) ->
-      [Constraint a] ->
-      IntMap (Constraint a)
-    go _ m [] = m
-    go n m (c : cs') =
-      go (n + 1) (Map.insert n c m) cs'
+    addVar :: Var -> ConstraintId -> IntMap (Set ConstraintId) -> IntMap (Set ConstraintId)
+    addVar x cid m =
+      case IntMap.lookup x m of
+        Nothing -> IntMap.insert x (Set.singleton cid) m
+        Just s0 -> IntMap.insert x (Set.insert cid s0) m
 
--- | Map variables to the indices of the constraints in which the vars appear.
-gather_vars :: IntMap (Constraint a) -> IntMap (Set Int)
-gather_vars constr_map =
-  go Map.empty (Map.toList constr_map)
-  where
-    go m [] = m
-    go m ((the_id, constr) : cs') =
-      let vars = constraint_vars (Set.singleton constr)
-       in go (foldl' (\m0 x -> add_var x the_id m0) m vars) cs'
+newtype Roots a = DEnv {dfRoots :: Set Var}
 
-    add_var x the_id m0 =
-      case Map.lookup x m0 of
-        Nothing -> Map.insert x (Set.singleton the_id) m0
-        Just s0 -> Map.insert x (Set.insert the_id s0) m0
+addRoot :: Var -> State (Roots a) ()
+addRoot x = modify (\s -> s {dfRoots = Set.insert x (dfRoots s)})
 
-data DEnv a = DEnv {df_roots :: Set Var}
+data Env a = Env
+  { constraints :: Map ConstraintId (Constraint a),
+    varMap :: IntMap (Set ConstraintId)
+  }
 
-add_root :: Var -> State (DEnv a) ()
-add_root x = modify (\s -> s {df_roots = Set.insert x (df_roots s)})
-
-remove_unreachable ::
+-- |  Removes constraints that are unreachable from the output variables of a ConstraintSystem.
+removeUnreachable ::
   (Ord a) =>
   ConstraintSystem a ->
   ConstraintSystem a
-remove_unreachable cs =
-  let m_constr = number_constraints cs
-      m_var = gather_vars m_constr
-      (var_set, _) =
-        flip runState (DEnv Set.empty) $
+removeUnreachable cs =
+  let nConstrs = numberConstraints cs
+      env =
+        Env
+          { constraints = nConstrs,
+            varMap = gatherVars nConstrs
+          }
+      foundConstraints =
+        flip evalState (DEnv Set.empty) $
           do
-            _ <- mapM add_root (cs_out_vars cs)
-            explore_vars m_constr m_var (cs_out_vars cs)
-            env <- get
-            return $ df_roots env
-      new_constrs = lookup_constraints m_constr m_var var_set
-   in cs {cs_constraints = new_constrs}
+            mapM_ addRoot (cs_out_vars cs)
+            -- start searching from the output variables
+            exploreVars env (cs_out_vars cs)
+            roots <- gets dfRoots
+            pure $ lookupConstraints env roots
+   in cs {cs_constraints = foundConstraints}
   where
-    lookup_constraints m_constr0 m_var0 var_set0 =
+    lookupConstraints :: (Ord a) => Env a -> Set Var -> Set (Constraint a)
+    lookupConstraints Env {constraints, varMap} roots =
       Set.foldl
-        ( \s0 x ->
-            case Map.lookup x m_var0 of
-              Nothing -> s0
-              Just s_ids ->
-                constrs_of_idset m_constr0 s_ids `Set.union` s0
+        ( \s x ->
+            case IntMap.lookup x varMap of
+              Nothing -> s
+              Just constraintIds ->
+                getConstraints constraintIds `Set.union` s
         )
         Set.empty
-        var_set0
+        roots
+      where
+        getConstraints =
+          Set.foldl
+            ( \s cid ->
+                case Map.lookup cid constraints of
+                  Nothing -> s
+                  Just constr -> Set.insert constr s
+            )
+            Set.empty
 
-    constrs_of_idset m_constr0 s_ids =
-      Set.foldl
-        ( \s0 the_id ->
-            case Map.lookup the_id m_constr0 of
-              Nothing -> s0
-              Just constr -> Set.insert constr s0
-        )
-        Set.empty
-        s_ids
-
-explore_vars ::
-  -- | ConstraintId->Constraint
-  IntMap (Constraint a) ->
-  -- | Var->Set ConstraintId
-  IntMap (Set Int) ->
-  -- | Roots to explore
+exploreVars ::
+  Env a ->
   [Var] ->
-  State (DEnv a) ()
-explore_vars m_constr m_var roots = go roots
+  State (Roots a) ()
+exploreVars Env {constraints, varMap} = go
   where
     go [] = return ()
-    go (r : roots') =
-      case Map.lookup r m_var of
-        Nothing -> go roots'
-        Just s_ids ->
+    go (r : rest) =
+      case IntMap.lookup r varMap of
+        Nothing -> go rest
+        Just cids ->
           do
-            let vars = get_vars (Set.toList s_ids)
-            new_roots <- filterM is_new_root vars
-            _ <- mapM add_root new_roots
-            go (new_roots ++ roots')
+            let vars = getVars (Set.toList cids)
+            currentRoots <- gets dfRoots
+            let newRoots = filter (\v -> not $ Set.member v currentRoots) vars
+            mapM_ addRoot newRoots
+            go (newRoots <> rest)
 
-    is_new_root :: Var -> State (DEnv a) Bool
-    is_new_root x =
-      do
-        env <- get
-        return $ not (Set.member x $ df_roots env)
-
-    get_vars [] = []
-    get_vars (the_id : ids') =
-      case Map.lookup the_id m_constr of
-        Nothing -> get_vars ids'
-        Just constr ->
-          constraint_vars (Set.singleton constr)
-            ++ get_vars ids'
+    getVars :: [ConstraintId] -> [Var]
+    getVars vars =
+      let f cid =
+            case Map.lookup cid constraints of
+              Nothing -> []
+              Just constr -> constraint_vars (Set.singleton constr)
+       in concatMap f vars

@@ -14,20 +14,42 @@ module Snarkl.Compile
 where
 
 import Control.Monad.State
+  ( State,
+    gets,
+    modify,
+    runState,
+  )
+import Data.Either (fromRight)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
-import Data.Typeable
-import Snarkl.Backend.R1CS
-import Snarkl.Common
+import Data.Typeable (Typeable)
+import Snarkl.Backend.R1CS.R1CS (R1CS)
+import Snarkl.Common (Op (..), UnOp (..), Var)
 import Snarkl.Constraint.Constraints
-import Snarkl.Constraint.Dataflow
-import Snarkl.Constraint.SimplMonad
-import Snarkl.Constraint.Simplify
-import Snarkl.Constraint.Solve
-import Snarkl.Errors
-import Snarkl.Field
+  ( Constraint (CMagic, CMult),
+    ConstraintSystem (ConstraintSystem),
+    cadd,
+    constraint_vars,
+    r1cs_of_cs,
+    renumber_constraints,
+  )
+import Snarkl.Constraint.Dataflow (removeUnreachable)
+import Snarkl.Constraint.SimplMonad (bind_of_var, bind_var)
+import Snarkl.Constraint.Simplify (do_simplify)
+import Snarkl.Constraint.Solve (solve)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field (add, inv, neg, one, zero))
 import Snarkl.Language.Expr
+  ( Exp (..),
+    Variable (Variable),
+    do_const_prop,
+    var_of_exp,
+  )
 import Snarkl.Language.TExpr
+  ( TExp,
+    booleanVarsOfTexp,
+    expOfTExp,
+  )
 
 ----------------------------------------------------------------
 --
@@ -45,16 +67,10 @@ add_constraint c =
   modify (\cenv -> cenv {cur_cs = Set.insert c $ cur_cs cenv})
 
 get_constraints :: State (CEnv a) [Constraint a]
-get_constraints =
-  do
-    cenv <- get
-    return $ Set.toList $ cur_cs cenv
+get_constraints = gets (Set.toList . cur_cs)
 
 get_next_var :: State (CEnv a) Var
-get_next_var =
-  do
-    cenv <- get
-    return (next_var cenv)
+get_next_var = gets next_var
 
 set_next_var :: Var -> State (CEnv a) ()
 set_next_var next = modify (\cenv -> cenv {next_var = next})
@@ -241,7 +257,7 @@ encode_binop op (x, y, z) = go op
 
 encode_linear :: (Field a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
 encode_linear out xs =
-  let c = foldl (\acc d -> d `add` acc) zero $ map (either (\_ -> zero) id) xs
+  let c = foldl (flip add) zero $ map (fromRight zero) xs
    in add_constraint $
         cadd c $
           (out, neg one) : remove_consts xs
@@ -432,7 +448,7 @@ r1cs_of_constraints simpl cs =
         if must_simplify simpl
           then do_simplify False Map.empty cs
           else (undefined, cs)
-      cs_dataflow = if must_dataflow simpl then remove_unreachable cs_simpl else cs_simpl
+      cs_dataflow = if must_dataflow simpl then removeUnreachable cs_simpl else cs_simpl
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
       -- their renumbered counterparts.
