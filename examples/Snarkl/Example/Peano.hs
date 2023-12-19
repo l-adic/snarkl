@@ -2,9 +2,9 @@
 
 module Snarkl.Example.Peano where
 
-import Snarkl.Syntax
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
+import Snarkl.Language.Syntax
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import Prelude hiding
   ( fromRational,
     negate,

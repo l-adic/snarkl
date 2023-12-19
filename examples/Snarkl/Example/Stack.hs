@@ -5,9 +5,9 @@ module Snarkl.Example.Stack where
 import Data.Typeable
 import Snarkl.Compile
 import Snarkl.Example.List
-import Snarkl.Syntax
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
+import Snarkl.Language.Syntax
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
   ( fromRational,

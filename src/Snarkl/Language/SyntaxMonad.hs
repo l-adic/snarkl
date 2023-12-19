@@ -3,7 +3,7 @@
 
 {-# HLINT ignore "Use camelCase" #-}
 
-module Snarkl.SyntaxMonad
+module Snarkl.Language.SyntaxMonad
   ( -- | Computation monad
     Comp,
     CompResult,
@@ -42,7 +42,7 @@ module Snarkl.SyntaxMonad
     assert_bot,
     -- | Show the current state.
     debug_state,
-    -- | Misc. functions imported by 'Snarkl.Syntax.hs'
+    -- | Misc. functions imported by 'Snarkl.Language.Syntax.hs'
     get_addr,
     guard,
     add_objects,
@@ -56,7 +56,7 @@ import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
 import Data.Typeable
 import Snarkl.Errors
-import Snarkl.TExpr
+import Snarkl.Language.TExpr
 import Prelude hiding
   ( fromRational,
     negate,

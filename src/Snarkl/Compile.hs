@@ -21,13 +21,13 @@ import Snarkl.Common
 import Snarkl.Constraints
 import Snarkl.Dataflow
 import Snarkl.Errors
-import Snarkl.Expr
 import Snarkl.Field
+import Snarkl.Language.Expr
+import Snarkl.Language.TExpr
 import Snarkl.R1CS
 import Snarkl.SimplMonad
 import Snarkl.Simplify
 import Snarkl.Solve
-import Snarkl.TExpr
 
 ----------------------------------------------------------------
 --

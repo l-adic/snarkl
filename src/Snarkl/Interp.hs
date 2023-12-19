@@ -12,7 +12,7 @@ import qualified Data.Map as Map
 import Snarkl.Common
 import Snarkl.Errors
 import Snarkl.Field
-import Snarkl.TExpr
+import Snarkl.Language.TExpr
 
 type Env a = Map Variable (Maybe a)
 

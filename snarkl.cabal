@@ -37,18 +37,18 @@ library
     Snarkl.Constraints
     Snarkl.Dataflow
     Snarkl.Errors
-    Snarkl.Expr
     Snarkl.Field
     Snarkl.Interp
+    Snarkl.Language.Expr
+    Snarkl.Language.Syntax
+    Snarkl.Language.SyntaxMonad
+    Snarkl.Language.TExpr
     Snarkl.Poly
     Snarkl.R1CS
     Snarkl.Serialize
     Snarkl.Simplify
     Snarkl.SimplMonad
     Snarkl.Solve
-    Snarkl.Syntax
-    Snarkl.SyntaxMonad
-    Snarkl.TExpr
     Snarkl.Toplevel
     Snarkl.UnionFind
 
@@ -193,6 +193,6 @@ executable print-examples
   build-depends:
       base           >=4.7
     , containers
-    , hspec       >=2.0
+    , hspec          >=2.0
     , prettyprinter
     , snarkl         >=0.1.0.0

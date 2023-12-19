@@ -1,4 +1,4 @@
-module Snarkl.Expr
+module Snarkl.Language.Expr
   ( Exp (..),
     Variable (..),
     exp_binop,

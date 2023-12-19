@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Snarkl.TExpr
+module Snarkl.Language.TExpr
   ( Val (..),
     TExp (..),
     TFunct (..),
@@ -27,13 +27,13 @@ import Data.Typeable (Proxy (..), Typeable, eqT, typeOf, typeRep, type (:~:) (Re
 import Prettyprinter (Pretty (pretty), line, parens, (<+>))
 import Snarkl.Common (Op, UnOp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Expr
+import Snarkl.Field (Field (one, zero))
+import Snarkl.Language.Expr
   ( Exp (EAssert, EIf, EUnit, EUnop, EVal, EVar),
     Variable (..),
     exp_binop,
     exp_seq,
   )
-import Snarkl.Field (Field (one, zero))
 
 data TFunct where
   TFConst :: Ty -> TFunct

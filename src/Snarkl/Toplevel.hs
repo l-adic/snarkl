@@ -51,7 +51,7 @@ module Snarkl.Toplevel
     benchmark_comp,
 
     -- * Re-exported modules
-    module Snarkl.SyntaxMonad,
+    module Snarkl.Language.SyntaxMonad,
     module Snarkl.Constraints,
     module Snarkl.Simplify,
     module Snarkl.R1CS,
@@ -68,11 +68,11 @@ import Snarkl.Compile
 import Snarkl.Constraints
 import Snarkl.Errors
 import Snarkl.Interp (interp)
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import Snarkl.R1CS
 import qualified Snarkl.Serialize as Serialize
 import Snarkl.Simplify
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
 import System.Exit
 import System.IO
   ( IOMode (WriteMode),

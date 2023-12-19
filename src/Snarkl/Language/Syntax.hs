@@ -1,6 +1,6 @@
 {-# LANGUAGE RebindableSyntax #-}
 
-module Snarkl.Syntax
+module Snarkl.Language.Syntax
   ( Zippable,
     Derive,
     -- | Sums, products, recursive types
@@ -62,8 +62,8 @@ import Data.String (IsString (..))
 import Data.Typeable
 import Snarkl.Common
 import Snarkl.Errors
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import Unsafe.Coerce
 import Prelude hiding
   ( fromRational,
@@ -294,7 +294,7 @@ case_sum f1 f2 e =
           le <- f1 e1
           re <- f2 e2
           -- NOTE: should not guard b here.
-          -- zip_vals ... must maintain Snarkl.SyntaxMonad [INVARIANT]
+          -- zip_vals ... must maintain Snarkl.Language.SyntaxMonad [INVARIANT]
           -- regarding the representation of nonbase-type expressions.
           zip_vals (not b) le re
 

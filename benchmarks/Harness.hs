@@ -8,7 +8,7 @@ import Data.Typeable
 import GHC.IO.Exception
 import Snarkl.Compile (SimplParam)
 import Snarkl.Errors
-import Snarkl.TExpr
+import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import System.IO (hPutStrLn, stderr)
 
