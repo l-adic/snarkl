@@ -30,6 +30,8 @@ library
 
   -- -threaded
   exposed-modules:
+    Control.Monad.Supply
+    Control.Monad.Supply.Class
     Snarkl.Common
     Snarkl.Compile
     Snarkl.Constraints
