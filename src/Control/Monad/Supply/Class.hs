@@ -1,6 +1,6 @@
 module Control.Monad.Supply.Class where
 
-import Control.Monad.State (MonadTrans (lift), StateT, get, put)
+import Control.Monad.State (get, put)
 import Control.Monad.Supply (SupplyT (..))
 
 class (Monad m) => MonadSupply m where
@@ -13,7 +13,3 @@ instance (Monad m) => MonadSupply (SupplyT m) where
     put (i + 1)
     return i
   peek = SupplyT get
-
-instance (MonadSupply m) => MonadSupply (StateT s m) where
-  fresh = lift fresh
-  peek = lift peek

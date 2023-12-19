@@ -167,7 +167,6 @@ benchmark criterion
     , snarkl      >=0.1.0.0
 
 executable print-examples
-  type:               exitcode-stdio-1.0
   main-is:            Main.hs
   other-modules:
     Snarkl.Example.Basic
