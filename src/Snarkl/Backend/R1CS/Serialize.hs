@@ -1,12 +1,12 @@
-module Snarkl.Serialize where
+module Snarkl.Backend.R1CS.Serialize (serialize_r1cs, serialize_assgn) where
 
 import qualified Data.IntMap.Lazy as Map
 import Data.Ratio
+import Snarkl.Backend.R1CS.Poly
+import Snarkl.Backend.R1CS.R1CS
 import Snarkl.Common
 import Snarkl.Errors
 import Snarkl.Field
-import Snarkl.Poly
-import Snarkl.R1CS
 
 flatten_rat :: Rational -> IntP
 flatten_rat r =

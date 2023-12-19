@@ -34,8 +34,12 @@ library
     Control.Monad.Supply.Class
     Snarkl.Common
     Snarkl.Compile
-    Snarkl.Constraints
-    Snarkl.Dataflow
+    Snarkl.Constraint.Constraints
+    Snarkl.Constraint.Dataflow
+    Snarkl.Constraint.Simplify
+    Snarkl.Constraint.SimplMonad
+    Snarkl.Constraint.Solve
+    Snarkl.Constraint.UnionFind
     Snarkl.Errors
     Snarkl.Field
     Snarkl.Interp
@@ -43,14 +47,11 @@ library
     Snarkl.Language.Syntax
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
-    Snarkl.Poly
-    Snarkl.R1CS
-    Snarkl.Serialize
-    Snarkl.Simplify
-    Snarkl.SimplMonad
-    Snarkl.Solve
+    Snarkl.Backend.R1CS.Poly
+    Snarkl.Backend.R1CS.Serialize
+    Snarkl.Backend.R1CS.R1CS
+    Snarkl.Backend.R1CS
     Snarkl.Toplevel
-    Snarkl.UnionFind
 
   default-extensions:
     BangPatterns

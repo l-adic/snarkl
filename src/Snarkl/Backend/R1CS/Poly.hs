@@ -1,4 +1,4 @@
-module Snarkl.Poly where
+module Snarkl.Backend.R1CS.Poly where
 
 import qualified Data.IntMap.Lazy as Map
 import Snarkl.Common

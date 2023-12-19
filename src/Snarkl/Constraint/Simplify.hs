@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
-module Snarkl.Simplify
+module Snarkl.Constraint.Simplify
   ( do_simplify,
   )
 where
@@ -10,11 +10,11 @@ import Control.Monad.State
 import Data.List (foldl')
 import qualified Data.Set as Set
 import Snarkl.Common
-import Snarkl.Constraints
+import Snarkl.Constraint.Constraints
+import Snarkl.Constraint.SimplMonad
+import qualified Snarkl.Constraint.UnionFind as UF
 import Snarkl.Errors
 import Snarkl.Field
-import Snarkl.SimplMonad
-import qualified Snarkl.UnionFind as UF
 
 ----------------------------------------------------------------
 --                         Substitution                       --
@@ -168,7 +168,7 @@ learn = go
 
 do_simplify ::
   (Field a) =>
-  -- | Snarkl.Solve mode? If 'True', use Magic.
+  -- | Snarkl.Constraint.Solve mode? If 'True', use Magic.
   Bool ->
   -- | Initial variable assignment
   Assgn a ->

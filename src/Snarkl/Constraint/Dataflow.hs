@@ -1,4 +1,7 @@
-module Snarkl.Dataflow
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
+module Snarkl.Constraint.Dataflow
   ( remove_unreachable,
   )
 where
@@ -10,7 +13,7 @@ import Data.List (foldl')
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Snarkl.Common
-import Snarkl.Constraints
+import Snarkl.Constraint.Constraints
 
 number_constraints :: ConstraintSystem a -> IntMap (Constraint a)
 number_constraints cs =

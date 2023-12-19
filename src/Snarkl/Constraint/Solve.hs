@@ -1,4 +1,4 @@
-module Snarkl.Solve
+module Snarkl.Constraint.Solve
   ( solve,
   )
 where
@@ -8,10 +8,10 @@ import Data.Maybe
   ( isJust,
   )
 import Snarkl.Common
-import Snarkl.Constraints
+import Snarkl.Constraint.Constraints
+import Snarkl.Constraint.Simplify
 import Snarkl.Errors
 import Snarkl.Field
-import Snarkl.Simplify
 
 -- | Starting from an initial partial assignment [env], solve the
 -- constraints [cs] and return the resulting complete assignment.

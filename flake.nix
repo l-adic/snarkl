@@ -50,6 +50,7 @@
                       haskellPackages.ormolu_0_5_2_0
                       haskellPackages.cabal-fmt
                       haskellPackages.hspec-discover
+                      haskellPackages.graphmod
                       libsnark 
                     ];
                   };

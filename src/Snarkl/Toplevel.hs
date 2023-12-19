@@ -29,9 +29,6 @@ module Snarkl.Toplevel
     -- * Serialize the resulting witness assignment
     serialize_witnesses,
 
-    -- * Serialize R1CS in 'libsnark' format
-    serialize_r1cs,
-
     -- * For a given Snarkl computation, use 'libsnark' to test: (1)
 
     -- key generation, (2) proof generation, and (3) proof
@@ -52,9 +49,9 @@ module Snarkl.Toplevel
 
     -- * Re-exported modules
     module Snarkl.Language.SyntaxMonad,
-    module Snarkl.Constraints,
-    module Snarkl.Simplify,
-    module Snarkl.R1CS,
+    module Snarkl.Constraint.Constraints,
+    module Snarkl.Constraint.Simplify,
+    module Snarkl.Backend.R1CS,
   )
 where
 
@@ -63,16 +60,15 @@ import Data.List (sort)
 import qualified Data.Map.Strict as Map
 import Data.Typeable
 import Prettyprinter
-import Snarkl.Common
+import Snarkl.Backend.R1CS
 import Snarkl.Compile
-import Snarkl.Constraints
+import Snarkl.Constraint.Constraints
+import Snarkl.Constraint.Simplify
 import Snarkl.Errors
+import Snarkl.Field
 import Snarkl.Interp (interp)
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
-import Snarkl.R1CS
-import qualified Snarkl.Serialize as Serialize
-import Snarkl.Simplify
 import System.Exit
 import System.IO
   ( IOMode (WriteMode),
@@ -229,7 +225,7 @@ wit_of_r1cs inputs r1cs =
 serialize_inputs :: [Rational] -> R1CS Rational -> String
 serialize_inputs inputs r1cs =
   let inputs_assgn = IntMap.fromList $ zip (r1cs_in_vars r1cs) inputs
-   in Serialize.serialize_assgn inputs_assgn
+   in serialize_assgn inputs_assgn
 
 -- | For a given R1CS and inputs, serialize the witness variable assignment.
 serialize_witnesses :: [Rational] -> R1CS Rational -> String
@@ -237,10 +233,7 @@ serialize_witnesses inputs r1cs =
   let num_in_vars = length $ r1cs_in_vars r1cs
       assgn = wit_of_r1cs inputs r1cs
       inputs_assgn = IntMap.fromList $ drop num_in_vars $ IntMap.toAscList assgn
-   in Serialize.serialize_assgn inputs_assgn
-
-serialize_r1cs :: R1CS Rational -> String
-serialize_r1cs = Serialize.serialize_r1cs
+   in serialize_assgn inputs_assgn
 
 ------------------------------------------------------
 --

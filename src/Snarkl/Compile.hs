@@ -17,17 +17,17 @@ import Control.Monad.State
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
 import Data.Typeable
+import Snarkl.Backend.R1CS
 import Snarkl.Common
-import Snarkl.Constraints
-import Snarkl.Dataflow
+import Snarkl.Constraint.Constraints
+import Snarkl.Constraint.Dataflow
+import Snarkl.Constraint.SimplMonad
+import Snarkl.Constraint.Simplify
+import Snarkl.Constraint.Solve
 import Snarkl.Errors
 import Snarkl.Field
 import Snarkl.Language.Expr
 import Snarkl.Language.TExpr
-import Snarkl.R1CS
-import Snarkl.SimplMonad
-import Snarkl.Simplify
-import Snarkl.Solve
 
 ----------------------------------------------------------------
 --

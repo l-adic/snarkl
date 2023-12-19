@@ -1,4 +1,7 @@
-module Snarkl.Constraints
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
+module Snarkl.Constraint.Constraints
   ( CoeffList (..),
     coeff_insert,
     Constraint (..),
@@ -11,15 +14,14 @@ module Snarkl.Constraints
   )
 where
 
-import Control.Monad.State
+import Control.Monad.State (State)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
-import Snarkl.Common
-import Snarkl.Errors
-import Snarkl.Field
-import Snarkl.Poly
-import Snarkl.R1CS
-import Snarkl.SimplMonad
+import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
+import Snarkl.Common (Assgn, Var)
+import Snarkl.Constraint.SimplMonad (SEnv)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field (add, one, zero))
 
 ----------------------------------------------------------------
 --            Intermediate Constraint Language
