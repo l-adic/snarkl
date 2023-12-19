@@ -1,4 +1,7 @@
 {-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
 
 module Snarkl.Toplevel
   ( -- * Interpret Snarkl Computations
@@ -97,7 +100,7 @@ comp_interp ::
   Rational
 comp_interp mf inputs =
   let TExpPkg _ in_vars e = texp_of_comp mf
-      input_map = IntMap.fromList $ zip in_vars inputs
+      input_map = Map.fromList $ zip in_vars inputs
    in case interp input_map e of
         Left err -> failWith err
         Right (_, Nothing) -> failWith $ ErrMsg $ show e ++ " evaluated to bot"
@@ -114,7 +117,7 @@ data TExpPkg ty = TExpPkg
   { -- | The number of free variables in the computation.
     comp_num_vars :: Int,
     -- | The variables marked as inputs.
-    comp_input_vars :: [Var],
+    comp_input_vars :: [Variable],
     -- | The resulting 'TExp'.
     comp_texp :: TExp ty Rational
   }
@@ -136,7 +139,7 @@ texp_of_comp mf =
   case run mf of
     Left err -> failWith err
     Right (e, rho) ->
-      let nv = next_var rho
+      let nv = next_variable rho
           in_vars = sort $ input_vars rho
        in TExpPkg nv in_vars e
   where
@@ -163,7 +166,7 @@ constrs_of_texp ::
   (Typeable ty) =>
   TExpPkg ty ->
   ConstraintSystem Rational
-constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp out in_vars e
+constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp out (map (\(Variable v) -> v) in_vars) e
 
 -- | Snarkl.Compile Snarkl computations to constraint systems.
 constrs_of_comp ::

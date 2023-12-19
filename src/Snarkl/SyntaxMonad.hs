@@ -153,7 +153,7 @@ type ObjMap =
     ObjBind -- maps to result r
 
 data Env = Env
-  { next_var :: Int,
+  { next_variable :: Int,
     next_loc :: Int,
     input_vars :: [Variable],
     obj_map :: ObjMap,
@@ -186,14 +186,14 @@ arr len =
   State
     ( \s ->
         let loc = next_loc s
-            (binds, nextVar) = runSupply (new_binds loc) (next_var s)
+            (binds, nextVar) = runSupply (new_binds loc) (next_variable s)
          in Right
               ( TEVal (VLoc (TLoc $ next_loc s)),
                 -- allocate:
                 -- (1) a new location (next_loc s)
-                -- (2) 'len' new variables [(next_var s)..(next_var s+len-1)]
+                -- (2) 'len' new variables [(next_variable s)..(next_variable s+len-1)]
                 s
-                  { next_var = nextVar,
+                  { next_variable = nextVar,
                     next_loc = loc P.+ 1,
                     obj_map = binds `Map.union` obj_map s
                   }
@@ -220,15 +220,15 @@ input_arr len =
   State
     ( \s ->
         let loc = next_loc s
-            ((binds, vars), nextVar) = runSupply (new_binds loc) (next_var s)
+            ((binds, vars), nextVar) = runSupply (new_binds loc) (next_variable s)
          in Right
               ( TEVal (VLoc (TLoc $ next_loc s)),
                 -- allocate:
                 -- (1) a new location (next_loc s)
-                -- (2) 'len' new variables [(next_var s)..(next_var s+len-1)]
+                -- (2) 'len' new variables [(next_variable s)..(next_variable s+len-1)]
                 -- (3) mark new vars. as inputs
                 s
-                  { next_var = nextVar,
+                  { next_variable = nextVar,
                     next_loc = loc P.+ 1,
                     input_vars = vars ++ input_vars s,
                     obj_map = binds `Map.union` obj_map s
@@ -421,11 +421,11 @@ fresh_var :: State Env (TExp ty a)
 fresh_var =
   State
     ( \s ->
-        let (v, nextVar) = runSupply (Variable <$> fresh) (next_var s)
+        let (v, nextVar) = runSupply (Variable <$> fresh) (next_variable s)
          in Right
               ( TEVar (TVar v),
                 s
-                  { next_var = nextVar
+                  { next_variable = nextVar
                   }
               )
     )
@@ -434,11 +434,11 @@ fresh_input :: State Env (TExp ty a)
 fresh_input =
   State
     ( \s ->
-        let (v, nextVar) = runSupply (Variable <$> fresh) (next_var s)
+        let (v, nextVar) = runSupply (Variable <$> fresh) (next_variable s)
          in Right
               ( TEVar (TVar v),
                 s
-                  { next_var = nextVar,
+                  { next_variable = nextVar,
                     input_vars = v : input_vars s
                   }
               )
