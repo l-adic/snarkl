@@ -10,6 +10,7 @@ module Snarkl.TExpr
     TUnop (..),
     TOp (..),
     TVar (..),
+    Variable (..),
     Loc,
     TLoc (..),
     booleanVarsOfTexp,
@@ -24,10 +25,11 @@ where
 import Data.Kind (Type)
 import Data.Typeable (Proxy (..), Typeable, eqT, typeOf, typeRep, type (:~:) (Refl))
 import Prettyprinter (Pretty (pretty), line, parens, (<+>))
-import Snarkl.Common (Op, UnOp, Var)
+import Snarkl.Common (Op, UnOp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Expr
   ( Exp (EAssert, EIf, EUnit, EUnop, EVal, EVar),
+    Variable (..),
     exp_binop,
     exp_seq,
   )
@@ -95,7 +97,7 @@ type instance Rep ('TFSum f g) x = 'TSum (Rep f x) (Rep g x)
 
 type instance Rep ('TFComp f g) x = Rep f (Rep g x)
 
-newtype TVar (ty :: Ty) = TVar Var deriving (Eq, Show)
+newtype TVar (ty :: Ty) = TVar Variable deriving (Eq, Show)
 
 instance Pretty (TVar ty) where
   pretty (TVar x) = "var_" <> pretty x
@@ -222,10 +224,10 @@ teSeq te1 te2 = case (te1, te2) of
   (TESeq tx ty, _) -> teSeq tx (teSeq ty te2)
   (_, _) -> te2
 
-booleanVarsOfTexp :: (Typeable ty) => TExp ty a -> [Var]
+booleanVarsOfTexp :: (Typeable ty) => TExp ty a -> [Variable]
 booleanVarsOfTexp = go []
   where
-    go :: (Typeable ty) => [Var] -> TExp ty a -> [Var]
+    go :: (Typeable ty) => [Variable] -> TExp ty a -> [Variable]
     go vars (TEVar t@(TVar x)) =
       if varIsBoolean t
         then x : vars
@@ -239,12 +241,12 @@ booleanVarsOfTexp = go []
     go vars (TESeq e1 e2) = go (go vars e1) e2
     go vars TEBot = vars
 
-varOfTExp :: (Show (TExp ty a)) => TExp ty a -> Var
+varOfTExp :: (Show (TExp ty a)) => TExp ty a -> Variable
 varOfTExp te = case lastSeq te of
   TEVar (TVar x) -> x
   _ -> failWith $ ErrMsg ("varOfTExp: expected var: " ++ show te)
 
-locOfTexp :: (Show (TExp ty a)) => TExp ty a -> Var
+locOfTexp :: (Show (TExp ty a)) => TExp ty a -> Loc
 locOfTexp te = case lastSeq te of
   TEVal (VLoc (TLoc l)) -> l
   _ -> failWith $ ErrMsg ("locOfTexp: expected loc: " ++ show te)

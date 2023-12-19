@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
 module Snarkl.Compile
   ( CEnv (CEnv),
     SimplParam (..),
