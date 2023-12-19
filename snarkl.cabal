@@ -32,6 +32,10 @@ library
   exposed-modules:
     Control.Monad.Supply
     Control.Monad.Supply.Class
+    Snarkl.Backend.R1CS
+    Snarkl.Backend.R1CS.Poly
+    Snarkl.Backend.R1CS.R1CS
+    Snarkl.Backend.R1CS.Serialize
     Snarkl.Common
     Snarkl.Compile
     Snarkl.Constraint.Constraints
@@ -47,10 +51,6 @@ library
     Snarkl.Language.Syntax
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
-    Snarkl.Backend.R1CS.Poly
-    Snarkl.Backend.R1CS.Serialize
-    Snarkl.Backend.R1CS.R1CS
-    Snarkl.Backend.R1CS
     Snarkl.Toplevel
 
   default-extensions:
