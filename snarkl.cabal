@@ -30,25 +30,28 @@ library
 
   -- -threaded
   exposed-modules:
+    Control.Monad.Supply
+    Control.Monad.Supply.Class
+    Snarkl.Backend.R1CS
+    Snarkl.Backend.R1CS.Poly
+    Snarkl.Backend.R1CS.R1CS
+    Snarkl.Backend.R1CS.Serialize
     Snarkl.Common
     Snarkl.Compile
-    Snarkl.Constraints
-    Snarkl.Dataflow
+    Snarkl.Constraint.Constraints
+    Snarkl.Constraint.Dataflow
+    Snarkl.Constraint.Simplify
+    Snarkl.Constraint.SimplMonad
+    Snarkl.Constraint.Solve
+    Snarkl.Constraint.UnionFind
     Snarkl.Errors
-    Snarkl.Expr
     Snarkl.Field
     Snarkl.Interp
-    Snarkl.Poly
-    Snarkl.R1CS
-    Snarkl.Serialize
-    Snarkl.Simplify
-    Snarkl.SimplMonad
-    Snarkl.Solve
-    Snarkl.Syntax
-    Snarkl.SyntaxMonad
-    Snarkl.TExpr
+    Snarkl.Language.Expr
+    Snarkl.Language.Syntax
+    Snarkl.Language.SyntaxMonad
+    Snarkl.Language.TExpr
     Snarkl.Toplevel
-    Snarkl.UnionFind
 
   default-extensions:
     BangPatterns
@@ -96,6 +99,7 @@ test-suite spec
     Snarkl.Example.Queue
     Snarkl.Example.Stack
     Snarkl.Example.Tree
+    Test.Snarkl.DataflowSpec
     Test.Snarkl.Unit.Programs
     Test.Snarkl.UnitSpec
     Test.UnionFindSpec
@@ -164,7 +168,6 @@ benchmark criterion
     , snarkl      >=0.1.0.0
 
 executable print-examples
-  type:               exitcode-stdio-1.0
   main-is:            Main.hs
   other-modules:
     Snarkl.Example.Basic
@@ -191,6 +194,6 @@ executable print-examples
   build-depends:
       base           >=4.7
     , containers
-    , hspec       >=2.0
+    , hspec          >=2.0
     , prettyprinter
     , snarkl         >=0.1.0.0

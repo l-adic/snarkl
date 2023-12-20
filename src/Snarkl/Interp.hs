@@ -1,17 +1,20 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
 module Snarkl.Interp
   ( interp,
   )
 where
 
 import Control.Monad
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Snarkl.Common
 import Snarkl.Errors
 import Snarkl.Field
-import Snarkl.TExpr
+import Snarkl.Language.TExpr
 
-type Env a = IntMap (Maybe a)
+type Env a = Map Variable (Maybe a)
 
 newtype InterpM a b = InterpM {runInterpM :: Env a -> Either ErrMsg (Env a, b)}
 
@@ -36,14 +39,14 @@ raise_err :: ErrMsg -> InterpM a b
 raise_err err =
   InterpM (\_ -> Left err)
 
-add_binds :: [(Var, Maybe a)] -> InterpM a (Maybe b)
+add_binds :: [(Variable, Maybe a)] -> InterpM a (Maybe b)
 add_binds binds =
-  InterpM (\rho -> Right (IntMap.union (IntMap.fromList binds) rho, Nothing))
+  InterpM (\rho -> Right (Map.union (Map.fromList binds) rho, Nothing))
 
-lookup_var :: (Show a) => Var -> InterpM a (Maybe a)
+lookup_var :: (Show a) => Variable -> InterpM a (Maybe a)
 lookup_var x =
   InterpM
-    ( \rho -> case IntMap.lookup x rho of
+    ( \rho -> case Map.lookup x rho of
         Nothing ->
           Left $
             ErrMsg $
@@ -177,5 +180,5 @@ interp_texp e =
         interp_texp e2
     TEBot -> return Nothing
 
-interp :: (Field a) => IntMap a -> TExp ty a -> Either ErrMsg (Env a, Maybe a)
-interp rho e = runInterpM (interp_texp e) $ IntMap.map Just rho
+interp :: (Field a) => Map Variable a -> TExp ty a -> Either ErrMsg (Env a, Maybe a)
+interp rho e = runInterpM (interp_texp e) $ Map.map Just rho

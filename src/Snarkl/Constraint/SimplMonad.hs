@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
-module Snarkl.SimplMonad
+module Snarkl.Constraint.SimplMonad
   ( SEnv (..),
     unite_vars,
     bind_var,
@@ -17,8 +17,8 @@ import Control.Monad.State
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import Snarkl.Common
+import qualified Snarkl.Constraint.UnionFind as UF
 import Snarkl.Field
-import qualified Snarkl.UnionFind as UF
 
 ----------------------------------------------------------------
 --                  Simplifier State Monad                    --
@@ -30,7 +30,7 @@ data SolveMode = UseMagic | JustSimplify
 data SEnv a = SEnv
   { -- | Equalities among variables,
     -- together with a partial map from variables
-    -- to constants (hidden inside the "Snarkl.UnionFind"
+    -- to constants (hidden inside the "Snarkl.Constraint.UnionFind"
     -- data structure).
     eqs :: UF.UnionFind Var a,
     -- | Use Magic only in 'solve_mode'.

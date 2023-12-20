@@ -3,9 +3,9 @@
 module Snarkl.Example.Basic where
 
 import Snarkl.Compile
-import Snarkl.Syntax
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
+import Snarkl.Language.Syntax
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
   ( fromRational,

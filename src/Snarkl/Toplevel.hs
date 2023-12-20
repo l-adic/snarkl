@@ -1,4 +1,7 @@
 {-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
 
 module Snarkl.Toplevel
   ( -- * Interpret Snarkl Computations
@@ -26,9 +29,6 @@ module Snarkl.Toplevel
     -- * Serialize the resulting witness assignment
     serialize_witnesses,
 
-    -- * Serialize R1CS in 'libsnark' format
-    serialize_r1cs,
-
     -- * For a given Snarkl computation, use 'libsnark' to test: (1)
 
     -- key generation, (2) proof generation, and (3) proof
@@ -48,10 +48,10 @@ module Snarkl.Toplevel
     benchmark_comp,
 
     -- * Re-exported modules
-    module Snarkl.SyntaxMonad,
-    module Snarkl.Constraints,
-    module Snarkl.Simplify,
-    module Snarkl.R1CS,
+    module Snarkl.Language.SyntaxMonad,
+    module Snarkl.Constraint.Constraints,
+    module Snarkl.Constraint.Simplify,
+    module Snarkl.Backend.R1CS,
   )
 where
 
@@ -60,16 +60,15 @@ import Data.List (sort)
 import qualified Data.Map.Strict as Map
 import Data.Typeable
 import Prettyprinter
-import Snarkl.Common
+import Snarkl.Backend.R1CS
 import Snarkl.Compile
-import Snarkl.Constraints
+import Snarkl.Constraint.Constraints
+import Snarkl.Constraint.Simplify
 import Snarkl.Errors
+import Snarkl.Field
 import Snarkl.Interp (interp)
-import Snarkl.R1CS
-import qualified Snarkl.Serialize as Serialize
-import Snarkl.Simplify
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import System.Exit
 import System.IO
   ( IOMode (WriteMode),
@@ -97,7 +96,7 @@ comp_interp ::
   Rational
 comp_interp mf inputs =
   let TExpPkg _ in_vars e = texp_of_comp mf
-      input_map = IntMap.fromList $ zip in_vars inputs
+      input_map = Map.fromList $ zip in_vars inputs
    in case interp input_map e of
         Left err -> failWith err
         Right (_, Nothing) -> failWith $ ErrMsg $ show e ++ " evaluated to bot"
@@ -114,7 +113,7 @@ data TExpPkg ty = TExpPkg
   { -- | The number of free variables in the computation.
     comp_num_vars :: Int,
     -- | The variables marked as inputs.
-    comp_input_vars :: [Var],
+    comp_input_vars :: [Variable],
     -- | The resulting 'TExp'.
     comp_texp :: TExp ty Rational
   }
@@ -136,7 +135,7 @@ texp_of_comp mf =
   case run mf of
     Left err -> failWith err
     Right (e, rho) ->
-      let nv = next_var rho
+      let nv = next_variable rho
           in_vars = sort $ input_vars rho
        in TExpPkg nv in_vars e
   where
@@ -163,7 +162,7 @@ constrs_of_texp ::
   (Typeable ty) =>
   TExpPkg ty ->
   ConstraintSystem Rational
-constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp out in_vars e
+constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp out (map (\(Variable v) -> v) in_vars) e
 
 -- | Snarkl.Compile Snarkl computations to constraint systems.
 constrs_of_comp ::
@@ -226,7 +225,7 @@ wit_of_r1cs inputs r1cs =
 serialize_inputs :: [Rational] -> R1CS Rational -> String
 serialize_inputs inputs r1cs =
   let inputs_assgn = IntMap.fromList $ zip (r1cs_in_vars r1cs) inputs
-   in Serialize.serialize_assgn inputs_assgn
+   in serialize_assgn inputs_assgn
 
 -- | For a given R1CS and inputs, serialize the witness variable assignment.
 serialize_witnesses :: [Rational] -> R1CS Rational -> String
@@ -234,10 +233,7 @@ serialize_witnesses inputs r1cs =
   let num_in_vars = length $ r1cs_in_vars r1cs
       assgn = wit_of_r1cs inputs r1cs
       inputs_assgn = IntMap.fromList $ drop num_in_vars $ IntMap.toAscList assgn
-   in Serialize.serialize_assgn inputs_assgn
-
-serialize_r1cs :: R1CS Rational -> String
-serialize_r1cs = Serialize.serialize_r1cs
+   in serialize_assgn inputs_assgn
 
 ------------------------------------------------------
 --

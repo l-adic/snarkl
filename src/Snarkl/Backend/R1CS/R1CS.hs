@@ -1,8 +1,5 @@
-module Snarkl.R1CS
-  ( Field,
-    Poly,
-    Var,
-    R1C (..),
+module Snarkl.Backend.R1CS.R1CS
+  ( R1C (..),
     R1CS (..),
     sat_r1cs,
     num_constraints,
@@ -11,10 +8,10 @@ where
 
 import Control.Parallel.Strategies
 import qualified Data.IntMap.Lazy as Map
+import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
 import Snarkl.Errors
 import Snarkl.Field
-import Snarkl.Poly
 
 ----------------------------------------------------------------
 --                Rank-1 Constraint Systems                   --

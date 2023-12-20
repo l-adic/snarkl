@@ -8,9 +8,9 @@ import Snarkl.Example.Lam
 import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
-import Snarkl.Syntax
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
+import Snarkl.Language.Syntax
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Prelude hiding

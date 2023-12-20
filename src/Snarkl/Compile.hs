@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
 module Snarkl.Compile
   ( CEnv (CEnv),
     SimplParam (..),
@@ -11,20 +14,42 @@ module Snarkl.Compile
 where
 
 import Control.Monad.State
+  ( State,
+    gets,
+    modify,
+    runState,
+  )
+import Data.Either (fromRight)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
-import Data.Typeable
-import Snarkl.Common
-import Snarkl.Constraints
-import Snarkl.Dataflow
-import Snarkl.Errors
-import Snarkl.Expr
-import Snarkl.Field
-import Snarkl.R1CS
-import Snarkl.SimplMonad
-import Snarkl.Simplify
-import Snarkl.Solve
-import Snarkl.TExpr
+import Data.Typeable (Typeable)
+import Snarkl.Backend.R1CS.R1CS (R1CS)
+import Snarkl.Common (Op (..), UnOp (..), Var)
+import Snarkl.Constraint.Constraints
+  ( Constraint (CMagic, CMult),
+    ConstraintSystem (ConstraintSystem),
+    cadd,
+    constraint_vars,
+    r1cs_of_cs,
+    renumber_constraints,
+  )
+import Snarkl.Constraint.Dataflow (removeUnreachable)
+import Snarkl.Constraint.SimplMonad (bind_of_var, bind_var)
+import Snarkl.Constraint.Simplify (do_simplify)
+import Snarkl.Constraint.Solve (solve)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field (add, inv, neg, one, zero))
+import Snarkl.Language.Expr
+  ( Exp (..),
+    Variable (Variable),
+    do_const_prop,
+    var_of_exp,
+  )
+import Snarkl.Language.TExpr
+  ( TExp,
+    booleanVarsOfTexp,
+    expOfTExp,
+  )
 
 ----------------------------------------------------------------
 --
@@ -42,16 +67,10 @@ add_constraint c =
   modify (\cenv -> cenv {cur_cs = Set.insert c $ cur_cs cenv})
 
 get_constraints :: State (CEnv a) [Constraint a]
-get_constraints =
-  do
-    cenv <- get
-    return $ Set.toList $ cur_cs cenv
+get_constraints = gets (Set.toList . cur_cs)
 
 get_next_var :: State (CEnv a) Var
-get_next_var =
-  do
-    cenv <- get
-    return (next_var cenv)
+get_next_var = gets next_var
 
 set_next_var :: Var -> State (CEnv a) ()
 set_next_var next = modify (\cenv -> cenv {next_var = next})
@@ -86,13 +105,13 @@ encode_or :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_or (x, y, z) =
   do
     x_mult_y <- fresh_var
-    cs_of_exp x_mult_y (EBinop Mult [EVar x, EVar y])
+    cs_of_exp x_mult_y (EBinop Mult [EVar (Variable x), EVar (Variable y)])
     cs_of_exp
       x_mult_y
       ( EBinop
           Sub
-          [ EBinop Add [EVar x, EVar y],
-            EVar z
+          [ EBinop Add [EVar (Variable x), EVar (Variable y)],
+            EVar (Variable z)
           ]
       )
 
@@ -131,11 +150,11 @@ encode_boolean_eq (x, y, z) = cs_of_exp z e
     e =
       EBinop
         Add
-        [ EBinop Mult [EVar x, EVar y],
+        [ EBinop Mult [EVar (Variable x), EVar (Variable y)],
           EBinop
             Mult
-            [ EBinop Sub [EVal one, EVar x],
-              EBinop Sub [EVal one, EVar y]
+            [ EBinop Sub [EVal one, EVar (Variable x)],
+              EBinop Sub [EVal one, EVar (Variable y)]
             ]
         ]
 
@@ -146,8 +165,8 @@ encode_eq (x, y, z) = cs_of_exp z e
   where
     e =
       EAssert
-        (EVar z)
-        (EUnop ZEq (EBinop Sub [EVar x, EVar y]))
+        (EVar (Variable z))
+        (EUnop ZEq (EBinop Sub [EVar (Variable x), EVar (Variable y)]))
 
 -- | Constraint 'y = x!=0 ? 1 : 0'.
 -- The encoding is:
@@ -167,8 +186,8 @@ encode_zneq (x, y) =
     nm <- fresh_var
     add_constraint (CMagic nm [x, m] mf)
     -- END magic.
-    cs_of_exp y (EBinop Mult [EVar x, EVar m])
-    cs_of_exp neg_y (EBinop Sub [EVal one, EVar y])
+    cs_of_exp y (EBinop Mult [EVar (Variable x), EVar (Variable m)])
+    cs_of_exp neg_y (EBinop Sub [EVal one, EVar (Variable y)])
     add_constraint
       (CMult (one, neg_y) (one, x) (zero, Nothing))
   where
@@ -206,7 +225,7 @@ encode_zeq (x, y) =
   do
     neg_y <- fresh_var
     encode_zneq (x, neg_y)
-    cs_of_exp y (EBinop Sub [EVal one, EVar neg_y])
+    cs_of_exp y (EBinop Sub [EVal one, EVar (Variable neg_y)])
 
 -- | Encode the constraint 'un_op x = y'
 encode_unop :: (Field a) => UnOp -> (Var, Var) -> State (CEnv a) ()
@@ -238,7 +257,7 @@ encode_binop op (x, y, z) = go op
 
 encode_linear :: (Field a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
 encode_linear out xs =
-  let c = foldl (\acc d -> d `add` acc) zero $ map (either (\_ -> zero) id) xs
+  let c = foldl (flip add) zero $ map (fromRight zero) xs
    in add_constraint $
         cadd c $
           (out, neg one) : remove_consts xs
@@ -250,13 +269,13 @@ encode_linear out xs =
 
 cs_of_exp :: (Field a) => Var -> Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
-  EVar x ->
+  EVar (Variable x) ->
     do
       ensure_equal (out, x)
   EVal c ->
     do
       ensure_const (out, c)
-  EUnop op (EVar x) ->
+  EUnop op (EVar (Variable x)) ->
     do
       encode_unop op (x, out)
   EUnop op e1 ->
@@ -277,12 +296,13 @@ cs_of_exp out e = case e of
     -- We special-case linear combinations in this way to avoid having
     -- to introduce new multiplication gates for multiplication by
     -- constant scalars.
-    let go_linear [] = return []
-        go_linear (EBinop Mult [EVar x, EVal coeff] : es') =
+    let go_linear :: (Field a) => [Exp a] -> State (CEnv a) [Either (Var, a) a]
+        go_linear [] = return []
+        go_linear (EBinop Mult [EVar (Variable x), EVal coeff] : es') =
           do
             labels <- go_linear es'
             return $ Left (x, coeff) : labels
-        go_linear (EBinop Mult [EVal coeff, EVar y] : es') =
+        go_linear (EBinop Mult [EVal coeff, EVar (Variable y)] : es') =
           do
             labels <- go_linear es'
             return $ Left (y, coeff) : labels
@@ -302,7 +322,7 @@ cs_of_exp out e = case e of
           do
             labels <- go_linear es'
             return $ Right c : labels
-        go_linear (EVar x : es') =
+        go_linear (EVar (Variable x) : es') =
           do
             labels <- go_linear es'
             return $ Left (x, one) : labels
@@ -327,8 +347,9 @@ cs_of_exp out e = case e of
         rev_pol (Left (x, c) : ls) = Left (x, neg c) : rev_pol ls
         rev_pol (Right c : ls) = Right (neg c) : rev_pol ls
 
+        go_other :: (Field a) => [Exp a] -> State (CEnv a) [Var]
         go_other [] = return []
-        go_other (EVar x : es') =
+        go_other (EVar (Variable x) : es') =
           do
             labels <- go_other es'
             return $ x : labels
@@ -340,8 +361,8 @@ cs_of_exp out e = case e of
             return $ e1_out : labels
 
         encode_labels [] = return ()
-        encode_labels (_ : []) = failWith $ ErrMsg ("wrong arity in " ++ show e)
-        encode_labels (l1 : l2 : []) = encode_binop op (l1, l2, out)
+        encode_labels [_] = failWith $ ErrMsg ("wrong arity in " ++ show e)
+        encode_labels [l1, l2] = encode_binop op (l1, l2, out)
         encode_labels (l1 : l2 : labels') =
           do
             res_out <- fresh_var
@@ -381,7 +402,7 @@ cs_of_exp out e = case e of
   -- compilation of e2 directly.
   EAssert e1 e2 ->
     do
-      let x = var_of_exp e1
+      let Variable x = var_of_exp e1
       cs_of_exp x e2
   ESeq le ->
     do
@@ -427,7 +448,7 @@ r1cs_of_constraints simpl cs =
         if must_simplify simpl
           then do_simplify False Map.empty cs
           else (undefined, cs)
-      cs_dataflow = if must_dataflow simpl then remove_unreachable cs_simpl else cs_simpl
+      cs_dataflow = if must_dataflow simpl then removeUnreachable cs_simpl else cs_simpl
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
       -- their renumbered counterparts.
@@ -464,13 +485,13 @@ constraints_of_texp out in_vars te =
       let boolean_in_vars =
             Set.toList $
               Set.fromList in_vars
-                `Set.intersection` Set.fromList (booleanVarsOfTexp te)
+                `Set.intersection` Set.fromList (map (\(Variable v) -> v) $ booleanVarsOfTexp te)
           e0 = expOfTExp te
           e = do_const_prop e0
       -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
       cs_of_exp out e
       -- Add boolean constraints
-      _ <- mapM ensure_boolean boolean_in_vars
+      mapM_ ensure_boolean boolean_in_vars
       cs <- get_constraints
       let constraint_set = Set.fromList cs
           num_constraint_vars =

@@ -4,9 +4,9 @@ module Snarkl.Example.Keccak where
 
 import Data.Bits hiding (xor)
 import qualified Data.Map.Strict as Map
-import Snarkl.Syntax
-import Snarkl.SyntaxMonad
-import Snarkl.TExpr
+import Snarkl.Language.Syntax
+import Snarkl.Language.SyntaxMonad
+import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
   ( fromRational,

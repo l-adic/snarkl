@@ -9,8 +9,8 @@
 module Test.UnionFindSpec where
 
 import Snarkl.Common
+import Snarkl.Constraint.UnionFind
 import Snarkl.Errors
-import Snarkl.UnionFind
 import Test.Hspec
 import Test.QuickCheck
 

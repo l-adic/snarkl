@@ -1,6 +1,9 @@
 {-# LANGUAGE RebindableSyntax #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-module Snarkl.SyntaxMonad
+{-# HLINT ignore "Use camelCase" #-}
+
+module Snarkl.Language.SyntaxMonad
   ( -- | Computation monad
     Comp,
     CompResult,
@@ -39,19 +42,21 @@ module Snarkl.SyntaxMonad
     assert_bot,
     -- | Show the current state.
     debug_state,
-    -- | Misc. functions imported by 'Snarkl.Syntax.hs'
+    -- | Misc. functions imported by 'Snarkl.Language.Syntax.hs'
     get_addr,
     guard,
     add_objects,
   )
 where
 
+import Control.Monad (forM, replicateM)
+import Control.Monad.Supply (Supply, runSupply)
+import Control.Monad.Supply.Class (MonadSupply (fresh))
 import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
 import Data.Typeable
-import Snarkl.Common
 import Snarkl.Errors
-import Snarkl.TExpr
+import Snarkl.Language.TExpr
 import Prelude hiding
   ( fromRational,
     negate,
@@ -127,7 +132,7 @@ return e = State (\s -> Right (lastSeq e, s))
 --    vars.
 data ObjBind
   = ObjLoc Loc
-  | ObjVar Var
+  | ObjVar Variable
   deriving
     ( Show
     )
@@ -148,11 +153,11 @@ type ObjMap =
     ObjBind -- maps to result r
 
 data Env = Env
-  { next_var :: Int,
+  { next_variable :: Int,
     next_loc :: Int,
-    input_vars :: [Int],
+    input_vars :: [Variable],
     obj_map :: ObjMap,
-    anal_map :: Map.Map Var AnalBind -- supporting simple constprop analyses
+    anal_map :: Map.Map Variable AnalBind -- supporting simple constprop analyses
   }
   deriving (Show)
 
@@ -180,26 +185,33 @@ arr 0 = raise_err $ ErrMsg "array must have size > 0"
 arr len =
   State
     ( \s ->
-        Right
-          ( TEVal (VLoc (TLoc $ next_loc s)),
-            -- allocate:
-            -- (1) a new location (next_loc s)
-            -- (2) 'len' new variables [(next_var s)..(next_var s+len-1)]
-            s
-              { next_var = (P.+) (next_var s) len,
-                next_loc = (P.+) (next_loc s) 1,
-                obj_map = new_binds s `Map.union` obj_map s
-              }
-          )
+        let loc = next_loc s
+            (binds, nextVar) = runSupply (new_binds loc) (next_variable s)
+         in Right
+              ( TEVal (VLoc (TLoc $ next_loc s)),
+                -- allocate:
+                -- (1) a new location (next_loc s)
+                -- (2) 'len' new variables [(next_variable s)..(next_variable s+len-1)]
+                s
+                  { next_variable = nextVar,
+                    next_loc = loc P.+ 1,
+                    obj_map = binds `Map.union` obj_map s
+                  }
+              )
     )
   where
-    new_binds :: Env -> ObjMap
-    new_binds s =
+    new_binds :: Loc -> Supply ObjMap
+    new_binds loc =
       Map.fromList
-        ( zip
-            (zip (repeat (next_loc s)) [0 .. ((P.-) len 1)])
-            (map ObjVar [next_var s .. ((P.+) (next_var s) ((P.-) len 1))])
-        )
+        <$> forM
+          [0 .. (len P.- 1)]
+          ( \i ->
+              fresh P.>>= \v ->
+                pure
+                  ( (loc, i),
+                    ObjVar (Variable v)
+                  )
+          )
 
 -- Like 'arr', but declare fresh array variables as inputs.
 input_arr :: Int -> Comp ('TArr ty)
@@ -207,27 +219,43 @@ input_arr 0 = raise_err $ ErrMsg "array must have size > 0"
 input_arr len =
   State
     ( \s ->
-        Right
-          ( TEVal (VLoc (TLoc $ next_loc s)),
-            -- allocate:
-            -- (1) a new location (next_loc s)
-            -- (2) 'len' new variables [(next_var s)..(next_var s+len-1)]
-            -- (3) mark new vars. as inputs
-            s
-              { next_var = (P.+) (next_var s) len,
-                next_loc = (P.+) (next_loc s) 1,
-                input_vars = new_vars s ++ input_vars s,
-                obj_map = new_binds s `Map.union` obj_map s
-              }
-          )
+        let loc = next_loc s
+            ((binds, vars), nextVar) = runSupply (new_binds loc) (next_variable s)
+         in Right
+              ( TEVal (VLoc (TLoc $ next_loc s)),
+                -- allocate:
+                -- (1) a new location (next_loc s)
+                -- (2) 'len' new variables [(next_variable s)..(next_variable s+len-1)]
+                -- (3) mark new vars. as inputs
+                s
+                  { next_variable = nextVar,
+                    next_loc = loc P.+ 1,
+                    input_vars = vars ++ input_vars s,
+                    obj_map = binds `Map.union` obj_map s
+                  }
+              )
     )
   where
-    new_binds :: Env -> ObjMap
-    new_binds s =
-      Map.fromList
-        (zip (zip (repeat (next_loc s)) [0 .. ((P.-) len 1)]) (map ObjVar $ new_vars s))
+    new_binds :: Loc -> Supply (ObjMap, [Variable])
+    new_binds loc =
+      new_vars P.>>= \vs ->
+        pure
+          ( Map.fromList $ zipWith (\i v -> ((loc, i), ObjVar v)) [0 .. (len P.- 1)] vs,
+            vs
+          )
+    --       (Map.fromList $ zipWith (\(i, v) -> ((next_loc s, i), ObjVar v)) [0 .. (len vs P.- 1)] vs, vs)
 
-    new_vars s = [next_var s .. ((P.+) (next_var s) ((P.-) len 1))]
+    --        ( forM [0 .. (len P.- 1)] \i ->
+    --                fresh P.>>= \v ->
+    --                  pure
+    --                    ( ( (next_loc s, i),
+    --                        ObjVar (Variable v)
+    --                      ),
+    --                      Variable v
+    --                    )
+    --            )
+    new_vars :: Supply [Variable]
+    new_vars = replicateM len (Variable <$> fresh)
 
 get_addr :: (Loc, Int) -> Comp ty
 get_addr (l, i) =
@@ -393,25 +421,27 @@ fresh_var :: State Env (TExp ty a)
 fresh_var =
   State
     ( \s ->
-        Right
-          ( TEVar (TVar $ next_var s),
-            s
-              { next_var = (P.+) (next_var s) 1
-              }
-          )
+        let (v, nextVar) = runSupply (Variable <$> fresh) (next_variable s)
+         in Right
+              ( TEVar (TVar v),
+                s
+                  { next_variable = nextVar
+                  }
+              )
     )
 
 fresh_input :: State Env (TExp ty a)
 fresh_input =
   State
     ( \s ->
-        Right
-          ( TEVar (TVar $ next_var s),
-            s
-              { next_var = (P.+) (next_var s) 1,
-                input_vars = next_var s : input_vars s
-              }
-          )
+        let (v, nextVar) = runSupply (Variable <$> fresh) (next_variable s)
+         in Right
+              ( TEVar (TVar v),
+                s
+                  { next_variable = nextVar,
+                    input_vars = v : input_vars s
+                  }
+              )
     )
 
 fresh_loc :: State Env (TExp ty a)
@@ -438,7 +468,7 @@ add_objects binds =
           )
     )
 
-add_statics :: [(Var, AnalBind)] -> Comp 'TUnit
+add_statics :: [(Variable, AnalBind)] -> Comp 'TUnit
 add_statics binds =
   State
     ( \s ->

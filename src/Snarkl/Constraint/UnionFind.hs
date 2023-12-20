@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Snarkl.UnionFind
+module Snarkl.Constraint.UnionFind
   ( root,
     unite,
     empty,
