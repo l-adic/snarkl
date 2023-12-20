@@ -8,8 +8,16 @@ import qualified Data.Map as Map
 import Snarkl.Field
 import Snarkl.Interp (interp)
 import Snarkl.Language.Syntax
+  ( apply,
+    curry,
+    lambda,
+    pair,
+    uncurry,
+    (*),
+    (+),
+  )
 import qualified Snarkl.Language.SyntaxMonad as SM
-import Snarkl.Language.TExpr (TExp, Ty (..), Variable (Variable))
+import Snarkl.Language.TExpr (TExp, Ty (TField, TFun, TProd))
 import Snarkl.Toplevel (comp_interp)
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Testable (property))

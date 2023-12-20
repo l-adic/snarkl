@@ -124,7 +124,9 @@ interpExpr e = case e of
           v2 <- interpExpr e2
           addBinds [(x, v2)]
       (_, _) -> raiseErr $ ErrMsg $ show e1 ++ " not a variable"
-  ESeq es -> last <$> mapM interpExpr es
+  ESeq es -> case es of
+    [] -> failWith $ ErrMsg "empty sequence"
+    _ -> last <$> mapM interpExpr es
   EUnit -> return $ Just one
   where
     interpBinopExpr :: (Field a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
