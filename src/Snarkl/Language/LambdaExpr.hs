@@ -4,7 +4,6 @@ module Snarkl.Language.LambdaExpr
   ( Exp (..),
     expOfLambdaExp,
     expBinop,
-    expSeq,
   )
 where
 

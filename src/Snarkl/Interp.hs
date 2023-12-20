@@ -10,11 +10,9 @@ import Data.Data (Typeable)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Snarkl.Common (Op (..), UnOp (ZEq))
-import Snarkl.Compile (expOfTExp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Field (Field (..))
-import Snarkl.Language.Expr (Exp (..), Variable)
-import Snarkl.Language.TExpr (TExp)
+import Snarkl.Language (Exp (..), TExp, Variable, expOfTExp)
 
 type Env a = Map Variable (Maybe a)
 

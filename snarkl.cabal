@@ -47,6 +47,7 @@ library
     Snarkl.Errors
     Snarkl.Field
     Snarkl.Interp
+    Snarkl.Language
     Snarkl.Language.Expr
     Snarkl.Language.LambdaExpr
     Snarkl.Language.Syntax
@@ -101,8 +102,8 @@ test-suite spec
     Snarkl.Example.Stack
     Snarkl.Example.Tree
     Test.Snarkl.DataflowSpec
-    Test.Snarkl.Unit.Programs
     Test.Snarkl.LambdaSpec
+    Test.Snarkl.Unit.Programs
     Test.Snarkl.UnitSpec
     Test.UnionFindSpec
 

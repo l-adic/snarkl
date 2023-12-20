@@ -7,11 +7,13 @@ import qualified Data.IntMap.Lazy as Map
 import Data.Maybe
   ( isJust,
   )
-import Snarkl.Common
+import Snarkl.Common (Assgn)
 import Snarkl.Constraint.Constraints
-import Snarkl.Constraint.Simplify
-import Snarkl.Errors
-import Snarkl.Field
+  ( ConstraintSystem (cs_in_vars, cs_num_vars, cs_out_vars),
+  )
+import Snarkl.Constraint.Simplify (do_simplify)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field)
 
 -- | Starting from an initial partial assignment [env], solve the
 -- constraints [cs] and return the resulting complete assignment.

@@ -6,15 +6,31 @@ module Snarkl.Constraint.Simplify
   )
 where
 
-import Control.Monad.State
+import Control.Monad.State (State, runState)
 import Data.List (foldl')
 import qualified Data.Set as Set
-import Snarkl.Common
+import Snarkl.Common (Assgn, Var, intMapToMap)
 import Snarkl.Constraint.Constraints
+  ( CoeffList (CoeffList, asList),
+    Constraint (..),
+    ConstraintSet,
+    ConstraintSystem (cs_constraints, cs_in_vars, cs_out_vars),
+    cadd,
+    constraint_vars,
+  )
 import Snarkl.Constraint.SimplMonad
+  ( SEnv (SEnv),
+    SolveMode (JustSimplify, UseMagic),
+    assgn_of_vars,
+    bind_of_var,
+    bind_var,
+    root_of_var,
+    solve_mode_flag,
+    unite_vars,
+  )
 import qualified Snarkl.Constraint.UnionFind as UF
-import Snarkl.Errors
-import Snarkl.Field
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field (..))
 
 ----------------------------------------------------------------
 --                         Substitution                       --
