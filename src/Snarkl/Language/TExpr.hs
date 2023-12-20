@@ -32,12 +32,6 @@ import Snarkl.Field (Field (one, zero))
 import qualified Snarkl.Language.Expr as Core
 import qualified Snarkl.Language.LambdaExpr as LE
 
---  ( Exp (EAssert, EIf, EUnit, EUnop, EVal, EVar),
---    Variable (..),
---    exp_binop,
---    exp_seq,
---  )
-
 data TFunct where
   TFConst :: Ty -> TFunct
   TFId :: TFunct
