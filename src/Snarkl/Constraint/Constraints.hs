@@ -17,12 +17,7 @@ where
 import Control.Monad.State (State)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
-import Snarkl.Backend.R1CS.Poly
-  ( Poly (Poly),
-    const_poly,
-    var_poly,
-  )
-import Snarkl.Backend.R1CS.R1CS (R1C (R1C), R1CS (R1CS))
+import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
 import Snarkl.Common (Assgn, Var)
 import Snarkl.Constraint.SimplMonad (SEnv)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
