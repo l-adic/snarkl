@@ -63,12 +63,48 @@ module Snarkl.Language.Syntax
 where
 
 import Data.String (IsString (..))
-import Data.Typeable
+import Data.Typeable (Typeable)
 import Snarkl.Common
-import Snarkl.Errors
+  ( Op (Add, And, BEq, Div, Eq, Mult, Sub, XOr),
+    UnOp (ZEq),
+  )
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.SyntaxMonad
+  ( Comp,
+    Env,
+    State (..),
+    arr,
+    assert_bot,
+    assert_false,
+    assert_true,
+    false,
+    fresh_var,
+    fst_pair,
+    get,
+    guard,
+    input_arr,
+    is_bot,
+    is_false,
+    is_true,
+    pair,
+    raise_err,
+    return,
+    runState,
+    set,
+    snd_pair,
+    true,
+    unit,
+    (>>=),
+  )
 import Snarkl.Language.TExpr
-import Unsafe.Coerce
+  ( Rep,
+    TExp (TEAbs, TEApp, TEBinop, TEBot, TEIf, TEUnop, TEVal, TEVar),
+    TOp (TOp),
+    TUnop (TUnop),
+    Ty (TArr, TBool, TField, TFun, TMu, TProd, TSum, TUnit),
+    Val (VFalse, VField, VTrue, VUnit),
+  )
+import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
   ( curry,
     fromRational,

@@ -48,7 +48,7 @@ module Snarkl.Toplevel
     benchmark_comp,
 
     -- * Re-exported modules
-    module Snarkl.Language.SyntaxMonad,
+    module Snarkl.Language,
     module Snarkl.Constraint.Constraints,
     module Snarkl.Constraint.Simplify,
     module Snarkl.Backend.R1CS,
@@ -58,18 +58,21 @@ where
 import qualified Data.IntMap.Lazy as IntMap
 import Data.List (sort)
 import qualified Data.Map.Strict as Map
-import Data.Typeable
-import Prettyprinter
+import Data.Typeable (Typeable)
+import Prettyprinter (Pretty (pretty))
 import Snarkl.Backend.R1CS
 import Snarkl.Compile
+  ( SimplParam,
+    constraints_of_texp,
+    r1cs_of_constraints,
+  )
 import Snarkl.Constraint.Constraints
 import Snarkl.Constraint.Simplify
-import Snarkl.Errors
-import Snarkl.Field
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field)
 import Snarkl.Interp (interp)
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
-import System.Exit
+import Snarkl.Language
+import System.Exit (ExitCode (..))
 import System.IO
   ( IOMode (WriteMode),
     hFlush,
@@ -79,6 +82,11 @@ import System.IO
     withFile,
   )
 import System.Process
+  ( CreateProcess (cwd),
+    createProcess,
+    proc,
+    waitForProcess,
+  )
 import Prelude
 import qualified Prelude as P
 
