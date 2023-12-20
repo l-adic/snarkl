@@ -405,6 +405,9 @@ instance
           _ <- assert_bot x
           return x
 
+instance (Typeable a, Typeable b, Derive b) => Derive ('TFun a b) where
+  derive n = lambda $ \_ -> derive n
+
 -- | Types for which conditional branches can be pushed to the leaves
 -- of two values.
 class Zippable ty where
@@ -532,6 +535,23 @@ instance
 
 instance Zippable ('TArr ty) where
   zip_vals _ x _ = return x
+
+instance
+  ( Zippable ty1,
+    Typeable ty1,
+    Derive ty1,
+    Zippable ty2,
+    Typeable ty2,
+    Derive ty2
+  ) =>
+  Zippable ('TFun ty1 ty2)
+  where
+  zip_vals b e1 e2 = do
+    y1 <- lambda $ \x ->
+      return $ TEApp e1 x
+    y2 <- lambda $ \x ->
+      return $ TEApp e2 x
+    zip_vals b y1 y2
 
 ----------------------------------------------------
 --
