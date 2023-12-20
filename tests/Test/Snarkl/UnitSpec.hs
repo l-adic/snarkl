@@ -8,8 +8,8 @@ import Snarkl.Example.Lam
 import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
-import Snarkl.Language.TExpr
-import Snarkl.Toplevel
+import Snarkl.Language.Syntax hiding (negate)
+import Snarkl.Toplevel (test_comp)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.Snarkl.Unit.Programs
 import Prelude

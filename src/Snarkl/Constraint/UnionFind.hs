@@ -13,8 +13,8 @@ module Snarkl.Constraint.UnionFind
 where
 
 import qualified Data.Map as Map
-import Data.Maybe
-import Snarkl.Errors
+import Data.Maybe (fromMaybe)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
 data UnionFind node a = UnionFind
   { ids :: Map.Map node node,

@@ -54,9 +54,21 @@ import Control.Monad.Supply (Supply, runSupply)
 import Control.Monad.Supply.Class (MonadSupply (fresh))
 import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
-import Data.Typeable
-import Snarkl.Errors
+import Data.Typeable (Typeable)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Language.Expr (Variable (..))
 import Snarkl.Language.TExpr
+  ( Loc,
+    TExp (TEAssert, TEBinop, TEBot, TESeq, TEUnop, TEVal, TEVar),
+    TLoc (TLoc),
+    TVar (TVar),
+    Ty (TArr, TBool, TProd, TUnit),
+    Val (VFalse, VLoc, VTrue, VUnit),
+    lastSeq,
+    locOfTexp,
+    teSeq,
+    varOfTExp,
+  )
 import Prelude hiding
   ( fromRational,
     negate,

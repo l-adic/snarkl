@@ -9,14 +9,20 @@ module Snarkl.Language.Expr
   )
 where
 
-import Control.Monad.State
+import Control.Monad.State (State, gets, modify, runState)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Prettyprinter
-import Snarkl.Common
-import Snarkl.Errors
-import Snarkl.Field
+  ( Pretty (pretty),
+    hsep,
+    parens,
+    punctuate,
+    (<+>),
+  )
+import Snarkl.Common (Op, UnOp, isAssoc)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field)
 
 newtype Variable = Variable Int deriving (Eq, Ord, Show, Pretty)
 

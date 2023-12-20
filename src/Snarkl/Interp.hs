@@ -1,18 +1,18 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# LANGUAGE LambdaCase #-}
 
-{-# HLINT ignore "Use camelCase" #-}
 module Snarkl.Interp
   ( interp,
   )
 where
 
-import Control.Monad
+import Control.Monad (ap, foldM)
+import Data.Data (Typeable)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Snarkl.Common
-import Snarkl.Errors
-import Snarkl.Field
-import Snarkl.Language.TExpr
+import Snarkl.Common (Op (..), UnOp (ZEq))
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Field (Field (..))
+import Snarkl.Language (Exp (..), TExp, Variable, expOfTExp)
 
 type Env a = Map Variable (Maybe a)
 
@@ -35,16 +35,16 @@ instance Applicative (InterpM a) where
   pure = return
   mf <*> ma = ap mf ma
 
-raise_err :: ErrMsg -> InterpM a b
-raise_err err =
+raiseErr :: ErrMsg -> InterpM a b
+raiseErr err =
   InterpM (\_ -> Left err)
 
-add_binds :: [(Variable, Maybe a)] -> InterpM a (Maybe b)
-add_binds binds =
+addBinds :: [(Variable, Maybe a)] -> InterpM a (Maybe b)
+addBinds binds =
   InterpM (\rho -> Right (Map.union (Map.fromList binds) rho, Nothing))
 
-lookup_var :: (Show a) => Variable -> InterpM a (Maybe a)
-lookup_var x =
+lookupVar :: (Show a) => Variable -> InterpM a (Maybe a)
+lookupVar x =
   InterpM
     ( \rho -> case Map.lookup x rho of
         Nothing ->
@@ -57,128 +57,108 @@ lookup_var x =
         Just v -> Right (rho, v)
     )
 
-field_of_bool :: (Field a) => Bool -> a
-field_of_bool b = if b then one else zero
+fieldOfBool :: (Field a) => Bool -> a
+fieldOfBool b = if b then one else zero
 
-case_of_field :: (Field a) => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
-case_of_field Nothing f = f Nothing
-case_of_field (Just v) f =
-  if v == zero
-    then f $ Just False
-    else
-      if v == one
-        then f $ Just True
-        else raise_err $ ErrMsg $ "expected " ++ show v ++ " to be boolean"
+caseOfField :: (Field a) => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
+caseOfField Nothing f = f Nothing
+caseOfField (Just v) f
+  | v == zero = f $ Just False
+  | v == one = f $ Just True
+  | otherwise = raiseErr $ ErrMsg $ "expected " ++ show v ++ " to be boolean"
 
-bool_of_field :: (Field a) => a -> InterpM a Bool
-bool_of_field v =
-  case_of_field
+boolOfField :: (Field a) => a -> InterpM a Bool
+boolOfField v =
+  caseOfField
     (Just v)
-    ( \mb -> case mb of
-        Nothing -> raise_err $ ErrMsg "internal error in bool_of_field"
+    ( \case
+        Nothing -> raiseErr $ ErrMsg "internal error in bool_of_field"
         Just b -> return b
     )
 
-interp_unop ::
-  (Field a) =>
-  TUnop ty1 ty2 ->
-  TExp ty1 a ->
-  InterpM a (Maybe a)
-interp_unop op e2 =
-  do
-    mv2 <- interp_texp e2
-    case mv2 of
-      Nothing -> return Nothing
-      Just v2 ->
-        case op of
-          TUnop ZEq -> return $ Just $ field_of_bool (v2 == zero)
-
-interp_binop ::
-  (Field a) =>
-  TOp ty1 ty2 ty3 ->
-  TExp ty1 a ->
-  TExp ty2 a ->
-  InterpM a (Maybe a)
-interp_binop op e1 e2 =
-  do
-    mv1 <- interp_texp e1
-    mv2 <- interp_texp e2
-    case (mv1, mv2) of
-      (Nothing, _) -> return Nothing
-      (_, Nothing) -> return Nothing
-      (Just v1, Just v2) ->
-        do
-          v <- interp_val_binop v1 v2
-          return $ Just v
-  where
-    interp_val_binop v1 v2 =
-      case op of
-        TOp Add -> return $ v1 `add` v2
-        TOp Sub -> return $ v1 `add` (neg v2)
-        TOp Mult -> return $ v1 `mult` v2
-        TOp Div ->
-          case inv v2 of
-            Nothing -> raise_err $ ErrMsg $ show v2 ++ " not invertible"
-            Just v2' -> return $ v1 `mult` v2'
-        TOp And -> interp_boolean_binop v1 v2
-        TOp Or -> interp_boolean_binop v1 v2
-        TOp XOr -> interp_boolean_binop v1 v2
-        TOp BEq -> interp_boolean_binop v1 v2
-        TOp Eq -> return $ field_of_bool $ v1 == v2
-
-    interp_boolean_binop v1 v2 =
-      do
-        b1 <- bool_of_field v1
-        b2 <- bool_of_field v2
-        let b = case op of
-              TOp And -> b1 && b2
-              TOp Or -> b1 || b2
-              TOp XOr -> (b1 && not b2) || (b2 && not b1)
-              TOp BEq -> b1 == b2
-              _ -> failWith $ ErrMsg "internal error in interp_binop"
-         in return $ field_of_bool b
-
-interp_val :: (Field a) => Val ty a -> InterpM a a
-interp_val v =
-  case v of
-    VField v' -> return v'
-    VTrue -> return $ field_of_bool True
-    VFalse -> return $ field_of_bool False
-    VUnit -> return one
-    VLoc _ -> raise_err $ ErrMsg "location in source program"
-
-interp_texp ::
-  ( Field a
+interpTExp ::
+  ( Field a,
+    Typeable ty
   ) =>
-  TExp ty1 a ->
+  TExp ty a ->
   InterpM a (Maybe a)
-interp_texp e =
-  case e of
-    TEVar (TVar x) -> lookup_var x
-    TEVal v -> interp_val v >>= return . Just
-    TEUnop op e2 -> interp_unop op e2
-    TEBinop op e1 e2 -> interp_binop op e1 e2
-    TEIf eb e1 e2 ->
-      do
-        mv <- interp_texp eb
-        case_of_field
-          mv
-          ( \mb -> case mb of
-              Nothing -> return Nothing
-              Just b -> if b then interp_texp e1 else interp_texp e2
-          )
-    TEAssert e1 e2 ->
-      case (e1, e2) of
-        (TEVar (TVar x), _) ->
-          do
-            v2 <- interp_texp e2
-            add_binds [(x, v2)]
-        (_, _) -> raise_err $ ErrMsg $ show e1 ++ " not a variable"
-    TESeq e1 e2 ->
-      do
-        _ <- interp_texp e1
-        interp_texp e2
-    TEBot -> return Nothing
+interpTExp e = do
+  let _exp = expOfTExp e
+  interpExpr _exp
 
-interp :: (Field a) => Map Variable a -> TExp ty a -> Either ErrMsg (Env a, Maybe a)
-interp rho e = runInterpM (interp_texp e) $ Map.map Just rho
+interp ::
+  (Field a, Typeable ty) =>
+  Map Variable a ->
+  TExp ty a ->
+  Either ErrMsg (Env a, Maybe a)
+interp rho e = runInterpM (interpTExp e) $ Map.map Just rho
+
+interpExpr ::
+  (Field a) =>
+  Exp a ->
+  InterpM a (Maybe a)
+interpExpr e = case e of
+  EVar x -> lookupVar x
+  EVal v -> pure $ Just v
+  EUnop op e2 -> do
+    v2 <- interpExpr e2
+    case v2 of
+      Nothing -> pure Nothing
+      Just v2' -> case op of
+        ZEq -> return $ Just $ fieldOfBool (v2' == zero)
+  EBinop op _es -> case _es of
+    [] -> failWith $ ErrMsg "empty binary args"
+    (a : as) -> do
+      b <- interpExpr a
+      foldM (interpBinopExpr op) b as
+  EIf eb e1 e2 ->
+    do
+      mb <- interpExpr eb
+      case mb of
+        Nothing -> pure Nothing
+        Just _b -> boolOfField _b >>= \b -> if b then interpExpr e1 else interpExpr e2
+  EAssert e1 e2 ->
+    case (e1, e2) of
+      (EVar x, _) ->
+        do
+          v2 <- interpExpr e2
+          addBinds [(x, v2)]
+      (_, _) -> raiseErr $ ErrMsg $ show e1 ++ " not a variable"
+  ESeq es -> case es of
+    [] -> failWith $ ErrMsg "empty sequence"
+    _ -> last <$> mapM interpExpr es
+  EUnit -> return $ Just one
+  where
+    interpBinopExpr :: (Field a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
+    interpBinopExpr _ Nothing _ = return Nothing
+    interpBinopExpr _op (Just a1) _exp = do
+      ma2 <- interpExpr _exp
+      case ma2 of
+        Nothing -> return Nothing
+        Just a2 -> Just <$> op a1 a2
+      where
+        op :: (Field a) => a -> a -> InterpM a a
+        op a b = case _op of
+          Add -> pure $ a `add` b
+          Sub -> pure $ a `add` neg b
+          Mult -> pure $ a `mult` b
+          Div -> pure $
+            case inv b of
+              Nothing -> failWith $ ErrMsg $ show b ++ " not invertible"
+              Just b' -> a `mult` b'
+          And -> interpBooleanBinop a b
+          Or -> interpBooleanBinop a b
+          XOr -> interpBooleanBinop a b
+          BEq -> interpBooleanBinop a b
+          Eq -> pure $ fieldOfBool $ a == b
+        interpBooleanBinop :: (Field a) => a -> a -> InterpM a a
+        interpBooleanBinop a b =
+          do
+            b1 <- boolOfField a
+            b2 <- boolOfField b
+            case _op of
+              And -> return $ fieldOfBool $ b1 && b2
+              Or -> return $ fieldOfBool $ b1 || b2
+              XOr -> return $ fieldOfBool $ (b1 && not b2) || (b2 && not b1)
+              BEq -> return $ fieldOfBool $ b1 == b2
+              _ -> failWith $ ErrMsg "internal error in interp_binop"

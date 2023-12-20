@@ -55,21 +55,63 @@ module Snarkl.Language.Syntax
     forall,
     forall2,
     forall3,
+    lambda,
+    curry,
+    uncurry,
+    apply,
   )
 where
 
 import Data.String (IsString (..))
-import Data.Typeable
+import Data.Typeable (Typeable)
 import Snarkl.Common
-import Snarkl.Errors
+  ( Op (Add, And, BEq, Div, Eq, Mult, Sub, XOr),
+    UnOp (ZEq),
+  )
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.SyntaxMonad
+  ( Comp,
+    Env,
+    State (..),
+    arr,
+    assert_bot,
+    assert_false,
+    assert_true,
+    false,
+    fresh_var,
+    fst_pair,
+    get,
+    guard,
+    input_arr,
+    is_bot,
+    is_false,
+    is_true,
+    pair,
+    raise_err,
+    return,
+    runState,
+    set,
+    snd_pair,
+    true,
+    unit,
+    (>>=),
+  )
 import Snarkl.Language.TExpr
-import Unsafe.Coerce
+  ( Rep,
+    TExp (TEAbs, TEApp, TEBinop, TEBot, TEIf, TEUnop, TEVal, TEVar),
+    TOp (TOp),
+    TUnop (TUnop),
+    Ty (TArr, TBool, TField, TFun, TMu, TProd, TSum, TUnit),
+    Val (VFalse, VField, VTrue, VUnit),
+  )
+import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
-  ( fromRational,
+  ( curry,
+    fromRational,
     negate,
     not,
     return,
+    uncurry,
     (&&),
     (*),
     (+),
@@ -673,3 +715,50 @@ times ::
   Comp 'TUnit ->
   Comp 'TUnit
 times n mf = forall [0 .. dec n] (const mf)
+
+lambda ::
+  (Typeable a) =>
+  (Typeable b) =>
+  (TExp a Rational -> Comp b) ->
+  Comp ('TFun a b)
+lambda f = do
+  _x <- fresh_var
+  case _x of
+    TEVar x ->
+      -- we need to inline the monadic computation to avoid having
+      -- bound variable escape there scope in assertions for (f _x)
+      State
+        ( \s ->
+            case runState (f _x) s of
+              Left err -> Left err
+              Right (res, s') -> Right (TEAbs x res, s')
+        )
+    _ -> error "impossible: lambda"
+
+curry ::
+  (Typeable a) =>
+  (Typeable b) =>
+  (Typeable c) =>
+  (TExp ('TProd a b) Rational -> Comp c) ->
+  TExp a Rational ->
+  Comp ('TFun b c)
+curry f a = do
+  lambda $ \b -> do
+    p <- pair a b
+    f p
+
+uncurry ::
+  (Typeable a) =>
+  (Typeable b) =>
+  (Typeable c) =>
+  (TExp a Rational -> Comp ('TFun b c)) ->
+  TExp ('TProd a b) Rational ->
+  Comp c
+uncurry f p = do
+  x <- fst_pair p
+  y <- snd_pair p
+  g <- f x
+  return $ TEApp g y
+
+apply :: (Typeable a, Typeable b) => TExp ('TFun a b) Rational -> TExp a Rational -> Comp b
+apply f x = return $ TEApp f x

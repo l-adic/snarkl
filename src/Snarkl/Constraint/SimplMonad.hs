@@ -16,9 +16,9 @@ where
 import Control.Monad.State
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
-import Snarkl.Common
+import Snarkl.Common (Assgn, Var)
 import qualified Snarkl.Constraint.UnionFind as UF
-import Snarkl.Field
+import Snarkl.Field (Field)
 
 ----------------------------------------------------------------
 --                  Simplifier State Monad                    --

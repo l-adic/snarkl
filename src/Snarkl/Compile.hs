@@ -9,7 +9,6 @@ module Snarkl.Compile
     get_constraints,
     constraints_of_texp,
     r1cs_of_constraints,
-    expOfTExp,
   )
 where
 
@@ -39,16 +38,14 @@ import Snarkl.Constraint.Simplify (do_simplify)
 import Snarkl.Constraint.Solve (solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Field (Field (add, inv, neg, one, zero))
-import Snarkl.Language.Expr
+import Snarkl.Language
   ( Exp (..),
+    TExp,
     Variable (Variable),
-    do_const_prop,
-    var_of_exp,
-  )
-import Snarkl.Language.TExpr
-  ( TExp,
     booleanVarsOfTexp,
+    do_const_prop,
     expOfTExp,
+    var_of_exp,
   )
 
 ----------------------------------------------------------------
