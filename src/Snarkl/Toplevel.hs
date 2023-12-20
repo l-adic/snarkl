@@ -91,6 +91,7 @@ import qualified Prelude as P
 -- | Using the executable semantics for the 'TExp' language, execute
 -- the computation on the provided inputs, returning the 'Rational' result.
 comp_interp ::
+  (Typeable ty) =>
   Comp ty ->
   [Rational] ->
   Rational

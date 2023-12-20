@@ -48,6 +48,7 @@ library
     Snarkl.Field
     Snarkl.Interp
     Snarkl.Language.Expr
+    Snarkl.Language.LambdaExpr
     Snarkl.Language.Syntax
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr

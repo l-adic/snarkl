@@ -45,10 +45,11 @@ import Snarkl.Language.Expr
     do_const_prop,
     var_of_exp,
   )
+import Snarkl.Language.LambdaExpr (expOfLambdaExp)
 import Snarkl.Language.TExpr
   ( TExp,
     booleanVarsOfTexp,
-    expOfTExp,
+    lambdaExpOfTExp,
   )
 
 ----------------------------------------------------------------
@@ -502,3 +503,6 @@ constraints_of_texp out in_vars te =
           num_constraint_vars
           in_vars
           [out]
+
+expOfTExp :: (Field a, Typeable ty) => TExp ty a -> Exp a
+expOfTExp = expOfLambdaExp . lambdaExpOfTExp
