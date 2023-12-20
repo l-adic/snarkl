@@ -112,7 +112,7 @@ interpExpr e = case e of
     [] -> failWith $ ErrMsg "empty binary args"
     (a : as) -> do
       b <- interpExpr a
-      foldM (interp_binop_expr op) b as
+      foldM (interpBinopExpr op) b as
   EIf eb e1 e2 ->
     do
       mb <- interpExpr eb
@@ -129,9 +129,9 @@ interpExpr e = case e of
   ESeq es -> last <$> mapM interpExpr es
   EUnit -> return $ Just one
   where
-    interp_binop_expr :: (Field a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
-    interp_binop_expr _ Nothing _ = return Nothing
-    interp_binop_expr _op (Just a1) _exp = do
+    interpBinopExpr :: (Field a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
+    interpBinopExpr _ Nothing _ = return Nothing
+    interpBinopExpr _op (Just a1) _exp = do
       ma2 <- interpExpr _exp
       case ma2 of
         Nothing -> return Nothing
