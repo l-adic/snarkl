@@ -58,6 +58,7 @@ module Snarkl.Language.Syntax
     lambda,
     curry,
     uncurry,
+    apply,
   )
 where
 
@@ -722,3 +723,6 @@ uncurry f p = do
   y <- snd_pair p
   g <- f x
   return $ TEApp g y
+
+apply :: (Typeable a, Typeable b) => TExp ('TFun a b) Rational -> TExp a Rational -> Comp b
+apply f x = return $ TEApp f x
