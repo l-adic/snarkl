@@ -10,6 +10,7 @@ module Snarkl.Language.Expr
 where
 
 import Control.Monad.State (State, gets, modify, runState)
+import Data.Field.Galois (PrimeField)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -22,13 +23,12 @@ import Prettyprinter
   )
 import Snarkl.Common (Op, UnOp, isAssoc)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field)
 
 newtype Variable = Variable Int deriving (Eq, Ord, Show, Pretty)
 
 data Exp :: Type -> Type where
   EVar :: Variable -> Exp a
-  EVal :: (Field a) => a -> Exp a
+  EVal :: (PrimeField a) => a -> Exp a
   EUnop :: UnOp -> Exp a -> Exp a
   EBinop :: Op -> [Exp a] -> Exp a
   EIf :: Exp a -> Exp a -> Exp a -> Exp a
@@ -83,7 +83,7 @@ is_pure e =
     ESeq es -> all is_pure es
     EUnit -> True
 
-const_prop :: (Field a) => Exp a -> State (Map Variable a) (Exp a)
+const_prop :: (PrimeField a) => Exp a -> State (Map Variable a) (Exp a)
 const_prop e =
   case e of
     EVar x -> lookup_var x
@@ -114,7 +114,7 @@ const_prop e =
         return $ ESeq es'
     EUnit -> return EUnit
   where
-    lookup_var :: (Field a) => Variable -> State (Map Variable a) (Exp a)
+    lookup_var :: (PrimeField a) => Variable -> State (Map Variable a) (Exp a)
     lookup_var x0 =
       gets
         ( \m -> case Map.lookup x0 m of
@@ -127,7 +127,7 @@ const_prop e =
         modify (Map.insert x0 c0)
         return EUnit
 
-do_const_prop :: (Field a) => Exp a -> Exp a
+do_const_prop :: (PrimeField a) => Exp a -> Exp a
 do_const_prop e = fst $ runState (const_prop e) Map.empty
 
 instance (Pretty a) => Pretty (Exp a) where

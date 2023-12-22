@@ -30,9 +30,9 @@ ln_width :: Int
 ln_width = 32
 
 round1 ::
-  (Int -> TExp 'TBool Rational) ->
+  (Int -> TExp 'TBool (Prime p)) ->
   -- | 'i'th bit of round constant
-  TExp ('TArr ('TArr ('TArr 'TBool))) Rational ->
+  TExp ('TArr ('TArr ('TArr 'TBool))) (Prime p) ->
   -- | Array 'a'
   Comp 'TUnit
 round1 rc a =
@@ -175,7 +175,7 @@ trunc rc =
   fromIntegral rc
     .&. dec (truncate (2 ** fromIntegral ln_width :: Double) :: Int)
 
-get_round_bit :: Int -> Int -> TExp 'TBool Rational
+get_round_bit :: Int -> Int -> TExp 'TBool (Prime p)
 get_round_bit round_i bit_i =
   let the_bit =
         round_consts !! round_i

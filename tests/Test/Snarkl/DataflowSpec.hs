@@ -19,29 +19,29 @@ data SEnv a = SEnv
 
 -- Sample Constraints
 -- 3 + 4 * var_1 + 3 * var_2 == 0
-constraint1 :: Constraint Rational
-constraint1 = CAdd (3 :: Rational) (CoeffList [(1, 4 :: Rational), (2, 3 :: Rational)])
+constraint1 :: Constraint (Prime p)
+constraint1 = CAdd (3 :: (Prime p)) (CoeffList [(1, 4 :: (Prime p)), (2, 3 :: (Prime p))])
 
 -- 2 * var_1 + 3 * var_2 == 4 * var_3
-constraint2 :: Constraint Rational
-constraint2 = CMult (2 :: Rational, 1) (3 :: Rational, 2) (4 :: Rational, Just 3)
+constraint2 :: Constraint (Prime p)
+constraint2 = CMult (2 :: (Prime p), 1) (3 :: (Prime p), 2) (4 :: (Prime p), Just 3)
 
 -- NOTE: notice 4 doesn't count as a variable here, WHY?
-constraint3 :: Constraint Rational
+constraint3 :: Constraint (Prime p)
 constraint3 = CMagic 4 [2, 3] $ \vars -> do
   let sumVars = sum vars
   return (sumVars > 5)
 
 -- 4 is independent from 1,2,3
-constraint4 :: Constraint Rational
-constraint4 = CAdd (3 :: Rational) (CoeffList [(4, 4 :: Rational), (5, 3 :: Rational)])
+constraint4 :: Constraint (Prime p)
+constraint4 = CAdd (3 :: (Prime p)) (CoeffList [(4, 4 :: (Prime p)), (5, 3 :: (Prime p))])
 
 -- 5 is independent from 1,2,3 but intersects 4
-constraint5 :: Constraint Rational
-constraint5 = CAdd (3 :: Rational) (CoeffList [(4, 4 :: Rational), (1, 3 :: Rational)])
+constraint5 :: Constraint (Prime p)
+constraint5 = CAdd (3 :: (Prime p)) (CoeffList [(4, 4 :: (Prime p)), (1, 3 :: (Prime p))])
 
 -- Example ConstraintSystem
-exampleConstraintSystem :: ConstraintSystem Rational
+exampleConstraintSystem :: ConstraintSystem (Prime p)
 exampleConstraintSystem =
   ConstraintSystem
     { cs_constraints = Set.fromList [constraint1, constraint2, constraint3],
@@ -52,7 +52,7 @@ exampleConstraintSystem =
 
 -- Expected Result after removeUnreachable is applied
 -- (Adjust this based on the expected behavior of removeUnreachable)
-expectedResult :: ConstraintSystem Rational
+expectedResult :: ConstraintSystem (Prime p)
 expectedResult =
   exampleConstraintSystem
     { cs_constraints = Set.fromList [constraint1, constraint2, constraint3, constraint5]

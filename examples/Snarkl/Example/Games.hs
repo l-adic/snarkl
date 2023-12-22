@@ -9,7 +9,7 @@ import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
-  ( fromRational,
+  ( from(Prime p),
     negate,
     return,
     (&&),
@@ -20,6 +20,7 @@ import Prelude hiding
     (>>),
     (>>=),
   )
+import Data.Field.Galois (Prime)
 
 {---------------------------------------------------------
   See Vytiniotis & Kennedy,
@@ -27,8 +28,8 @@ import Prelude hiding
  ---------------------------------------------------------}
 
 data ISO (t :: Ty) (s :: Ty) = Iso
-  { to :: TExp t Rational -> Comp s,
-    from :: TExp s Rational -> Comp t
+  { to :: TExp t (Prime p) -> Comp s,
+    from :: TExp s (Prime p) -> Comp t
   }
 
 data Game :: Ty -> * where
@@ -90,7 +91,7 @@ fail_game =
   Single
     ( Iso
         (\_ -> failWith $ ErrMsg "fail-games can't encode")
-        ( \(_ :: TExp 'TField Rational) ->
+        ( \(_ :: TExp 'TField (Prime p)) ->
             failWith $ ErrMsg "fail-games can't decode"
         )
     )

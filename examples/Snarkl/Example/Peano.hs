@@ -28,7 +28,7 @@ nat_zero =
     x <- inl unit
     roll x
 
-nat_succ :: TExp TNat Rational -> Comp TNat
+nat_succ :: TExp TNat (Prime p) -> Comp TNat
 nat_succ n =
   do
     x <- inr n
@@ -36,8 +36,8 @@ nat_succ n =
 
 nat_eq ::
   Int ->
-  TExp TNat Rational ->
-  TExp TNat Rational ->
+  TExp TNat (Prime p) ->
+  TExp TNat (Prime p) ->
   Comp 'TBool
 nat_eq level n m
   | level > 0 =

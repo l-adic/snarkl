@@ -23,16 +23,16 @@ type TF a = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst a) ('TFProd 'TFId 'TFId)
 
 type TTree a = 'TMu (TF a)
 
-type Rat = TExp 'TField Rational
+type Rat = TExp 'TField (Prime p)
 
-type Tree a = TExp (TTree a) Rational
+type Tree a = TExp (TTree a) (Prime p)
 
 leaf :: (Typeable a) => Comp (TTree a)
 leaf = do
   t <- inl unit
   roll t
 
-node :: (Typeable a) => TExp a Rational -> Tree a -> Tree a -> Comp (TTree a)
+node :: (Typeable a) => TExp a (Prime p) -> Tree a -> Tree a -> Comp (TTree a)
 node v t1 t2 = do
   p <- pair t1 t2
   p' <- pair v p
@@ -46,7 +46,7 @@ case_tree ::
   ) =>
   Tree a ->
   Comp a1 ->
-  (TExp a Rational -> Tree a -> Tree a -> Comp a1) ->
+  (TExp a (Prime p) -> Tree a -> Tree a -> Comp a1) ->
   Comp a1
 case_tree t f_leaf f_node = do
   t' <- unroll t
@@ -65,8 +65,8 @@ map_tree ::
     Zippable a1,
     Derive a1
   ) =>
-  (TExp a Rational -> State Env (TExp a1 Rational)) ->
-  TExp (TTree a) Rational ->
+  (TExp a (Prime p) -> State Env (TExp a1 (Prime p))) ->
+  TExp (TTree a) (Prime p) ->
   Comp (TTree a1)
 map_tree f t =
   fix go t

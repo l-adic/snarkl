@@ -14,7 +14,7 @@ import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Prelude hiding
-  ( fromRational,
+  ( from(Prime p),
     negate,
     return,
     (&&),
@@ -74,7 +74,7 @@ prog4 =
     return (x * y)
 
 -- | 5. Identical to 4, except with more constraints
-pow :: Int -> TExp TField Rational -> TExp TField Rational
+pow :: Int -> TExp TField (Prime p) -> TExp TField (Prime p)
 pow 0 _ = 1.0
 pow n e = e * (pow (dec n) e)
 

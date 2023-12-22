@@ -6,7 +6,8 @@ module Snarkl.Constraint.Simplify
   )
 where
 
-import Control.Monad.State (State, runState)
+import Control.Monad.State (State, runState, when)
+import Data.Field.Galois (PrimeField)
 import Data.List (foldl')
 import qualified Data.Set as Set
 import Snarkl.Common (Assgn, Var, intMapToMap)
@@ -29,8 +30,6 @@ import Snarkl.Constraint.SimplMonad
     unite_vars,
   )
 import qualified Snarkl.Constraint.UnionFind as UF
-import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field (..))
 
 ----------------------------------------------------------------
 --                         Substitution                       --
@@ -41,7 +40,7 @@ import Snarkl.Field (Field (..))
 -- normalizing a multiplicative constraint, it may be necessary to
 -- convert it into an additive constraint.
 subst_constr ::
-  (Field a) =>
+  (PrimeField a) =>
   Constraint a ->
   State (SEnv a) (Constraint a)
 subst_constr !constr = case constr of
@@ -52,7 +51,7 @@ subst_constr !constr = case constr of
         then do
           b <- mf xs
           if b
-            then return $ cadd zero []
+            then return $ cadd 0 []
             else return constr
         else return constr
   CAdd a m ->
@@ -65,19 +64,19 @@ subst_constr !constr = case constr of
                 var_or_a <- bind_of_var x
                 case var_or_a of
                   Left _ -> return []
-                  Right a' -> return [(x, a0 `mult` a')]
+                  Right a' -> return [(x, a0 * a')]
           )
           $! asList m
       let consts = concat consts'
       let const_keys = map fst consts
       let const_vals = map snd consts
       -- The new constant folding in all constant constraint variables
-      let new_const = foldl' add a const_vals
+      let new_const = foldl' (+) a const_vals
       -- The linear combination minus
       -- (1) Terms whose variables resolve to constants, and
       -- (2) Terms with coeff 0.
       let less_consts =
-            filter (\(k, v) -> not (elem k const_keys) && v /= zero) $!
+            filter (\(k, v) -> not (elem k const_keys) && v /= 0) $!
               asList m
       -- The new linear combination: 'less_consts' with all variables
       -- replaced by their roots.
@@ -104,31 +103,31 @@ subst_constr !constr = case constr of
             CMult (c, rx) (d, ry) (e, Nothing)
         (Left rx, Right d0, Left (e, rz)) ->
           return $!
-            cadd zero [(rx, c `mult` d `mult` d0), (rz, neg e)]
+            cadd 0 [(rx, c * d * d0), (rz, negate e)]
         (Left rx, Right d0, Right e) ->
           return $!
-            cadd (neg e) [(rx, c `mult` d `mult` d0)]
+            cadd (negate e) [(rx, c * d * d0)]
         (Right c0, Left ry, Left (e, rz)) ->
           return $!
-            cadd zero [(ry, c0 `mult` c `mult` d), (rz, neg e)]
+            cadd 0 [(ry, c0 * c * d), (rz, negate e)]
         (Right c0, Left ry, Right e) ->
           return $!
-            cadd (neg e) [(ry, c0 `mult` c `mult` d)]
+            cadd (negate e) [(ry, c0 * c * d)]
         (Right c0, Right d0, Left (e, rz)) ->
           return $!
-            cadd (c `mult` c0 `mult` d `mult` d0) [(rz, neg e)]
+            cadd (c * c0 * d * d0) [(rz, negate e)]
         (Right c0, Right d0, Right e) ->
           return $!
-            cadd (c `mult` c0 `mult` d `mult` d0 `add` (neg e)) []
+            cadd ((c * c0 * d * d0) - e) []
     where
       bind_of_term (e, Nothing) =
-        return $! Right e
+        return $ Right e
       bind_of_term (e, Just z) =
         do
           var_or_a <- bind_of_var z
           case var_or_a of
-            Left rz -> return $! Left (e, rz)
-            Right e0 -> return $! Right (e `mult` e0)
+            Left rz -> return $ Left (e, rz)
+            Right e0 -> return $ Right (e * e0)
 
 ----------------------------------------------------------------
 --                 Constraint Set Minimization                --
@@ -146,7 +145,7 @@ is_taut constr =
     CMagic _ xs mf -> mf xs
 
 -- | Remove tautologous constraints.
-remove_tauts :: (Field a) => [Constraint a] -> State (SEnv a) [Constraint a]
+remove_tauts :: (PrimeField a) => [Constraint a] -> State (SEnv a) [Constraint a]
 remove_tauts sigma =
   do
     sigma_taut <-
@@ -161,29 +160,23 @@ remove_tauts sigma =
 
 -- | Learn bindings and variable equalities from constraint 'constr'.
 learn ::
-  (Field a) =>
+  (PrimeField a) =>
   Constraint a ->
   State (SEnv a) ()
 learn = go
   where
     go (CAdd a (CoeffList [(x, c)])) =
-      if c == zero
+      if c == 0
         then return ()
-        else case inv c of
-          Nothing ->
-            failWith $
-              ErrMsg (show c ++ " not invertible")
-          Just c' -> bind_var (x, neg a `mult` c')
+        else bind_var (x, negate a * recip c)
     go (CAdd a (CoeffList [(x, c), (y, d)]))
-      | a == zero =
-          if c == neg d then unite_vars x y else return ()
-    go (CAdd _ _)
-      | otherwise =
-          return ()
-    go _ | otherwise = return ()
+      | a == 0 = when (c == negate d) (unite_vars x y)
+    go (CAdd _ _) =
+      return ()
+    go _ = return ()
 
 do_simplify ::
-  (Field a) =>
+  (PrimeField a) =>
   -- | Snarkl.Constraint.Solve mode? If 'True', use Magic.
   Bool ->
   -- | Initial variable assignment
@@ -227,7 +220,7 @@ do_simplify in_solve_mode env cs =
         cs0
 
 simplify ::
-  (Field a) =>
+  (PrimeField a) =>
   [Var] ->
   ConstraintSet a ->
   State (SEnv a) (ConstraintSet a)
@@ -260,15 +253,15 @@ simplify pinned_vars sigma =
                 ( \(x, var_or_a) ->
                     case var_or_a of
                       Left rx ->
-                        cadd zero [(x, one), (rx, neg one)]
+                        cadd 0 [(x, 1), (rx, negate 1)]
                       Right c ->
-                        cadd (neg c) [(x, one)]
+                        cadd (negate c) [(x, 1)]
                 )
                 $ filter (\(x, rx) -> Left x /= rx) pinned_terms
         return $ pin_eqns ++ sigma0
 
 simplify_rec ::
-  (Field a) =>
+  (PrimeField a) =>
   -- | Initial constraint set
   ConstraintSet a ->
   -- | Resulting simplified constraint set
@@ -285,7 +278,7 @@ simplify_rec sigma =
           else simplify_rec sigma'
   where
     simplify_once ::
-      (Field a) =>
+      (PrimeField a) =>
       ConstraintSet a ->
       -- \^ Initial constraint set
       State (SEnv a) (ConstraintSet a)

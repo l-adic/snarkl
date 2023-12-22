@@ -7,8 +7,9 @@ import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
+import Data.Field.Galois (Prime)
 import Prelude hiding
-  ( fromRational,
+  ( from(Prime p),
     negate,
     return,
     (&&),
@@ -21,12 +22,12 @@ import Prelude hiding
   )
 
 mult_ex ::
-  TExp 'TField Rational ->
-  TExp 'TField Rational ->
+  TExp 'TField (Prime p) ->
+  TExp 'TField (Prime p) ->
   Comp 'TField
 mult_ex x y = return $ x * y
 
-arr_ex :: TExp 'TField Rational -> Comp 'TField
+arr_ex :: TExp 'TField (Prime p) -> Comp 'TField
 arr_ex x = do
   a <- arr 2
   forall [0 .. 1] (\i -> set (a, i) x)

@@ -14,11 +14,11 @@ module Snarkl.Constraint.SimplMonad
 where
 
 import Control.Monad.State
+import Data.Field.Galois (PrimeField)
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import Snarkl.Common (Assgn, Var)
 import qualified Snarkl.Constraint.UnionFind as UF
-import Snarkl.Field (Field)
 
 ----------------------------------------------------------------
 --                  Simplifier State Monad                    --
@@ -41,12 +41,12 @@ data SEnv a = SEnv
   deriving (Show)
 
 -- | Unify variables 'x' and 'y'.
-unite_vars :: (Field a) => Var -> Var -> State (SEnv a) ()
+unite_vars :: (PrimeField a) => Var -> Var -> State (SEnv a) ()
 unite_vars x y =
   do modify (\senv -> senv {eqs = UF.unite (eqs senv) x y})
 
 -- | Bind variable 'x' to 'c'.
-bind_var :: (Field a) => (Var, a) -> State (SEnv a) ()
+bind_var :: (PrimeField a) => (Var, a) -> State (SEnv a) ()
 bind_var (x, c) =
   do
     rx <- root_of_var x
@@ -55,7 +55,7 @@ bind_var (x, c) =
     put $ senv {eqs = eqs'}
 
 -- | Return 'x''s root (the representative of its equivalence class).
-root_of_var :: (Field a) => Var -> State (SEnv a) Var
+root_of_var :: (PrimeField a) => Var -> State (SEnv a) Var
 root_of_var x =
   do
     senv <- get
@@ -65,7 +65,7 @@ root_of_var x =
 
 -- | Return the binding associated with variable 'x', or 'x''s root
 -- if no binding exists.
-bind_of_var :: (Field a) => Var -> State (SEnv a) (Either Var a)
+bind_of_var :: (PrimeField a) => Var -> State (SEnv a) (Either Var a)
 bind_of_var x =
   do
     rx <- root_of_var x
@@ -75,7 +75,7 @@ bind_of_var x =
       Just c -> return $ Right c
 
 -- | Construct a partial assignment from 'vars' to field elements.
-assgn_of_vars :: (Field a) => [Var] -> State (SEnv a) (Assgn a)
+assgn_of_vars :: (PrimeField a) => [Var] -> State (SEnv a) (Assgn a)
 assgn_of_vars vars =
   do
     binds <- mapM bind_of_var vars

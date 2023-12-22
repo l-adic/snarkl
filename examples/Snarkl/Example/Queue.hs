@@ -11,7 +11,7 @@ import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
-  ( fromRational,
+  ( from(Prime p),
     negate,
     return,
     (&&),
@@ -22,10 +22,11 @@ import Prelude hiding
     (>>),
     (>>=),
   )
+import Data.Field.Galois (Prime)
 
 type TQueue a = 'TProd (TStack a) (TStack a)
 
-type Queue a = TExp (TQueue a) Rational
+type Queue a = TExp (TQueue a) (Prime p)
 
 empty_queue :: (Typeable a) => Comp (TQueue a)
 empty_queue = do
@@ -35,7 +36,7 @@ empty_queue = do
 
 enqueue ::
   (Zippable a, Derive a, Typeable a) =>
-  TExp a Rational ->
+  TExp a (Prime p) ->
   Queue a ->
   Comp (TQueue a)
 enqueue v q = do
@@ -47,7 +48,7 @@ enqueue v q = do
 dequeue ::
   (Zippable a, Derive a, Typeable a) =>
   Queue a ->
-  TExp a Rational ->
+  TExp a (Prime p) ->
   Comp ('TProd a (TQueue a))
 dequeue q def = do
   l <- fst_pair q
@@ -75,7 +76,7 @@ dequeue q def = do
 dequeue_rec ::
   (Zippable a, Derive a, Typeable a) =>
   Queue a ->
-  TExp a Rational ->
+  TExp a (Prime p) ->
   Comp ('TProd a (TQueue a))
 dequeue_rec q def = fix go q
   where
@@ -115,7 +116,7 @@ is_empty q = do
 last_queue ::
   (Zippable a, Derive a, Typeable a) =>
   Queue a ->
-  TExp a Rational ->
+  TExp a (Prime p) ->
   Comp a
 last_queue q def = fixN 100 go q
   where

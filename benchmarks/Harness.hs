@@ -13,7 +13,7 @@ import Snarkl.Toplevel
 import System.IO (hPutStrLn, stderr)
 
 -- Just interpret.
-test_interp :: (Typeable ty) => Comp ty -> [Int] -> Rational
+test_interp :: (Typeable ty) => Comp ty -> [Int] -> (Prime p)
 test_interp mf inputs =
   comp_interp mf (map fromIntegral inputs)
 
@@ -21,7 +21,7 @@ test_interp mf inputs =
 test_texp :: (Typeable ty) => Comp ty -> IO ()
 test_texp mf = (hPutStrLn stderr . show . extract_rat . lastSeq . comp_texp . texp_of_comp) mf
   where
-    extract_rat :: TExp ty Rational -> Int
+    extract_rat :: TExp ty (Prime p) -> Int
     extract_rat te =
       case te of
         TEVar _ -> 0
@@ -98,6 +98,6 @@ test_crypto simpl mf inputs =
 -- on the inputs provided. Both results are checked to match 'res'.
 -- The function outputs a 'Result' that details number of variables and
 -- constraints in the resulting constraint system.
-test_numconstrs :: (Typeable ty) => SimplParam -> Comp ty -> [Int] -> Rational -> IO ()
+test_numconstrs :: (Typeable ty) => SimplParam -> Comp ty -> [Int] -> (Prime p) -> IO ()
 test_numconstrs simpl mf inputs res =
   benchmark_comp (simpl, mf, map fromIntegral inputs, res)

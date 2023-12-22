@@ -28,9 +28,9 @@ spec = do
   describe "Snarkl.Lambda" $ do
     describe "curry/uncurry identities for simply operations" $ do
       it "curry . uncurry == id" $ do
-        let f :: TExp 'TField Rational -> SM.Comp ('TFun 'TField 'TField)
+        let f :: TExp 'TField (Prime p) -> SM.Comp ('TFun 'TField 'TField)
             f x = lambda $ \y -> SM.return (x + y)
-            g :: TExp 'TField Rational -> SM.Comp ('TFun 'TField 'TField)
+            g :: TExp 'TField (Prime p) -> SM.Comp ('TFun 'TField 'TField)
             g = curry (uncurry f)
             prog1 =
               SM.fresh_input SM.>>= \a ->
@@ -45,12 +45,12 @@ spec = do
         property $ \a b -> comp_interp prog1 [a, b] == comp_interp prog2 [a, b]
 
       it "uncurry . curry == id" $ do
-        let f :: TExp ('TProd 'TField 'TField) Rational -> SM.Comp 'TField
+        let f :: TExp ('TProd 'TField 'TField) (Prime p) -> SM.Comp 'TField
             f p =
               SM.fst_pair p SM.>>= \x ->
                 SM.snd_pair p SM.>>= \y ->
                   SM.return (x * y)
-            g :: TExp ('TProd 'TField 'TField) Rational -> SM.Comp 'TField
+            g :: TExp ('TProd 'TField 'TField) (Prime p) -> SM.Comp 'TField
             g = uncurry (curry f)
 
             prog1 =

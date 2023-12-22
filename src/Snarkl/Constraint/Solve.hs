@@ -3,6 +3,7 @@ module Snarkl.Constraint.Solve
   )
 where
 
+import Data.Field.Galois (PrimeField)
 import qualified Data.IntMap.Lazy as Map
 import Data.Maybe
   ( isJust,
@@ -13,7 +14,6 @@ import Snarkl.Constraint.Constraints
   )
 import Snarkl.Constraint.Simplify (do_simplify)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field)
 
 -- | Starting from an initial partial assignment [env], solve the
 -- constraints [cs] and return the resulting complete assignment.
@@ -21,7 +21,7 @@ import Snarkl.Field (Field)
 -- constraint that is violated (under normal operation, this error
 -- case should NOT occur).
 solve ::
-  (Field a) =>
+  (PrimeField a) =>
   -- | Constraints to be solved
   ConstraintSystem a ->
   -- | Initial assignment

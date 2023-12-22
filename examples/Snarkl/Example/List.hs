@@ -2,14 +2,14 @@
 
 module Snarkl.Example.List where
 
+import Data.Field.Galois (Prime)
 import Data.Typeable
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
-  ( fromRational,
-    negate,
+  ( negate,
     return,
     (&&),
     (*),
@@ -24,14 +24,14 @@ type TF a = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst a) 'TFId)
 
 type TList a = 'TMu (TF a)
 
-type List a = TExp (TList a) Rational
+type List a = TExp (TList a) (Prime p)
 
 nil :: (Typeable a) => Comp (TList a)
 nil = do
   t <- inl unit
   roll t
 
-cons :: (Typeable a) => TExp a Rational -> List a -> Comp (TList a)
+cons :: (Typeable a) => TExp a (Prime p) -> List a -> Comp (TList a)
 cons f t =
   do
     p <- pair f t
@@ -45,7 +45,7 @@ case_list ::
   ) =>
   List a ->
   Comp ty ->
-  (TExp a Rational -> List a -> Comp ty) ->
+  (TExp a (Prime p) -> List a -> Comp ty) ->
   Comp ty
 case_list t f_nil f_cons =
   do
@@ -63,7 +63,7 @@ head_list ::
     Zippable a,
     Derive a
   ) =>
-  TExp a Rational ->
+  TExp a (Prime p) ->
   List a ->
   Comp a
 head_list def l =
@@ -136,7 +136,7 @@ map_list ::
     Zippable b,
     Derive b
   ) =>
-  (TExp a Rational -> Comp b) ->
+  (TExp a (Prime p) -> Comp b) ->
   List a ->
   Comp (TList b)
 map_list f l =
@@ -155,9 +155,9 @@ map_list f l =
 
 last_list ::
   (Typeable a, Zippable a, Derive a) =>
-  TExp a Rational ->
+  TExp a (Prime p) ->
   List a ->
-  Comp a
+  Comp a p
 last_list def l =
   fix go l
   where

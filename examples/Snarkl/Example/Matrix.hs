@@ -7,7 +7,7 @@ import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
-  ( fromRational,
+  ( from(Prime p),
     negate,
     not,
     return,
@@ -20,6 +20,7 @@ import Prelude hiding
     (>>=),
   )
 import qualified Prelude as P
+import Data.Field.Galois (Prime)
 
 type Matrix = TExp ('TArr ('TArr 'TField))
 
@@ -35,7 +36,7 @@ input_rowvec n = input_arr n
 
 input_colvec n = input_arr n
 
-type FixedMatrix = Int -> Int -> Rational
+type FixedMatrix = Int -> Int -> (Prime p)
 
 -- v0 + v1 + .. + v(n-1)
 sum_vec n v = do

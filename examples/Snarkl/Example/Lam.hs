@@ -8,7 +8,7 @@ import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Prelude hiding
-  ( fromRational,
+  ( fromPrimeField,
     negate,
     return,
     (&&),
@@ -42,7 +42,7 @@ subst_cons t sigma =
 
 case_subst sigma f_shift f_cons =
   do
-    sigma' <- unroll (sigma :: TExp TSubst Rational)
+    sigma' <- unroll (sigma :: TExp TSubst (Prime p))
     case_sum f_shift go sigma'
   where
     go p =
@@ -61,7 +61,7 @@ type TF = 'TFSum ('TFConst 'TField) ('TFSum 'TFId ('TFProd 'TFId 'TFId))
 type TTerm = 'TMu TF
 
 varN ::
-  TExp 'TField Rational ->
+  TExp 'TField (Prime p) ->
   Comp TTerm
 varN e =
   do
@@ -77,7 +77,7 @@ varN' i =
     roll v
 
 lam ::
-  TExp TTerm Rational ->
+  TExp TTerm (Prime p) ->
   Comp TTerm
 lam t =
   do
@@ -86,8 +86,8 @@ lam t =
     roll v
 
 app ::
-  TExp TTerm Rational ->
-  TExp TTerm Rational ->
+  TExp TTerm (Prime p) ->
+  TExp TTerm (Prime p) ->
   Comp TTerm
 app t1 t2 =
   do
@@ -100,10 +100,10 @@ case_term ::
   ( Typeable ty,
     Zippable ty
   ) =>
-  TExp TTerm Rational ->
-  (TExp 'TField Rational -> Comp ty) ->
-  (TExp TTerm Rational -> Comp ty) ->
-  (TExp TTerm Rational -> TExp TTerm Rational -> Comp ty) ->
+  TExp TTerm (Prime p) ->
+  (TExp 'TField (Prime p) -> Comp ty) ->
+  (TExp TTerm (Prime p) -> Comp ty) ->
+  (TExp TTerm (Prime p) -> TExp TTerm (Prime p) -> Comp ty) ->
   Comp ty
 case_term t f_var f_lam f_app =
   do
@@ -116,7 +116,7 @@ case_term t f_var f_lam f_app =
         e2 <- fst_pair p
         f_app e1 e2
 
-is_lam :: TExp TTerm Rational -> Comp 'TBool
+is_lam :: TExp TTerm (Prime p) -> Comp 'TBool
 is_lam t =
   case_term
     t
@@ -125,8 +125,8 @@ is_lam t =
     (\_ _ -> return false)
 
 shift ::
-  TExp 'TField Rational ->
-  TExp TTerm Rational ->
+  TExp 'TField (Prime p) ->
+  TExp TTerm (Prime p) ->
   Comp TTerm
 shift n t = fix go t
   where
@@ -221,8 +221,8 @@ subst_term sigma t =
               )
 
 beta ::
-  TExp TTerm Rational ->
-  TExp TTerm Rational ->
+  TExp TTerm (Prime p) ->
+  TExp TTerm (Prime p) ->
   Comp TTerm
 beta t1 t2 =
   case_term
@@ -239,7 +239,7 @@ beta t1 t2 =
     -- App _ _
     (\_ _ -> failWith $ ErrMsg "beta expects an abstraction")
 
-step :: TExp TTerm Rational -> Comp TTerm
+step :: TExp TTerm (Prime p) -> Comp TTerm
 step t =
   case_term
     t
@@ -247,7 +247,7 @@ step t =
     (\_ -> return t)
     (\t1 t2 -> beta t1 t2)
 
-whnf :: TExp TTerm Rational -> Comp TTerm
+whnf :: TExp TTerm (Prime p) -> Comp TTerm
 whnf t = fix go t
   where
     go self t0 =

@@ -4,7 +4,6 @@ module Snarkl.Common where
 
 import qualified Data.IntMap.Lazy as IntMap
 import qualified Data.Map as Map
-import Data.Ratio
 import Prettyprinter
 
 type Var = Int
@@ -63,11 +62,6 @@ isAssoc op = case op of
   XOr -> True
   Eq -> True
   BEq -> True
-
-instance Pretty Rational where
-  pretty r
-    | denominator r == 1 = pretty (numerator r)
-    | otherwise = pretty (numerator r) <> "/" <> pretty (denominator r)
 
 intMapToMap :: IntMap.IntMap v -> Map.Map Int v
 intMapToMap = Map.fromList . IntMap.toList

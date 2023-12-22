@@ -162,7 +162,7 @@ module Basic where
 
 import Prelude hiding
   ( (>>), (>>=), (+), (-), (*), (/), (&&)
-  , return, fromRational, negate
+  , return, from(Prime p), negate
   )
 
 import Syntax
@@ -178,16 +178,16 @@ When importing the Haskell `Prelude` we hide the standard definitions of functio
 Out of the box, Snårkl supports arithmetic over (bounded) rationals. The following program
 
 ```
-mult_ex :: TExp 'TField Rational -> TExp 'TField Rational-> Comp 'TField
+mult_ex :: TExp 'TField (Prime p) -> TExp 'TField (Prime p)-> Comp 'TField
 mult_ex x y = return (x * y)
 ```
 
-takes two Snårkl expressions as arguments (`TExp 'TField Rational` is the type of Snårkl expressions of type `'TField` ["field element"], specialized to underlying field `Rational`) and returns their product. The naked expression `x * y`, of type `TExp 'TField Rational` is wrapped inside a `return`, coercing it to a Snårkl computation (`Comp 'TField` ["Snårkl computation returning a field element"]). 
+takes two Snårkl expressions as arguments (`TExp 'TField (Prime p)` is the type of Snårkl expressions of type `'TField` ["field element"], specialized to underlying field `(Prime p)`) and returns their product. The naked expression `x * y`, of type `TExp 'TField (Prime p)` is wrapped inside a `return`, coercing it to a Snårkl computation (`Comp 'TField` ["Snårkl computation returning a field element"]). 
 
 Snårkl also supports array-structured computation: 
 
 ```
-arr_ex :: TExp 'TField Rational -> Comp 'TField
+arr_ex :: TExp 'TField (Prime p) -> Comp 'TField
 arr_ex x = do
   a <- arr 2
   forall [0..1] (\i -> set (a,i) x)
@@ -314,7 +314,7 @@ type TF = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst 'TField) ('TFProd 'TFId 'T
 In more standard notation:
 
 ```
-TF(T) = unit + (Rational x (T x T))
+TF(T) = unit + ((Prime p) x (T x T))
 ```
 
 The deeply embedded syntax of type-level functions is given by:
@@ -346,8 +346,8 @@ type TF' a = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst a) ('TFProd 'TFId 'TFId
 
 type TTree a = 'TMu (TF' a)
 
-type Rat    = TExp 'TField Rational
-type Tree a = TExp (TTree a) Rational
+type Rat    = TExp 'TField (Prime p)
+type Tree a = TExp (TTree a) (Prime p)
 ```
 
 This pattern is especially convenient when writing libraries.
@@ -383,7 +383,7 @@ The type itself is the LFP of the functor `TF'`, or `'TMu TF'`. To construct a "
 
 ```
 roll :: (Typeable f, Typeable (Rep f ('TMu f)))
-     => TExp (Rep f ('TMu f)) Rational
+     => TExp (Rep f ('TMu f)) (Prime p)
      -> Comp ('TMu f)
 ``` 
 
@@ -392,7 +392,7 @@ In more standard notation, `roll` takes a value of type `F (μ F)`, for generati
 The `node` constructor is similar to `leaf`, except we take three arguments instead of none: `v` the node value, `t1` the left subtree, and `t2` the right subtree.
 
 ```
-node :: Typeable a => TExp a Rational -> Tree a -> Tree a -> Comp (TTree a)
+node :: Typeable a => TExp a (Prime p) -> Tree a -> Tree a -> Comp (TTree a)
 node v t1 t2 = do
   p  <- pair t1 t2
   p' <- pair v p 
@@ -410,7 +410,7 @@ The following is the sole eliminator for trees.
 case_tree :: ...
           => Tree a 
           -> Comp a1
-          -> (TExp a Rational -> Tree a -> Tree a -> Comp a1)
+          -> (TExp a (Prime p) -> Tree a -> Tree a -> Comp a1)
           -> Comp a1
 case_tree t f_leaf f_node = do
   t' <- unroll t
@@ -434,8 +434,8 @@ The eliminator `case_tree` comes in handy when defining higher-level functions o
 
 ```
 map_tree :: ...
-         => (TExp a Rational -> State Env (TExp a1 Rational))
-         -> TExp (TTree a) Rational
+         => (TExp a (Prime p) -> State Env (TExp a1 (Prime p)))
+         -> TExp (TTree a) (Prime p)
             -> Comp (TTree a1)
 map_tree f t
   = fix go t
@@ -452,7 +452,7 @@ map_tree f t
 `fix` is Snårkl's fixpoint combinator. It has type:
 
 ```
-Typeable ty2 => ((TExp ty1 Rational -> Comp ty2) -> TExp ty1 Rational -> Comp ty2)
-             -> TExp ty1 Rational 
+Typeable ty2 => ((TExp ty1 (Prime p) -> Comp ty2) -> TExp ty1 (Prime p) -> Comp ty2)
+             -> TExp ty1 (Prime p) 
              -> Comp ty2
 ```

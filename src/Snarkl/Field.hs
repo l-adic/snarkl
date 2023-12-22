@@ -1,8 +1,6 @@
 module Snarkl.Field where
 
-import Data.Ratio
-import Snarkl.Errors
-
+{-
 class (Show a, Eq a, Ord a) => Field a where
   zero :: a
   one :: a
@@ -11,7 +9,7 @@ class (Show a, Eq a, Ord a) => Field a where
   neg :: a -> a
   inv :: a -> Maybe a
 
-instance Field Rational where
+instance Field (Prime p) where
   zero = 0
   one = 1
   add = (+)
@@ -69,3 +67,4 @@ instance Field IntP where
   inv = \n -> case mod_inv (unIntP n) field_p of
     Nothing -> Nothing
     Just n' -> Just $ int_p n'
+-}

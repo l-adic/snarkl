@@ -7,11 +7,11 @@ where
 
 import Control.Monad (ap, foldM)
 import Data.Data (Typeable)
+import Data.Field.Galois (PrimeField)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Snarkl.Common (Op (..), UnOp (ZEq))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field (..))
 import Snarkl.Language (Exp (..), TExp, Variable, expOfTExp)
 
 type Env a = Map Variable (Maybe a)
@@ -57,17 +57,17 @@ lookupVar x =
         Just v -> Right (rho, v)
     )
 
-fieldOfBool :: (Field a) => Bool -> a
-fieldOfBool b = if b then one else zero
+fieldOfBool :: (PrimeField a) => Bool -> a
+fieldOfBool b = if b then 1 else 0
 
-caseOfField :: (Field a) => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
+caseOfField :: (PrimeField a) => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
 caseOfField Nothing f = f Nothing
 caseOfField (Just v) f
-  | v == zero = f $ Just False
-  | v == one = f $ Just True
+  | v == 0 = f $ Just False
+  | v == 1 = f $ Just True
   | otherwise = raiseErr $ ErrMsg $ "expected " ++ show v ++ " to be boolean"
 
-boolOfField :: (Field a) => a -> InterpM a Bool
+boolOfField :: (PrimeField a) => a -> InterpM a Bool
 boolOfField v =
   caseOfField
     (Just v)
@@ -77,7 +77,7 @@ boolOfField v =
     )
 
 interpTExp ::
-  ( Field a,
+  ( PrimeField a,
     Typeable ty
   ) =>
   TExp ty a ->
@@ -87,14 +87,14 @@ interpTExp e = do
   interpExpr _exp
 
 interp ::
-  (Field a, Typeable ty) =>
+  (PrimeField a, Typeable ty) =>
   Map Variable a ->
   TExp ty a ->
   Either ErrMsg (Env a, Maybe a)
 interp rho e = runInterpM (interpTExp e) $ Map.map Just rho
 
 interpExpr ::
-  (Field a) =>
+  (PrimeField a) =>
   Exp a ->
   InterpM a (Maybe a)
 interpExpr e = case e of
@@ -105,7 +105,7 @@ interpExpr e = case e of
     case v2 of
       Nothing -> pure Nothing
       Just v2' -> case op of
-        ZEq -> return $ Just $ fieldOfBool (v2' == zero)
+        ZEq -> return $ Just $ fieldOfBool (v2' == 0)
   EBinop op _es -> case _es of
     [] -> failWith $ ErrMsg "empty binary args"
     (a : as) -> do
@@ -127,9 +127,9 @@ interpExpr e = case e of
   ESeq es -> case es of
     [] -> failWith $ ErrMsg "empty sequence"
     _ -> last <$> mapM interpExpr es
-  EUnit -> return $ Just one
+  EUnit -> return $ Just 1
   where
-    interpBinopExpr :: (Field a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
+    interpBinopExpr :: (PrimeField a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
     interpBinopExpr _ Nothing _ = return Nothing
     interpBinopExpr _op (Just a1) _exp = do
       ma2 <- interpExpr _exp
@@ -137,21 +137,18 @@ interpExpr e = case e of
         Nothing -> return Nothing
         Just a2 -> Just <$> op a1 a2
       where
-        op :: (Field a) => a -> a -> InterpM a a
+        op :: (PrimeField a) => a -> a -> InterpM a a
         op a b = case _op of
-          Add -> pure $ a `add` b
-          Sub -> pure $ a `add` neg b
-          Mult -> pure $ a `mult` b
-          Div -> pure $
-            case inv b of
-              Nothing -> failWith $ ErrMsg $ show b ++ " not invertible"
-              Just b' -> a `mult` b'
+          Add -> pure $ a + b
+          Sub -> pure $ a - b
+          Mult -> pure $ a + b
+          Div -> pure $ a / b
           And -> interpBooleanBinop a b
           Or -> interpBooleanBinop a b
           XOr -> interpBooleanBinop a b
           BEq -> interpBooleanBinop a b
           Eq -> pure $ fieldOfBool $ a == b
-        interpBooleanBinop :: (Field a) => a -> a -> InterpM a a
+        interpBooleanBinop :: (PrimeField a) => a -> a -> InterpM a a
         interpBooleanBinop a b =
           do
             b1 <- boolOfField a

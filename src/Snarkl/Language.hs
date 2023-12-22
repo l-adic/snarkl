@@ -8,12 +8,12 @@ module Snarkl.Language
 where
 
 import Data.Data (Typeable)
-import Snarkl.Field (Field)
+import Data.Field.Galois (PrimeField)
 import Snarkl.Language.Expr
 import Snarkl.Language.LambdaExpr (expOfLambdaExp)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 
-expOfTExp :: (Field a, Typeable ty) => TExp ty a -> Exp a
+expOfTExp :: (PrimeField a, Typeable ty) => TExp ty a -> Exp a
 expOfTExp = expOfLambdaExp . lambdaExpOfTExp
