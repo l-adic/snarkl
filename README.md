@@ -162,7 +162,7 @@ module Basic where
 
 import Prelude hiding
   ( (>>), (>>=), (+), (-), (*), (/), (&&)
-  , return, from(Prime p), negate
+  , return, negate
   )
 
 import Syntax
@@ -182,7 +182,7 @@ mult_ex :: TExp 'TField (Prime p) -> TExp 'TField (Prime p)-> Comp 'TField
 mult_ex x y = return (x * y)
 ```
 
-takes two Snårkl expressions as arguments (`TExp 'TField (Prime p)` is the type of Snårkl expressions of type `'TField` ["field element"], specialized to underlying field `(Prime p)`) and returns their product. The naked expression `x * y`, of type `TExp 'TField (Prime p)` is wrapped inside a `return`, coercing it to a Snårkl computation (`Comp 'TField` ["Snårkl computation returning a field element"]). 
+takes two Snårkl expressions as arguments (`TExp 'TField (Prime p)` is the type of Snårkl expressions of type `'TField` ["field element"], specialized to underlying field `Prime p`) and returns their product. The naked expression `x * y`, of type `TExp 'TField (Prime p)` is wrapped inside a `return`, coercing it to a Snårkl computation (`Comp 'TField` ["Snårkl computation returning a field element"]). 
 
 Snårkl also supports array-structured computation: 
 
