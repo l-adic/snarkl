@@ -2,8 +2,7 @@ source-repository-package
   type: git
   location: https://github.com/martyall/galois-field.git
   tag: 8e1361d55d3db4ebf772122ac3dec845778749e5
-  --sha256: QLF8PQq6vPwhqXoDs4Txu4Fu3Z9R/rQ6fHWAdIpV/1c=
-  subdir: 
+  --sha256: j/zGFd2aeowzJfgCCBmJYmG8mDsfF0irqj/cPOw9ulE=
 
 
 tests: True
