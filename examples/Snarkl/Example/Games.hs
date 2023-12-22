@@ -85,12 +85,12 @@ bool_game :: (KnownNat p) => Game 'TBool p
 bool_game =
   Single
     ( Iso
-        (\be -> if return be then return (toP 1) else return (toP 0))
+        (\be -> if return be then return (fromPrimeField 1) else return (fromPrimeField 0))
         (\te -> if return (zeq te) then return false else return true)
     )
 
 unit_game :: (KnownNat p) => Game 'TUnit p
-unit_game = Single (Iso (\_ -> return (toP 1)) (\(_ :: TExp 'TField (Prime p)) -> return unit))
+unit_game = Single (Iso (\_ -> return (fromPrimeField 1)) (\(_ :: TExp 'TField (Prime p)) -> return unit))
 
 fail_game :: (Typeable ty) => Game ty p
 fail_game =

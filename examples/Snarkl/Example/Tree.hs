@@ -95,9 +95,9 @@ tree1 = do
   b <- fresh_input
   l1 <- leaf
   l2 <- leaf
-  t1' <- if return b then node (toP 77) l1 l2 else leaf
+  t1' <- if return b then node (fromPrimeField 77) l1 l2 else leaf
   l3 <- leaf
-  t2 <- node (toP 2) t1' l3
+  t2 <- node (fromPrimeField 2) t1' l3
   return t2
 
 tree_test1 :: (KnownNat p) => Comp 'TField p
@@ -105,11 +105,11 @@ tree_test1 = do
   t <- tree1
   case_tree
     t
-    (return (toP 99))
+    (return (fromPrimeField 99))
     ( \_ tl _ -> do
         case_tree
           tl
-          (return (toP 88))
+          (return (fromPrimeField 88))
           ( \v _ _ -> do
               return v
           )

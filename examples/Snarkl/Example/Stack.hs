@@ -50,16 +50,16 @@ stack1 :: (KnownNat p) => Comp (TStack 'TField) p
 stack1 =
   do
     tl <- empty_stack
-    tl' <- push_stack (toP 15) tl
-    push_stack (toP 99) tl'
+    tl' <- push_stack (fromPrimeField 15) tl
+    push_stack (fromPrimeField 99) tl'
 
 stack2 :: (KnownNat p) => Comp (TStack 'TField) p
 stack2 =
   do
     tl <- empty_stack
-    tl' <- push_stack (toP 1) tl
-    tl'' <- push_stack (toP 12) tl'
-    push_stack (toP 89) tl''
+    tl' <- push_stack (fromPrimeField 1) tl
+    tl'' <- push_stack (fromPrimeField 12) tl'
+    push_stack (fromPrimeField 89) tl''
 
 -- top_stack on empty stack
 test_top1 :: (KnownNat p) => Comp 'TField p
@@ -68,14 +68,14 @@ test_top1 =
     s1 <- stack1
     s2 <- pop_stack s1
     s3 <- pop_stack s2
-    top_stack (toP 1) s3
+    top_stack (fromPrimeField 1) s3
 
 -- top_stack on non-empty stack
 test_top2 :: (KnownNat p) => Comp 'TField p
 test_top2 =
   do
     s1 <- stack1
-    top_stack (toP 1) s1
+    top_stack (fromPrimeField 1) s1
 
 -- is_empty_stack on an empty stack
 test_empty_stack1 :: (KnownNat p) => Comp 'TBool p

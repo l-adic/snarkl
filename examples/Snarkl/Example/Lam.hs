@@ -182,7 +182,7 @@ compose sigma1 sigma2 =
                         -- Var(n)
                         (\n -> subst_nil $ n + m)
                         -- _ . s1'
-                        (\_ s1' -> subst_nil (m - toP 1) >>= recur s1')
+                        (\_ s1' -> subst_nil (m - fromPrimeField 1) >>= recur s1')
               )
               -- t' . s2'
               ( \t' s2' ->
@@ -214,14 +214,14 @@ subst_term sigma t =
                         do
                           if return (zeq n)
                             then return t'
-                            else varN (n - toP 1) >>= recur sigma'
+                            else varN (n - fromPrimeField 1) >>= recur sigma'
                     )
               )
               -- Lam t1
               ( \t1 ->
                   do
-                    var0 <- varN (toP 0)
-                    sigma1 <- subst_nil (toP 1)
+                    var0 <- varN (fromPrimeField 0)
+                    sigma1 <- subst_nil (fromPrimeField 1)
                     sigma2 <- compose sigma1 sigma
                     sigma' <- subst_cons var0 sigma2
                     t1' <- recur sigma' t1
@@ -248,7 +248,7 @@ beta t1 t2 =
     -- Lam t1'
     ( \t1' ->
         do
-          id_subst <- subst_nil (toP 0)
+          id_subst <- subst_nil (fromPrimeField 0)
           sigma <- subst_cons t2 id_subst
           subst_term sigma t1'
     )
@@ -296,4 +296,4 @@ beta_test1 =
   do
     t <- term_app
     whnf t
-    return (toP 0)
+    return (fromPrimeField 0)

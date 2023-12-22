@@ -40,7 +40,7 @@ arr_ex x = do
   return $ y + z
 
 p1 :: (KnownNat p) => Comp 'TField p
-p1 = arr_ex $ toP 1
+p1 = arr_ex $ fromPrimeField 1
 
 desugar1 :: (KnownNat p) => TExpPkg 'TField p
 desugar1 = texp_of_comp p1
@@ -70,7 +70,7 @@ comp1 :: (KnownNat p, Typeable a) => Comp ('TSum 'TBool a) p
 comp1 = inl false
 
 comp2 :: (KnownNat p, Typeable a) => Comp ('TSum a 'TField) p
-comp2 = inr (toP 0)
+comp2 = inr (fromPrimeField 0)
 
 test1 :: (KnownNat p) => State (Env p) (TExp 'TBool (Prime p))
 test1 = do

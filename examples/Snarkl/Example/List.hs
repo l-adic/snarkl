@@ -203,30 +203,30 @@ list_comp3 =
   do
     b <- fresh_input
     l <- nil
-    l' <- cons (toP 23) l
-    l'' <- cons (toP 33) l'
+    l' <- cons (fromPrimeField 23) l
+    l'' <- cons (fromPrimeField 33) l'
     l2 <- if return b then return l'' else return l
     l3 <- map_list inc_elem l2
     l4 <- tail_list l3
-    head_list (toP 0) l4
+    head_list (fromPrimeField 0) l4
 
 list_comp4 :: (KnownNat p) => Comp 'TField p
 list_comp4 =
   do
     l <- list2
-    last_list (toP 0) l
+    last_list (fromPrimeField 0) l
 
 listN :: (Typeable a, Zippable a p, Derive a p, KnownNat p) => TExp 'TField (Prime p) -> Comp (TList a) p
 listN n = fixN 100 go n
   where
     go self n0 = do
       x <- fresh_input
-      tl <- self (n0 - toP 1)
-      if return (eq n0 (toP 0)) then nil else cons x tl
+      tl <- self (n0 - fromPrimeField 1)
+      if return (eq n0 (fromPrimeField 0)) then nil else cons x tl
 
 test_listN :: (KnownNat p) => Comp 'TField p
 test_listN = do
   n <- fresh_input
   l1 <- listN n
   l2 <- map_list inc_elem l1
-  last_list (toP 99) l2
+  last_list (fromPrimeField 99) l2

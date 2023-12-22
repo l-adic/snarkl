@@ -163,17 +163,17 @@ queue_comp1 :: (KnownNat p) => Comp 'TField p
 queue_comp1 =
   do
     q1 <- queue1
-    q2 <- enqueue (toP 1) q1
-    q3 <- enqueue (toP 3 + (toP 4 / toP 10)) q2
+    q2 <- enqueue (fromPrimeField 1) q1
+    q3 <- enqueue (fromPrimeField 3 + (fromPrimeField 4 / fromPrimeField 10)) q2
     sx <- fst_pair q3
-    top_stack (toP 0) sx
+    top_stack (fromPrimeField 0) sx
 
 -- dequeue where input is queue with {nonempty, nonempty}
 queue_comp2 :: (KnownNat p) => Comp 'TField p
 queue_comp2 =
   do
     q1 <- queue1
-    sx <- dequeue q1 (toP 0)
+    sx <- dequeue q1 (fromPrimeField 0)
     fst_pair sx
 
 -- dequeue where input is queue with {nonempty, empty}
@@ -181,7 +181,7 @@ queue_comp3 :: (KnownNat p) => Comp 'TField p
 queue_comp3 =
   do
     q1 <- queue2
-    sx <- dequeue q1 (toP 0)
+    sx <- dequeue q1 (fromPrimeField 0)
     fst_pair sx
 
 queueN :: (Typeable a, Zippable a p, Derive a p, KnownNat p) => TExp 'TField (Prime p) -> Comp (TQueue a) p
@@ -189,8 +189,8 @@ queueN n = fixN 100 go n
   where
     go self n0 = do
       x <- fresh_input
-      tl <- self (n0 - toP 1)
-      if return (eq n0 (toP 0))
+      tl <- self (n0 - fromPrimeField 1)
+      if return (eq n0 (fromPrimeField 0))
         then empty_queue
         else enqueue x tl
 
@@ -199,4 +199,4 @@ test_queueN = do
   n <- fresh_input
   q1 <- queueN n
   q2 <- map_queue inc_elem q1
-  last_queue q2 (toP 105)
+  last_queue q2 (fromPrimeField 105)

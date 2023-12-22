@@ -47,7 +47,7 @@ sum_vec n v = do
         a <- get (v, i)
         return $ a + acc
     )
-    (toP 0)
+    (fromPrimeField 0)
 
 sum_mat n m mat = do
   iterM
@@ -60,10 +60,10 @@ sum_mat n m mat = do
                 mat_elem <- get2 (mat, i, j)
                 return $ mat_elem + acc'
             )
-            (toP 0)
+            (fromPrimeField 0)
         return $ a + acc
     )
-    (toP 0)
+    (fromPrimeField 0)
 
 input_matrix_mult n m p = do
   a <- input_matrix n m
@@ -84,7 +84,7 @@ input_matrix_mult n m p = do
                       bElem <- get2 (b, k, j)
                       return $ (bElem * aElem) + acc
                   )
-                  (toP 0)
+                  (fromPrimeField 0)
               set2 (c, i, j) res
           )
     )
@@ -106,7 +106,7 @@ matrix_colvec_mult fm n = do
                 a <- get (v, j)
                 return $ (fm i j) * a + acc
             )
-            (toP 0)
+            (fromPrimeField 0)
         set (v', i) res
     )
 
@@ -118,7 +118,7 @@ Test cases
 ------------------------------------------------}
 
 test1 :: (KnownNat p) => Int -> Comp 'TField p
-test1 n = matrix_colvec_mult (\_ _ -> toP 7) n
+test1 n = matrix_colvec_mult (\_ _ -> fromPrimeField 7) n
 
 interp1 n = comp_interp (test1 n) (map fromIntegral [0 .. dec n])
 

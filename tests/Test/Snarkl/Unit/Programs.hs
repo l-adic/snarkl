@@ -35,7 +35,7 @@ prog1 =
     x <- fresh_input -- bool
     y <- fresh_input -- int
     z <- fresh_input -- bool
-    u <- return $ y + toP 2
+    u <- return $ y + fromPrimeField 2
     v <- if return z then return y else return y
     w <- if return x then return y else return y
     return $ (u * u) - (w * u * u * y * y * v)
@@ -77,7 +77,7 @@ prog4 =
 
 -- | 5. Identical to 4, except with more constraints
 pow :: Int -> TExp TField F_BN128 -> TExp TField F_BN128
-pow 0 _ = toP 1
+pow 0 _ = fromPrimeField 1
 pow n e = e * (pow (dec n) e)
 
 prog5 =
@@ -103,7 +103,7 @@ prog6 =
 prog7 =
   do
     a <- arr 100
-    forall [0 .. 99] (\i -> set (a, i) (toP 0))
+    forall [0 .. 99] (\i -> set (a, i) (fromPrimeField 0))
     forall [0 .. 99] (\i -> set (a, i) (exp_of_int i))
     x <- get (a, 49)
     y <- get (a, 51)
@@ -113,7 +113,7 @@ prog7 =
 prog8 =
   do
     a <- arr 25
-    forall [0 .. 24] (\i -> set (a, i) (toP 0))
+    forall [0 .. 24] (\i -> set (a, i) (fromPrimeField 0))
     let index i j = (P.+) ((P.*) 5 i) j
     forall2
       ([0 .. 4], [0 .. 4])
@@ -156,19 +156,19 @@ bool_prog12 =
 prog13 =
   do
     a <- fresh_input
-    return $ toP 1 * a
+    return $ fromPrimeField 1 * a
 
 -- | 14. opt: 0x * 3y = out ~~> out=0
 prog14 =
   do
     x <- fresh_input
     y <- fresh_input
-    return $ (toP 0 * x) * (toP 3 * y)
+    return $ (fromPrimeField 0 * x) * (fromPrimeField 3 * y)
 
 -- | 15. exp_binop smart constructor: 3 - (2 - 1) = 2
 prog15 =
   do
-    return $ toP 3 - (toP 2 - toP 1)
+    return $ fromPrimeField 3 - (fromPrimeField 2 - fromPrimeField 1)
 
 -- | 16. bool fresh_inputs test
 bool_prog16 =
@@ -353,8 +353,8 @@ prog35 = tree_test1
 prog36 :: Comp 'TField P_BN128
 prog36 = do
   b1 <- fresh_input
-  x <- if return b1 then inl (toP 2) else inr (toP 3)
-  case_sum (\n -> return $ n + toP 5) (\m -> return $ m + toP 7) x
+  x <- if return b1 then inl (fromPrimeField 2) else inr (fromPrimeField 3)
+  case_sum (\n -> return $ n + fromPrimeField 5) (\m -> return $ m + fromPrimeField 7) x
 
 -- | 37. build and modify a list of user-specified length, up to size 50
 prog37 = test_listN

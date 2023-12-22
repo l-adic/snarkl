@@ -29,7 +29,7 @@ module Snarkl.Language.Syntax
     exp_of_int,
     inc,
     dec,
-    toP,
+    fromPrimeField,
     ifThenElse,
     negate,
     -- | Arrays
@@ -645,8 +645,8 @@ beq e1 e2 = TEBinop (TOp BEq) e1 e2
 eq :: (Typeable ty) => TExp ty (Prime p) -> TExp ty (Prime p) -> TExp 'TBool (Prime p)
 eq e1 e2 = TEBinop (TOp Eq) e1 e2
 
-toP :: (KnownNat p) => Prime p -> TExp 'TField (Prime p)
-toP r = TEVal (VField r)
+fromPrimeField :: (KnownNat p) => Prime p -> TExp 'TField (Prime p)
+fromPrimeField r = TEVal (VField r)
 
 exp_of_int :: (KnownNat p) => Int -> TExp 'TField (Prime p)
 exp_of_int i = TEVal (VField $ fromIntegral i)
@@ -681,7 +681,7 @@ ifThenElse cb c1 c2 =
     zip_vals b e1 e2
 
 negate :: (KnownNat p) => TExp 'TField (Prime p) -> TExp 'TField (Prime p)
-negate e = toP (P.negate 1) * e
+negate e = fromPrimeField (P.negate 1) * e
 
 ----------------------------------------------------
 --
@@ -718,7 +718,7 @@ bigsum ::
   Int ->
   (Int -> TExp 'TField (Prime p)) ->
   TExp 'TField (Prime p)
-bigsum n f = iter n (\n' e -> f n' + e) (toP 0)
+bigsum n f = iter n (\n' e -> f n' + e) (fromPrimeField 0)
 
 forall ::
   [a] ->
