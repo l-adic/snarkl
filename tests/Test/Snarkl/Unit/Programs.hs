@@ -14,7 +14,7 @@ import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Prelude hiding
-  ( from(Prime p),
+  ( fromRational,
     negate,
     return,
     (&&),

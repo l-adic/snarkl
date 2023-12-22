@@ -2,6 +2,7 @@
 
 module Snarkl.Example.Games where
 
+import Data.Field.Galois (Prime)
 import Data.Typeable
 import Snarkl.Errors
 import Snarkl.Language.Syntax
@@ -9,7 +10,7 @@ import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
-  ( from(Prime p),
+  ( fromRational,
     negate,
     return,
     (&&),
@@ -20,7 +21,6 @@ import Prelude hiding
     (>>),
     (>>=),
   )
-import Data.Field.Galois (Prime)
 
 {---------------------------------------------------------
   See Vytiniotis & Kennedy,

@@ -2,6 +2,7 @@
 
 module Snarkl.Example.Queue where
 
+import Data.Field.Galois (Prime)
 import Data.Typeable
 import Snarkl.Compile
 import Snarkl.Example.List
@@ -11,7 +12,7 @@ import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
-  ( from(Prime p),
+  ( fromRational,
     negate,
     return,
     (&&),
@@ -22,7 +23,6 @@ import Prelude hiding
     (>>),
     (>>=),
   )
-import Data.Field.Galois (Prime)
 
 type TQueue a = 'TProd (TStack a) (TStack a)
 

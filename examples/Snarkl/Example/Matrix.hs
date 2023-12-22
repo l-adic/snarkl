@@ -2,12 +2,13 @@
 
 module Snarkl.Example.Matrix where
 
+import Data.Field.Galois (Prime)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
 import Prelude hiding
-  ( from(Prime p),
+  ( fromRational,
     negate,
     not,
     return,
@@ -20,7 +21,6 @@ import Prelude hiding
     (>>=),
   )
 import qualified Prelude as P
-import Data.Field.Galois (Prime)
 
 type Matrix = TExp ('TArr ('TArr 'TField))
 

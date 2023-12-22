@@ -255,7 +255,7 @@ serialize_witnesses inputs r1cs =
 -- This function creates/overwrites files prefixed with 'filePrefix',
 -- within the scripts/ subdirectory. 'snarkify_comp' also
 -- assumes that it's run in working directory 'base-of-snarkl-repo'.
-snarkify_comp :: (Typeable ty, KnownNat p) => String -> SimplParam -> Comp ty p -> [Prime p] -> IO ExitCode
+snarkify_comp :: forall ty p. (Typeable ty, KnownNat p) => String -> SimplParam -> Comp ty p -> [Prime p] -> IO ExitCode
 snarkify_comp filePrefix simpl c inputs =
   do
     let r1cs = r1cs_of_comp simpl c
