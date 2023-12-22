@@ -3,7 +3,9 @@
 module Snarkl.Example.Keccak where
 
 import Data.Bits hiding (xor)
+import Data.Field.Galois (Prime)
 import qualified Data.Map.Strict as Map
+import GHC.TypeLits (KnownNat)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
@@ -30,11 +32,12 @@ ln_width :: Int
 ln_width = 32
 
 round1 ::
+  (KnownNat p) =>
   (Int -> TExp 'TBool (Prime p)) ->
   -- | 'i'th bit of round constant
   TExp ('TArr ('TArr ('TArr 'TBool))) (Prime p) ->
   -- | Array 'a'
-  Comp 'TUnit
+  Comp 'TUnit p
 round1 rc a =
   do
     -- Allocate local array variables [b], [c], [d].
@@ -192,6 +195,7 @@ keccak_f1 num_rounds a =
     )
 
 -- num_rounds = 12+2l, where 2^l = ln_width
+keccak1 :: (KnownNat p) => Int -> Comp 'TBool p
 keccak1 num_rounds =
   do
     a <- input_arr3 5 5 ln_width

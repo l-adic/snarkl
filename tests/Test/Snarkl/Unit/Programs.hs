@@ -2,12 +2,14 @@
 
 module Test.Snarkl.Unit.Programs where
 
+import Data.Field.Galois (Prime)
 import Snarkl.Compile
 import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
 import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
+import Snarkl.Field (F_BN128, P_BN128)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
@@ -33,7 +35,7 @@ prog1 =
     x <- fresh_input -- bool
     y <- fresh_input -- int
     z <- fresh_input -- bool
-    u <- return $ y + 2.0
+    u <- return $ y + toP 2
     v <- if return z then return y else return y
     w <- if return x then return y else return y
     return $ (u * u) - (w * u * u * y * y * v)
@@ -74,8 +76,8 @@ prog4 =
     return (x * y)
 
 -- | 5. Identical to 4, except with more constraints
-pow :: Int -> TExp TField (Prime p) -> TExp TField (Prime p)
-pow 0 _ = 1.0
+pow :: Int -> TExp TField F_BN128 -> TExp TField F_BN128
+pow 0 _ = toP 1
 pow n e = e * (pow (dec n) e)
 
 prog5 =
@@ -101,7 +103,7 @@ prog6 =
 prog7 =
   do
     a <- arr 100
-    forall [0 .. 99] (\i -> set (a, i) 0.0)
+    forall [0 .. 99] (\i -> set (a, i) (toP 0))
     forall [0 .. 99] (\i -> set (a, i) (exp_of_int i))
     x <- get (a, 49)
     y <- get (a, 51)
@@ -111,7 +113,7 @@ prog7 =
 prog8 =
   do
     a <- arr 25
-    forall [0 .. 24] (\i -> set (a, i) 0.0)
+    forall [0 .. 24] (\i -> set (a, i) (toP 0))
     let index i j = (P.+) ((P.*) 5 i) j
     forall2
       ([0 .. 4], [0 .. 4])
@@ -139,7 +141,7 @@ bool_prog10 =
 -- | 11. are unused fresh_input variables treated properly?
 prog11 =
   do
-    _ <- fresh_input :: Comp ('TArr 'TField)
+    _ <- fresh_input :: Comp ('TArr 'TField) P_BN128
     b <- fresh_input
     return b
 
@@ -154,19 +156,19 @@ bool_prog12 =
 prog13 =
   do
     a <- fresh_input
-    return $ 1.0 * a
+    return $ toP 1 * a
 
 -- | 14. opt: 0x * 3y = out ~~> out=0
 prog14 =
   do
     x <- fresh_input
     y <- fresh_input
-    return $ (0.0 * x) * (3.0 * y)
+    return $ (toP 0 * x) * (toP 3 * y)
 
 -- | 15. exp_binop smart constructor: 3 - (2 - 1) = 2
 prog15 =
   do
-    return $ 3.0 - (2.0 - 1.0)
+    return $ toP 3 - (toP 2 - toP 1)
 
 -- | 16. bool fresh_inputs test
 bool_prog16 =
@@ -235,7 +237,7 @@ bool_prog22 =
     x1 <- fresh_input
     x2 <- fresh_input
     x <- pair x1 x2
-    y <- (inl x :: Comp (TSum (TProd TBool TBool) TBool))
+    y <- (inl x :: Comp (TSum (TProd TBool TBool) TBool) P_BN128)
     case_sum
       (\e1 -> snd_pair e1)
       (\e2 -> return e2)
@@ -254,6 +256,7 @@ bool_prog23 =
                 (TProd TBool TBool)
                 (TProd TBool TBool)
             )
+            P_BN128
         )
     z <-
       ( inl y ::
@@ -265,6 +268,7 @@ bool_prog23 =
                 )
                 (TProd TBool TBool)
             )
+            P_BN128
         )
     case_sum
       ( case_sum
@@ -331,7 +335,11 @@ bool_prog32 =
 -- | 33. eq test
 bool_prog33 =
   do
-    x <- fresh_input :: Comp TField
+    x <-
+      fresh_input ::
+        Comp
+          TField
+          P_BN128
     y <- fresh_input
     return $ x `eq` y
 
@@ -342,16 +350,16 @@ prog34 = beta_test1
 prog35 = tree_test1
 
 -- | 36. sums test (ISSUE#7)
-prog36 :: Comp 'TField
+prog36 :: Comp 'TField P_BN128
 prog36 = do
   b1 <- fresh_input
-  x <- if return b1 then inl 2.0 else inr 3.0
-  case_sum (\n -> return $ n + 5.0) (\m -> return $ m + 7.0) x
+  x <- if return b1 then inl (toP 2) else inr (toP 3)
+  case_sum (\n -> return $ n + toP 5) (\m -> return $ m + toP 7) x
 
 -- | 37. build and modify a list of user-specified length, up to size 50
 prog37 = test_listN
 
-tests :: [(Comp 'TField, [Int], Integer)]
+tests :: [(Comp 'TField P_BN128, [Int], Integer)]
 tests =
   [ (prog1, [1, 2, 1], P.negate 240),
     (prog2 4, [0], 10),
@@ -393,7 +401,7 @@ tests =
     (prog37, 30 : (take 100 [0 ..]), 30)
   ]
 
-bool_tests :: [(Comp 'TBool, [Int], Integer)]
+bool_tests :: [(Comp 'TBool P_BN128, [Int], Integer)]
 bool_tests =
   [ (bool_prog9, [0, 0], 0),
     (bool_prog9, [0, 1], 0),

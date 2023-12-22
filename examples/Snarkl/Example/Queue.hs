@@ -4,6 +4,7 @@ module Snarkl.Example.Queue where
 
 import Data.Field.Galois (Prime)
 import Data.Typeable
+import GHC.TypeLits (KnownNat)
 import Snarkl.Compile
 import Snarkl.Example.List
 import Snarkl.Example.Stack
@@ -26,19 +27,19 @@ import Prelude hiding
 
 type TQueue a = 'TProd (TStack a) (TStack a)
 
-type Queue a = TExp (TQueue a) (Prime p)
+type Queue a p = TExp (TQueue a) (Prime p)
 
-empty_queue :: (Typeable a) => Comp (TQueue a)
+empty_queue :: (Typeable a, KnownNat p) => Comp (TQueue a) p
 empty_queue = do
   l <- empty_stack
   r <- empty_stack
   pair l r
 
 enqueue ::
-  (Zippable a, Derive a, Typeable a) =>
+  (Zippable a p, Derive a p, Typeable a, KnownNat p) =>
   TExp a (Prime p) ->
-  Queue a ->
-  Comp (TQueue a)
+  Queue a p ->
+  Comp (TQueue a) p
 enqueue v q = do
   l <- fst_pair q
   r <- snd_pair q
@@ -46,10 +47,10 @@ enqueue v q = do
   pair l' r
 
 dequeue ::
-  (Zippable a, Derive a, Typeable a) =>
-  Queue a ->
+  (Zippable a p, Derive a p, Typeable a, KnownNat p) =>
+  Queue a p ->
   TExp a (Prime p) ->
-  Comp ('TProd a (TQueue a))
+  Comp ('TProd a (TQueue a)) p
 dequeue q def = do
   l <- fst_pair q
   r <- snd_pair q
@@ -74,10 +75,10 @@ dequeue q def = do
       pair h p
 
 dequeue_rec ::
-  (Zippable a, Derive a, Typeable a) =>
-  Queue a ->
+  (Zippable a p, Derive a p, Typeable a, KnownNat p) =>
+  Queue a p ->
   TExp a (Prime p) ->
-  Comp ('TProd a (TQueue a))
+  Comp ('TProd a (TQueue a)) p
 dequeue_rec q def = fix go q
   where
     go self q0 = do
@@ -114,10 +115,10 @@ is_empty q = do
     (\_ _ -> return false)
 
 last_queue ::
-  (Zippable a, Derive a, Typeable a) =>
-  Queue a ->
+  (Zippable a p, Derive a p, Typeable a, KnownNat p) =>
+  Queue a p ->
   TExp a (Prime p) ->
-  Comp a
+  Comp a p
 last_queue q def = fixN 100 go q
   where
     go self p = do
@@ -141,6 +142,7 @@ map_queue f q = do
 -----------------------------------------
 
 -- queue with {nonempty stack, nonempty stack}
+queue1 :: (KnownNat p) => Comp (TQueue 'TField) p
 queue1 =
   do
     s1 <- stack1
@@ -148,6 +150,7 @@ queue1 =
     pair s1 s2
 
 -- queue with {nonempty stack, empty stack}
+queue2 :: (KnownNat p) => Comp (TQueue 'TField) p
 queue2 =
   do
     s1 <- stack1
@@ -156,39 +159,44 @@ queue2 =
     s4 <- stack2
     pair s4 s3
 
+queue_comp1 :: (KnownNat p) => Comp 'TField p
 queue_comp1 =
   do
     q1 <- queue1
-    q2 <- enqueue 1.0 q1
-    q3 <- enqueue 3.4 q2
+    q2 <- enqueue (toP 1) q1
+    q3 <- enqueue (toP 3 + (toP 4 / toP 10)) q2
     sx <- fst_pair q3
-    top_stack 0.0 sx
+    top_stack (toP 0) sx
 
 -- dequeue where input is queue with {nonempty, nonempty}
+queue_comp2 :: (KnownNat p) => Comp 'TField p
 queue_comp2 =
   do
     q1 <- queue1
-    sx <- dequeue q1 0.0
+    sx <- dequeue q1 (toP 0)
     fst_pair sx
 
 -- dequeue where input is queue with {nonempty, empty}
+queue_comp3 :: (KnownNat p) => Comp 'TField p
 queue_comp3 =
   do
     q1 <- queue2
-    sx <- dequeue q1 0.0
+    sx <- dequeue q1 (toP 0)
     fst_pair sx
 
+queueN :: (Typeable a, Zippable a p, Derive a p, KnownNat p) => TExp 'TField (Prime p) -> Comp (TQueue a) p
 queueN n = fixN 100 go n
   where
     go self n0 = do
       x <- fresh_input
-      tl <- self (n0 - 1.0)
-      if return (eq n0 0.0)
+      tl <- self (n0 - toP 1)
+      if return (eq n0 (toP 0))
         then empty_queue
         else enqueue x tl
 
+test_queueN :: (KnownNat p) => Comp 'TField p
 test_queueN = do
   n <- fresh_input
   q1 <- queueN n
   q2 <- map_queue inc_elem q1
-  last_queue q2 105.0
+  last_queue q2 (toP 105)

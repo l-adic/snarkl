@@ -4,6 +4,7 @@ module Snarkl.Example.List where
 
 import Data.Field.Galois (Prime)
 import Data.Typeable
+import GHC.TypeLits (KnownNat)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
@@ -24,14 +25,14 @@ type TF a = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst a) 'TFId)
 
 type TList a = 'TMu (TF a)
 
-type List a = TExp (TList a) (Prime p)
+type List a p = TExp (TList a) (Prime p)
 
-nil :: (Typeable a) => Comp (TList a)
+nil :: (Typeable a, KnownNat p) => Comp (TList a) p
 nil = do
   t <- inl unit
   roll t
 
-cons :: (Typeable a) => TExp a (Prime p) -> List a -> Comp (TList a)
+cons :: (Typeable a, KnownNat p) => TExp a (Prime p) -> List a p -> Comp (TList a) p
 cons f t =
   do
     p <- pair f t
@@ -41,12 +42,13 @@ cons f t =
 case_list ::
   ( Typeable a,
     Typeable ty,
-    Zippable ty
+    Zippable ty p,
+    KnownNat p
   ) =>
-  List a ->
-  Comp ty ->
-  (TExp a (Prime p) -> List a -> Comp ty) ->
-  Comp ty
+  List a p ->
+  Comp ty p ->
+  (TExp a (Prime p) -> List a p -> Comp ty p) ->
+  Comp ty p
 case_list t f_nil f_cons =
   do
     t' <- unroll t
@@ -60,12 +62,13 @@ case_list t f_nil f_cons =
 
 head_list ::
   ( Typeable a,
-    Zippable a,
-    Derive a
+    Zippable a p,
+    Derive a p,
+    KnownNat p
   ) =>
   TExp a (Prime p) ->
-  List a ->
-  Comp a
+  List a p ->
+  Comp a p
 head_list def l =
   case_list
     l
@@ -74,11 +77,12 @@ head_list def l =
 
 tail_list ::
   ( Typeable a,
-    Zippable a,
-    Derive a
+    Zippable a p,
+    Derive a p,
+    KnownNat p
   ) =>
-  List a ->
-  Comp (TList a)
+  List a p ->
+  Comp (TList a) p
 tail_list l =
   case_list
     l
@@ -91,12 +95,13 @@ tail_list l =
 
 app_list ::
   ( Typeable a,
-    Zippable a,
-    Derive a
+    Zippable a p,
+    Derive a p,
+    KnownNat p
   ) =>
-  List a ->
-  List a ->
-  Comp (TList a)
+  List a p ->
+  List a p ->
+  Comp (TList a) p
 app_list l1 l2 = fix go l1
   where
     go self l0 =
@@ -110,11 +115,12 @@ app_list l1 l2 = fix go l1
 
 rev_list ::
   ( Typeable a,
-    Zippable a,
-    Derive a
+    Zippable a p,
+    Derive a p,
+    KnownNat p
   ) =>
-  List a ->
-  Comp (TList a)
+  List a p ->
+  Comp (TList a) p
 rev_list l = fix go l
   where
     go self l0 =
@@ -130,15 +136,16 @@ rev_list l = fix go l
 
 map_list ::
   ( Typeable a,
-    Zippable a,
-    Derive a,
+    Zippable a p,
+    Derive a p,
     Typeable b,
-    Zippable b,
-    Derive b
+    Zippable b p,
+    Derive b p,
+    KnownNat p
   ) =>
-  (TExp a (Prime p) -> Comp b) ->
-  List a ->
-  Comp (TList b)
+  (TExp a (Prime p) -> Comp b p) ->
+  List a p ->
+  Comp (TList b) p
 map_list f l =
   fix go l
   where
@@ -154,9 +161,9 @@ map_list f l =
         )
 
 last_list ::
-  (Typeable a, Zippable a, Derive a) =>
+  (Typeable a, Zippable a p, Derive a p, KnownNat p) =>
   TExp a (Prime p) ->
-  List a ->
+  List a p ->
   Comp a p
 last_list def l =
   fix go l
@@ -176,6 +183,7 @@ last_list def l =
  A couple (very simple) test cases
  ------------------------------------------------}
 
+list1 :: (KnownNat p) => Comp (TList 'TField) p
 list1 =
   do
     tl <- nil
@@ -184,36 +192,41 @@ list1 =
 
 inc_elem e = return $ exp_of_int 1 + e
 
+list2 :: (KnownNat p) => Comp (TList 'TField) p
 list2 =
   do
     l <- list1
     map_list inc_elem l
 
+list_comp3 :: (KnownNat p) => Comp 'TField p
 list_comp3 =
   do
     b <- fresh_input
     l <- nil
-    l' <- cons 23.0 l
-    l'' <- cons 33.0 l'
+    l' <- cons (toP 23) l
+    l'' <- cons (toP 33) l'
     l2 <- if return b then return l'' else return l
     l3 <- map_list inc_elem l2
     l4 <- tail_list l3
-    head_list 0.0 l4
+    head_list (toP 0) l4
 
+list_comp4 :: (KnownNat p) => Comp 'TField p
 list_comp4 =
   do
     l <- list2
-    last_list 0.0 l
+    last_list (toP 0) l
 
+listN :: (Typeable a, Zippable a p, Derive a p, KnownNat p) => TExp 'TField (Prime p) -> Comp (TList a) p
 listN n = fixN 100 go n
   where
     go self n0 = do
       x <- fresh_input
-      tl <- self (n0 - 1.0)
-      if return (eq n0 0.0) then nil else cons x tl
+      tl <- self (n0 - toP 1)
+      if return (eq n0 (toP 0)) then nil else cons x tl
 
+test_listN :: (KnownNat p) => Comp 'TField p
 test_listN = do
   n <- fresh_input
   l1 <- listN n
   l2 <- map_list inc_elem l1
-  last_list 99.0 l2
+  last_list (toP 99) l2

@@ -6,6 +6,7 @@ import Data.Field.Galois (Prime)
 import Data.Typeable (Typeable)
 import GHC.TypeLits (KnownNat)
 import Snarkl.Compile
+import Snarkl.Field (F_BN128)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
@@ -39,7 +40,7 @@ arr_ex x = do
   return $ y + z
 
 p1 :: (KnownNat p) => Comp 'TField p
-p1 = arr_ex $ fromPrimeField 1
+p1 = arr_ex $ toP 1
 
 desugar1 :: (KnownNat p) => TExpPkg 'TField p
 desugar1 = texp_of_comp p1
@@ -63,13 +64,13 @@ compile1 :: (KnownNat p) => R1CS (Prime p)
 compile1 = r1cs_of_comp Simplify p1
 
 run1 :: IO ExitCode
-run1 = snarkify_comp "example" Simplify p1 ([] :: [Prime 257])
+run1 = snarkify_comp "example" Simplify p1 ([] :: [F_BN128])
 
 comp1 :: (KnownNat p, Typeable a) => Comp ('TSum 'TBool a) p
 comp1 = inl false
 
 comp2 :: (KnownNat p, Typeable a) => Comp ('TSum a 'TField) p
-comp2 = inr (fromPrimeField 0)
+comp2 = inr (toP 0)
 
 test1 :: (KnownNat p) => State (Env p) (TExp 'TBool (Prime p))
 test1 = do

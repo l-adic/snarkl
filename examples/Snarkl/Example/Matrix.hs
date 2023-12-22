@@ -3,6 +3,7 @@
 module Snarkl.Example.Matrix where
 
 import Data.Field.Galois (Prime)
+import GHC.TypeLits (KnownNat)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
@@ -36,7 +37,7 @@ input_rowvec n = input_arr n
 
 input_colvec n = input_arr n
 
-type FixedMatrix = Int -> Int -> (Prime p)
+type FixedMatrix p = Int -> Int -> (Prime p)
 
 -- v0 + v1 + .. + v(n-1)
 sum_vec n v = do
@@ -46,7 +47,7 @@ sum_vec n v = do
         a <- get (v, i)
         return $ a + acc
     )
-    0.0
+    (toP 0)
 
 sum_mat n m mat = do
   iterM
@@ -59,10 +60,10 @@ sum_mat n m mat = do
                 mat_elem <- get2 (mat, i, j)
                 return $ mat_elem + acc'
             )
-            0.0
+            (toP 0)
         return $ a + acc
     )
-    0.0
+    (toP 0)
 
 input_matrix_mult n m p = do
   a <- input_matrix n m
@@ -83,7 +84,7 @@ input_matrix_mult n m p = do
                       bElem <- get2 (b, k, j)
                       return $ (bElem * aElem) + acc
                   )
-                  0.0
+                  (toP 0)
               set2 (c, i, j) res
           )
     )
@@ -105,7 +106,7 @@ matrix_colvec_mult fm n = do
                 a <- get (v, j)
                 return $ (fm i j) * a + acc
             )
-            0.0
+            (toP 0)
         set (v', i) res
     )
 
@@ -116,7 +117,8 @@ matrix_colvec_mult fm n = do
 Test cases
 ------------------------------------------------}
 
-test1 n = matrix_colvec_mult (\_ _ -> 7.0) n
+test1 :: (KnownNat p) => Int -> Comp 'TField p
+test1 n = matrix_colvec_mult (\_ _ -> toP 7) n
 
 interp1 n = comp_interp (test1 n) (map fromIntegral [0 .. dec n])
 
@@ -124,6 +126,7 @@ t2_m0 n = (map fromIntegral [0 .. dec n])
 
 t2_m1 n = reverse (t2_m0 n)
 
+test2 :: (KnownNat p) => Int -> Comp 'TField p
 test2 n = input_matrix_mult n n n
 
 interp2 n =
