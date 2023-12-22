@@ -196,7 +196,7 @@ encode_zneq (x, y) =
           Right c ->
             if c == 0
               then do
-                bind_var (m0, 1)
+                bind_var (m0, 0)
                 return True
               else do
                 bind_var (m0, recip c)

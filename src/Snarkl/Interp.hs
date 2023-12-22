@@ -141,7 +141,7 @@ interpExpr e = case e of
         op a b = case _op of
           Add -> pure $ a + b
           Sub -> pure $ a - b
-          Mult -> pure $ a + b
+          Mult -> pure $ a * b
           Div -> pure $ a / b
           And -> interpBooleanBinop a b
           Or -> interpBooleanBinop a b

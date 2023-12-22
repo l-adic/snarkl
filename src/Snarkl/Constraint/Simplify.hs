@@ -103,19 +103,19 @@ subst_constr !constr = case constr of
             CMult (c, rx) (d, ry) (e, Nothing)
         (Left rx, Right d0, Left (e, rz)) ->
           return $!
-            cadd 0 [(rx, c * d * d0), (rz, negate e)]
+            cadd 0 [(rx, c * d * d0), (rz, -e)]
         (Left rx, Right d0, Right e) ->
           return $!
-            cadd (negate e) [(rx, c * d * d0)]
+            cadd (-e) [(rx, c * d * d0)]
         (Right c0, Left ry, Left (e, rz)) ->
           return $!
-            cadd 0 [(ry, c0 * c * d), (rz, negate e)]
+            cadd 0 [(ry, c0 * c * d), (rz, -e)]
         (Right c0, Left ry, Right e) ->
           return $!
-            cadd (negate e) [(ry, c0 * c * d)]
+            cadd (-e) [(ry, c0 * c * d)]
         (Right c0, Right d0, Left (e, rz)) ->
           return $!
-            cadd (c * c0 * d * d0) [(rz, negate e)]
+            cadd (c * c0 * d * d0) [(rz, -e)]
         (Right c0, Right d0, Right e) ->
           return $!
             cadd ((c * c0 * d * d0) - e) []
@@ -168,9 +168,9 @@ learn = go
     go (CAdd a (CoeffList [(x, c)])) =
       if c == 0
         then return ()
-        else bind_var (x, negate a * recip c)
+        else bind_var (x, -a * recip c)
     go (CAdd a (CoeffList [(x, c), (y, d)]))
-      | a == 0 = when (c == negate d) (unite_vars x y)
+      | a == 0 = when (c == -d) (unite_vars x y)
     go (CAdd _ _) =
       return ()
     go _ = return ()
@@ -253,9 +253,9 @@ simplify pinned_vars sigma =
                 ( \(x, var_or_a) ->
                     case var_or_a of
                       Left rx ->
-                        cadd 0 [(x, 1), (rx, negate 1)]
+                        cadd 0 [(x, 1), (rx, -1)]
                       Right c ->
-                        cadd (negate c) [(x, 1)]
+                        cadd (-c) [(x, 1)]
                 )
                 $ filter (\(x, rx) -> Left x /= rx) pinned_terms
         return $ pin_eqns ++ sigma0
