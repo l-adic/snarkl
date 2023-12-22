@@ -55,7 +55,7 @@ module Snarkl.Toplevel
   )
 where
 
-import Data.Field.Galois (Prime, PrimeField (fromP))
+import Data.Field.Galois (Prime, PrimeField)
 import qualified Data.IntMap.Lazy as IntMap
 import Data.List (sort)
 import qualified Data.Map.Strict as Map
@@ -455,15 +455,15 @@ result_of_comp simpl mf inputs =
 
 -- | Same as 'result_of_comp', but specialized to integer arguments
 -- and results. Returns just the integer result.
-int_of_comp :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> Integer
+int_of_comp :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> Prime p
 int_of_comp simpl mf args =
-  fromP $ result_result $ result_of_comp simpl mf (map fromIntegral args)
+  result_result $ result_of_comp simpl mf (map fromIntegral args)
 
 -- | Same as 'int_of_comp', but additionally runs resulting R1CS
 -- through key generation, proof generation, and verification stages
 -- of 'libsnark'.  TODO: This function does duplicate R1CS generation,
 -- once for 'libsnark' and a second time for 'int_of_comp'.
-test_comp :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> IO (Either ExitCode Integer)
+test_comp :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> IO (Either ExitCode (Prime p))
 test_comp simpl mf args =
   do
     exit_code <- snarkify_comp "hspec" simpl mf (map fromIntegral args)

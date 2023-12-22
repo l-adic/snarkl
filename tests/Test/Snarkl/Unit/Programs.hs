@@ -359,7 +359,7 @@ prog36 = do
 -- | 37. build and modify a list of user-specified length, up to size 50
 prog37 = test_listN
 
-tests :: [(Comp 'TField P_BN128, [Int], Integer)]
+tests :: [(Comp 'TField P_BN128, [Int], F_BN128)]
 tests =
   [ (prog1, [1, 2, 1], P.negate 240),
     (prog2 4, [0], 10),
@@ -401,7 +401,7 @@ tests =
     (prog37, 30 : (take 100 [0 ..]), 30)
   ]
 
-bool_tests :: [(Comp 'TBool P_BN128, [Int], Integer)]
+bool_tests :: [(Comp 'TBool P_BN128, [Int], F_BN128)]
 bool_tests =
   [ (bool_prog9, [0, 0], 0),
     (bool_prog9, [0, 1], 0),
