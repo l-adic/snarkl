@@ -2,7 +2,7 @@
 
 module Snarkl.Example.List where
 
-import Data.Field.Galois (Prime)
+import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
 import Snarkl.Language.Syntax
@@ -25,14 +25,14 @@ type TF a = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst a) 'TFId)
 
 type TList a = 'TMu (TF a)
 
-type List a p = TExp (TList a) (Prime p)
+type List a k = TExp (TList a) k
 
-nil :: (Typeable a, KnownNat p) => Comp (TList a) p
+nil :: (Typeable a, GaloisField k) => Comp (TList a) k
 nil = do
   t <- inl unit
   roll t
 
-cons :: (Typeable a, KnownNat p) => TExp a (Prime p) -> List a p -> Comp (TList a) p
+cons :: (Typeable a, GaloisField k) => TExp a k -> List a k -> Comp (TList a) k
 cons f t =
   do
     p <- pair f t
@@ -42,13 +42,13 @@ cons f t =
 case_list ::
   ( Typeable a,
     Typeable ty,
-    Zippable ty p,
-    KnownNat p
+    Zippable ty k,
+    GaloisField k
   ) =>
-  List a p ->
-  Comp ty p ->
-  (TExp a (Prime p) -> List a p -> Comp ty p) ->
-  Comp ty p
+  List a k ->
+  Comp ty k ->
+  (TExp a k -> List a k -> Comp ty k) ->
+  Comp ty k
 case_list t f_nil f_cons =
   do
     t' <- unroll t
@@ -62,13 +62,13 @@ case_list t f_nil f_cons =
 
 head_list ::
   ( Typeable a,
-    Zippable a p,
-    Derive a p,
-    KnownNat p
+    Zippable a k,
+    Derive a k,
+    GaloisField k
   ) =>
-  TExp a (Prime p) ->
-  List a p ->
-  Comp a p
+  TExp a k ->
+  List a k ->
+  Comp a k
 head_list def l =
   case_list
     l
@@ -77,12 +77,12 @@ head_list def l =
 
 tail_list ::
   ( Typeable a,
-    Zippable a p,
-    Derive a p,
-    KnownNat p
+    Zippable a k,
+    Derive a k,
+    GaloisField k
   ) =>
-  List a p ->
-  Comp (TList a) p
+  List a k ->
+  Comp (TList a) k
 tail_list l =
   case_list
     l
@@ -95,13 +95,13 @@ tail_list l =
 
 app_list ::
   ( Typeable a,
-    Zippable a p,
-    Derive a p,
-    KnownNat p
+    Zippable a k,
+    Derive a k,
+    GaloisField k
   ) =>
-  List a p ->
-  List a p ->
-  Comp (TList a) p
+  List a k ->
+  List a k ->
+  Comp (TList a) k
 app_list l1 l2 = fix go l1
   where
     go self l0 =
@@ -115,12 +115,12 @@ app_list l1 l2 = fix go l1
 
 rev_list ::
   ( Typeable a,
-    Zippable a p,
-    Derive a p,
-    KnownNat p
+    Zippable a k,
+    Derive a k,
+    GaloisField k
   ) =>
-  List a p ->
-  Comp (TList a) p
+  List a k ->
+  Comp (TList a) k
 rev_list l = fix go l
   where
     go self l0 =
@@ -136,16 +136,16 @@ rev_list l = fix go l
 
 map_list ::
   ( Typeable a,
-    Zippable a p,
-    Derive a p,
+    Zippable a k,
+    Derive a k,
     Typeable b,
-    Zippable b p,
-    Derive b p,
-    KnownNat p
+    Zippable b k,
+    Derive b k,
+    GaloisField k
   ) =>
-  (TExp a (Prime p) -> Comp b p) ->
-  List a p ->
-  Comp (TList b) p
+  (TExp a k -> Comp b k) ->
+  List a k ->
+  Comp (TList b) k
 map_list f l =
   fix go l
   where
@@ -161,10 +161,10 @@ map_list f l =
         )
 
 last_list ::
-  (Typeable a, Zippable a p, Derive a p, KnownNat p) =>
-  TExp a (Prime p) ->
-  List a p ->
-  Comp a p
+  (Typeable a, Zippable a k, Derive a k, GaloisField k) =>
+  TExp a k ->
+  List a k ->
+  Comp a k
 last_list def l =
   fix go l
   where
@@ -183,7 +183,7 @@ last_list def l =
  A couple (very simple) test cases
  ------------------------------------------------}
 
-list1 :: (KnownNat p) => Comp (TList 'TField) p
+list1 :: (GaloisField k) => Comp (TList 'TField) k
 list1 =
   do
     tl <- nil
@@ -192,41 +192,41 @@ list1 =
 
 inc_elem e = return $ exp_of_int 1 + e
 
-list2 :: (KnownNat p) => Comp (TList 'TField) p
+list2 :: (GaloisField k) => Comp (TList 'TField) k
 list2 =
   do
     l <- list1
     map_list inc_elem l
 
-list_comp3 :: (KnownNat p) => Comp 'TField p
+list_comp3 :: (GaloisField k) => Comp 'TField k
 list_comp3 =
   do
     b <- fresh_input
     l <- nil
-    l' <- cons (fromPrimeField 23) l
-    l'' <- cons (fromPrimeField 33) l'
+    l' <- cons (fromField 23) l
+    l'' <- cons (fromField 33) l'
     l2 <- if return b then return l'' else return l
     l3 <- map_list inc_elem l2
     l4 <- tail_list l3
-    head_list (fromPrimeField 0) l4
+    head_list (fromField 0) l4
 
-list_comp4 :: (KnownNat p) => Comp 'TField p
+list_comp4 :: (GaloisField k) => Comp 'TField k
 list_comp4 =
   do
     l <- list2
-    last_list (fromPrimeField 0) l
+    last_list (fromField 0) l
 
-listN :: (Typeable a, Zippable a p, Derive a p, KnownNat p) => TExp 'TField (Prime p) -> Comp (TList a) p
+listN :: (Typeable a, Zippable a k, Derive a k, GaloisField k) => TExp 'TField k -> Comp (TList a) k
 listN n = fixN 100 go n
   where
     go self n0 = do
       x <- fresh_input
-      tl <- self (n0 - fromPrimeField 1)
-      if return (eq n0 (fromPrimeField 0)) then nil else cons x tl
+      tl <- self (n0 - fromField 1)
+      if return (eq n0 (fromField 0)) then nil else cons x tl
 
-test_listN :: (KnownNat p) => Comp 'TField p
+test_listN :: (GaloisField k) => Comp 'TField k
 test_listN = do
   n <- fresh_input
   l1 <- listN n
   l2 <- map_list inc_elem l1
-  last_list (fromPrimeField 99) l2
+  last_list (fromField 99) l2

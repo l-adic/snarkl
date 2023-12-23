@@ -2,7 +2,7 @@
 
 module Snarkl.Field where
 
-import Data.Field.Galois (Prime, PrimeField (fromP))
+import Data.Field.Galois (Prime, fromP)
 import Prettyprinter (Pretty (..))
 
 type P_BN128 = 21888242871839275222246405745257275088548364400416034343698204186575808495617

@@ -3,7 +3,7 @@ module Snarkl.Constraint.Solve
   )
 where
 
-import Data.Field.Galois (PrimeField)
+import Data.Field.Galois (GaloisField)
 import qualified Data.IntMap.Lazy as Map
 import Data.Maybe
   ( isJust,
@@ -21,7 +21,7 @@ import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 -- constraint that is violated (under normal operation, this error
 -- case should NOT occur).
 solve ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   -- | Constraints to be solved
   ConstraintSystem a ->
   -- | Initial assignment

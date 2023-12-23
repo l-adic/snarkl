@@ -2,7 +2,7 @@
 
 module Snarkl.Example.Stack where
 
-import Data.Field.Galois (Prime)
+import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
 import Snarkl.Compile
@@ -26,59 +26,59 @@ import Prelude hiding
 
 type TStack a = TList a
 
-type Stack a p = TExp (TStack a) (Prime p)
+type Stack a k = TExp (TStack a) k
 
-empty_stack :: (Typeable a, KnownNat p) => Comp (TStack a) p
+empty_stack :: (Typeable a, GaloisField k) => Comp (TStack a) k
 empty_stack = nil
 
-push_stack :: (Typeable a, KnownNat p) => TExp a (Prime p) -> Stack a p -> Comp (TStack a) p
+push_stack :: (Typeable a, GaloisField k) => TExp a k -> Stack a k -> Comp (TStack a) k
 push_stack p q = cons p q
 
-pop_stack :: (Derive a p, Zippable a p, Typeable a, KnownNat p) => Stack a p -> Comp (TStack a) p
+pop_stack :: (Derive a k, Zippable a k, Typeable a, GaloisField k) => Stack a k -> Comp (TStack a) k
 pop_stack f = tail_list f
 
-top_stack :: (Derive a p, Zippable a p, Typeable a, KnownNat p) => TExp a (Prime p) -> Stack a p -> Comp a p
+top_stack :: (Derive a k, Zippable a k, Typeable a, GaloisField k) => TExp a k -> Stack a k -> Comp a k
 top_stack def e = head_list def e
 
-is_empty_stack :: (Typeable a, KnownNat p) => Stack a p -> Comp 'TBool p
+is_empty_stack :: (Typeable a, GaloisField k) => Stack a k -> Comp 'TBool k
 is_empty_stack s =
   case_list s (return true) (\_ _ -> return false)
 
 ---Test Examples---
 
-stack1 :: (KnownNat p) => Comp (TStack 'TField) p
+stack1 :: (GaloisField k) => Comp (TStack 'TField) k
 stack1 =
   do
     tl <- empty_stack
-    tl' <- push_stack (fromPrimeField 15) tl
-    push_stack (fromPrimeField 99) tl'
+    tl' <- push_stack (fromField 15) tl
+    push_stack (fromField 99) tl'
 
-stack2 :: (KnownNat p) => Comp (TStack 'TField) p
+stack2 :: (GaloisField k) => Comp (TStack 'TField) k
 stack2 =
   do
     tl <- empty_stack
-    tl' <- push_stack (fromPrimeField 1) tl
-    tl'' <- push_stack (fromPrimeField 12) tl'
-    push_stack (fromPrimeField 89) tl''
+    tl' <- push_stack (fromField 1) tl
+    tl'' <- push_stack (fromField 12) tl'
+    push_stack (fromField 89) tl''
 
 -- top_stack on empty stack
-test_top1 :: (KnownNat p) => Comp 'TField p
+test_top1 :: (GaloisField k) => Comp 'TField k
 test_top1 =
   do
     s1 <- stack1
     s2 <- pop_stack s1
     s3 <- pop_stack s2
-    top_stack (fromPrimeField 1) s3
+    top_stack (fromField 1) s3
 
 -- top_stack on non-empty stack
-test_top2 :: (KnownNat p) => Comp 'TField p
+test_top2 :: (GaloisField k) => Comp 'TField k
 test_top2 =
   do
     s1 <- stack1
-    top_stack (fromPrimeField 1) s1
+    top_stack (fromField 1) s1
 
 -- is_empty_stack on an empty stack
-test_empty_stack1 :: (KnownNat p) => Comp 'TBool p
+test_empty_stack1 :: (GaloisField k) => Comp 'TBool k
 test_empty_stack1 =
   do
     s1 <- stack1
@@ -87,7 +87,7 @@ test_empty_stack1 =
     is_empty_stack s3
 
 -- is_empty_stack on non-empty stack
-test_empty_stack2 :: (KnownNat p) => Comp 'TBool p
+test_empty_stack2 :: (GaloisField k) => Comp 'TBool k
 test_empty_stack2 =
   do
     s1 <- stack1

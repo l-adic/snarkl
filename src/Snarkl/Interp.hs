@@ -7,7 +7,7 @@ where
 
 import Control.Monad (ap, foldM)
 import Data.Data (Typeable)
-import Data.Field.Galois (PrimeField)
+import Data.Field.Galois (GaloisField)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Snarkl.Common (Op (..), UnOp (ZEq))
@@ -57,17 +57,17 @@ lookupVar x =
         Just v -> Right (rho, v)
     )
 
-fieldOfBool :: (PrimeField a) => Bool -> a
+fieldOfBool :: (GaloisField a) => Bool -> a
 fieldOfBool b = if b then 1 else 0
 
-caseOfField :: (PrimeField a) => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
+caseOfField :: (GaloisField a) => Maybe a -> (Maybe Bool -> InterpM a b) -> InterpM a b
 caseOfField Nothing f = f Nothing
 caseOfField (Just v) f
   | v == 0 = f $ Just False
   | v == 1 = f $ Just True
   | otherwise = raiseErr $ ErrMsg $ "expected " ++ show v ++ " to be boolean"
 
-boolOfField :: (PrimeField a) => a -> InterpM a Bool
+boolOfField :: (GaloisField a) => a -> InterpM a Bool
 boolOfField v =
   caseOfField
     (Just v)
@@ -77,7 +77,7 @@ boolOfField v =
     )
 
 interpTExp ::
-  ( PrimeField a,
+  ( GaloisField a,
     Typeable ty
   ) =>
   TExp ty a ->
@@ -87,14 +87,14 @@ interpTExp e = do
   interpExpr _exp
 
 interp ::
-  (PrimeField a, Typeable ty) =>
+  (GaloisField a, Typeable ty) =>
   Map Variable a ->
   TExp ty a ->
   Either ErrMsg (Env a, Maybe a)
 interp rho e = runInterpM (interpTExp e) $ Map.map Just rho
 
 interpExpr ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   Exp a ->
   InterpM a (Maybe a)
 interpExpr e = case e of
@@ -129,7 +129,7 @@ interpExpr e = case e of
     _ -> last <$> mapM interpExpr es
   EUnit -> return $ Just 1
   where
-    interpBinopExpr :: (PrimeField a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
+    interpBinopExpr :: (GaloisField a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)
     interpBinopExpr _ Nothing _ = return Nothing
     interpBinopExpr _op (Just a1) _exp = do
       ma2 <- interpExpr _exp
@@ -137,7 +137,7 @@ interpExpr e = case e of
         Nothing -> return Nothing
         Just a2 -> Just <$> op a1 a2
       where
-        op :: (PrimeField a) => a -> a -> InterpM a a
+        op :: (GaloisField a) => a -> a -> InterpM a a
         op a b = case _op of
           Add -> pure $ a + b
           Sub -> pure $ a - b
@@ -148,7 +148,7 @@ interpExpr e = case e of
           XOr -> interpBooleanBinop a b
           BEq -> interpBooleanBinop a b
           Eq -> pure $ fieldOfBool $ a == b
-        interpBooleanBinop :: (PrimeField a) => a -> a -> InterpM a a
+        interpBooleanBinop :: (GaloisField a) => a -> a -> InterpM a a
         interpBooleanBinop a b =
           do
             b1 <- boolOfField a

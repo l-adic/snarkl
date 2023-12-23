@@ -7,7 +7,7 @@
 module Main where
 
 import Criterion.Main
-import Data.Field.Galois (Prime)
+import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable (Typeable)
 import Harness
 import Snarkl.Compile (SimplParam (..))
@@ -15,9 +15,9 @@ import qualified Snarkl.Example.Keccak as Keccak
 import qualified Snarkl.Example.List as List
 import qualified Snarkl.Example.Matrix as Matrix
 import Snarkl.Field (F_BN128, P_BN128)
-import Snarkl.Language (Comp, fromPrimeField)
+import Snarkl.Language (Comp, fromField)
 
-mk_bgroup :: (Typeable ty) => String -> Comp ty P_BN128 -> [Int] -> F_BN128 -> Benchmark
+mk_bgroup :: (Typeable ty) => String -> Comp ty F_BN128 -> [Int] -> F_BN128 -> Benchmark
 mk_bgroup nm mf inputs result =
   bgroup
     nm

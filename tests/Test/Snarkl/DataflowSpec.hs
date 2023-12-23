@@ -2,7 +2,7 @@
 
 module Test.Snarkl.DataflowSpec where
 
-import Data.Field.Galois (Prime, toP)
+import Data.Field.Galois (GaloisField, Prime, PrimeField, toP)
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -16,7 +16,7 @@ import Snarkl.Constraint.Constraints
 import Snarkl.Constraint.Dataflow
   ( removeUnreachable,
   )
-import Snarkl.Field (P_BN128)
+import Snarkl.Field (F_BN128, P_BN128)
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 -- Mock state environment for CMagic (as the real one is not provided)
@@ -32,7 +32,7 @@ constraint2 :: (KnownNat p) => Constraint (Prime p)
 constraint2 = CMult (toP 2, 1) (toP 3, 2) (toP 4, Just 3)
 
 -- NOTE: notice 4 doesn't count as a variable here, WHY?
-constraint3 :: (KnownNat p) => Constraint (Prime p)
+constraint3 :: (GaloisField k) => Constraint k
 constraint3 = CMagic 4 [2, 3] $ \vars -> do
   let sumVars = sum vars
   return (sumVars > 5)
@@ -57,7 +57,7 @@ exampleConstraintSystem =
 
 -- Expected Result after removeUnreachable is applied
 -- (Adjust this based on the expected behavior of removeUnreachable)
-expectedResult :: ConstraintSystem (Prime P_BN128)
+expectedResult :: ConstraintSystem (F_BN128)
 expectedResult =
   exampleConstraintSystem
     { cs_constraints = Set.fromList [constraint1, constraint2, constraint3, constraint5]

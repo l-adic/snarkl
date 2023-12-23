@@ -7,7 +7,7 @@ module Snarkl.Backend.R1CS.R1CS
 where
 
 import Control.Parallel.Strategies
-import Data.Field.Galois (PrimeField)
+import Data.Field.Galois (GaloisField)
 import qualified Data.IntMap.Lazy as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
@@ -18,7 +18,7 @@ import Snarkl.Errors
 ----------------------------------------------------------------
 
 data R1C a where
-  R1C :: (PrimeField a) => (Poly a, Poly a, Poly a) -> R1C a
+  R1C :: (GaloisField a) => (Poly a, Poly a, Poly a) -> R1C a
 
 instance (Show a) => Show (R1C a) where
   show (R1C (aV, bV, cV)) = show aV ++ "*" ++ show bV ++ "==" ++ show cV
@@ -38,12 +38,12 @@ num_constraints :: R1CS a -> Int
 num_constraints = length . r1cs_clauses
 
 -- sat_r1c: Does witness 'w' satisfy constraint 'c'?
-sat_r1c :: (PrimeField a) => Assgn a -> R1C a -> Bool
+sat_r1c :: (GaloisField a) => Assgn a -> R1C a -> Bool
 sat_r1c w c
   | R1C (aV, bV, cV) <- c =
       inner aV w * inner bV w == inner cV w
   where
-    inner :: (PrimeField a) => Poly a -> Assgn a -> a
+    inner :: (GaloisField a) => Poly a -> Assgn a -> a
     inner (Poly v) w' =
       let c0 = Map.findWithDefault 0 (-1) v
        in Map.foldlWithKey (f w') c0 v
@@ -52,7 +52,7 @@ sat_r1c w c
       (v_val * Map.findWithDefault 0 v_key w') + acc
 
 -- sat_r1cs: Does witness 'w' satisfy constraint set 'cs'?
-sat_r1cs :: (PrimeField a) => Assgn a -> R1CS a -> Bool
+sat_r1cs :: (GaloisField a) => Assgn a -> R1CS a -> Bool
 sat_r1cs w cs = all id $ is_sat (r1cs_clauses cs)
   where
     is_sat cs0 = map g cs0 `using` parListChunk (chunk_sz cs0) rseq

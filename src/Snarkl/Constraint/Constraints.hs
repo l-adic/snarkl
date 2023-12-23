@@ -15,7 +15,7 @@ module Snarkl.Constraint.Constraints
 where
 
 import Control.Monad.State (State)
-import Data.Field.Galois (Prime, PrimeField)
+import Data.Field.Galois (GaloisField, Prime)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
 import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
@@ -35,7 +35,7 @@ newtype CoeffList k v = CoeffList {asList :: [(k, v)]}
 -- implicitly removed. Smart constructor 'cadd' (below) enforces this
 -- invariant.
 
-coeff_insert :: (Eq k, PrimeField a) => k -> a -> CoeffList k a -> CoeffList k a
+coeff_insert :: (Eq k, GaloisField a) => k -> a -> CoeffList k a -> CoeffList k a
 coeff_insert k a l = CoeffList $ go (asList l)
   where
     go [] = [(k, a)]
@@ -44,14 +44,14 @@ coeff_insert k a l = CoeffList $ go (asList l)
         then (k, a + a') : l'
         else scrut : go l'
 
-coeff_merge :: (Eq k, PrimeField a) => CoeffList k a -> CoeffList k a
+coeff_merge :: (Eq k, GaloisField a) => CoeffList k a -> CoeffList k a
 coeff_merge l = go (CoeffList []) (asList l)
   where
     go acc [] = acc
     go acc ((k, a) : l') =
       go (coeff_insert k a acc) l'
 
-remove_zeros :: (PrimeField a) => CoeffList k a -> CoeffList k a
+remove_zeros :: (GaloisField a) => CoeffList k a -> CoeffList k a
 remove_zeros (CoeffList l) = CoeffList $ go [] l
   where
     go acc [] = acc
@@ -74,7 +74,7 @@ data Constraint a
   | CMagic Var [Var] ([Var] -> State (SEnv a) Bool)
 
 -- | Smart constructor enforcing CoeffList invariant
-cadd :: (PrimeField a) => a -> [(Var, a)] -> Constraint a
+cadd :: (GaloisField a) => a -> [(Var, a)] -> Constraint a
 cadd !a !l = CAdd a (remove_zeros $ coeff_merge $ CoeffList l)
 
 type ConstraintSet a = Set.Set (Constraint a)
@@ -166,7 +166,7 @@ instance (Show a) => Show (Constraint a) where
 ----------------------------------------------------------------
 
 r1cs_of_cs ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   -- | Constraints
   ConstraintSystem a ->
   -- | Witness generator
@@ -210,7 +210,7 @@ constraint_vars cs =
 --   variables in the (renumbered) constraint set and the (possibly
 --   renumbered) in and out variables.
 renumber_constraints ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   ConstraintSystem a ->
   ( Var -> Var,
     ConstraintSystem a

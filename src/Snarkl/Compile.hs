@@ -19,7 +19,7 @@ import Control.Monad.State
     runState,
   )
 import Data.Either (fromRight)
-import Data.Field.Galois (PrimeField)
+import Data.Field.Galois (GaloisField)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -80,25 +80,25 @@ fresh_var =
     return next
 
 -- | Add constraint 'x = y'
-ensure_equal :: (PrimeField a) => (Var, Var) -> State (CEnv a) ()
+ensure_equal :: (GaloisField a) => (Var, Var) -> State (CEnv a) ()
 ensure_equal (x, y) =
   add_constraint $
     cadd 0 [(x, 1), (y, -1)]
 
 -- | Add constraint 'x = c'
-ensure_const :: (PrimeField a) => (Var, a) -> State (CEnv a) ()
+ensure_const :: (GaloisField a) => (Var, a) -> State (CEnv a) ()
 ensure_const (x, c) =
   add_constraint $
     cadd c [(x, -1)]
 
 -- | Add constraint 'b^2 = b'.
-ensure_boolean :: (PrimeField a) => Var -> State (CEnv a) ()
+ensure_boolean :: (GaloisField a) => Var -> State (CEnv a) ()
 ensure_boolean b =
   encode_binop Mult (b, b, b)
 
 -- | Constraint 'x \/ y = z'.
 -- The encoding is: x+y - z = x*y; assumes x and y are boolean.
-encode_or :: (PrimeField a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_or :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_or (x, y, z) =
   do
     x_mult_y <- fresh_var
@@ -114,7 +114,7 @@ encode_or (x, y, z) =
 
 -- | Constraint 'x xor y = z'.
 -- The encoding is: x+y - z = 2(x*y); assumes x and y are boolean.
-encode_xor :: (PrimeField a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_xor :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_xor (x, y, z) =
   do
     x_mult_y <- fresh_var
@@ -141,7 +141,7 @@ encode_xor (x, y, z) =
 
 -- | Constraint 'x == y = z' ASSUMING x, y are boolean.
 -- The encoding is: x*y + (1-x)*(1-y) = z.
-encode_boolean_eq :: (PrimeField a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_boolean_eq :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_boolean_eq (x, y, z) = cs_of_exp z e
   where
     e =
@@ -157,7 +157,7 @@ encode_boolean_eq (x, y, z) = cs_of_exp z e
 
 -- | Constraint 'x == y = z'.
 -- The encoding is: z = (x-y == 0).
-encode_eq :: (PrimeField a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_eq :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_eq (x, y, z) = cs_of_exp z e
   where
     e =
@@ -171,7 +171,7 @@ encode_eq (x, y, z) = cs_of_exp z e
 --    x*m = y
 -- /\ (1-y)*x = 0
 -- Cf. p7. of [pinnochio-sp13], which follows [setty-usenix12].
-encode_zneq :: (PrimeField a) => (Var, Var) -> State (CEnv a) ()
+encode_zneq :: (GaloisField a) => (Var, Var) -> State (CEnv a) ()
 encode_zneq (x, y) =
   do
     m <- fresh_var
@@ -206,7 +206,7 @@ encode_zneq (x, y) =
         ErrMsg "internal error in 'encode_zeq'"
 
 -- | Constraint 'y == x==0:1?0'
-encode_zeq :: (PrimeField a) => (Var, Var) -> State (CEnv a) ()
+encode_zeq :: (GaloisField a) => (Var, Var) -> State (CEnv a) ()
 encode_zeq (x, y) =
   do
     neg_y <- fresh_var
@@ -214,13 +214,13 @@ encode_zeq (x, y) =
     cs_of_exp y (EBinop Sub [EVal 1, EVar (Variable neg_y)])
 
 -- | Encode the constraint 'un_op x = y'
-encode_unop :: (PrimeField a) => UnOp -> (Var, Var) -> State (CEnv a) ()
+encode_unop :: (GaloisField a) => UnOp -> (Var, Var) -> State (CEnv a) ()
 encode_unop op (x, y) = go op
   where
     go ZEq = encode_zeq (x, y)
 
 -- | Encode the constraint 'x op y = z'.
-encode_binop :: (PrimeField a) => Op -> (Var, Var, Var) -> State (CEnv a) ()
+encode_binop :: (GaloisField a) => Op -> (Var, Var, Var) -> State (CEnv a) ()
 encode_binop op (x, y, z) = go op
   where
     go And = encode_binop Mult (x, y, z)
@@ -241,7 +241,7 @@ encode_binop op (x, y, z) = go op
       add_constraint $
         CMult (1, y) (1, z) (1, Just x)
 
-encode_linear :: (PrimeField a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
+encode_linear :: (GaloisField a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
 encode_linear out xs =
   let c = foldl (flip (+)) 0 $ map (fromRight 0) xs
    in add_constraint $
@@ -253,7 +253,7 @@ encode_linear out xs =
     remove_consts (Left p : l) = p : remove_consts l
     remove_consts (Right _ : l) = remove_consts l
 
-cs_of_exp :: (PrimeField a) => Var -> Exp a -> State (CEnv a) ()
+cs_of_exp :: (GaloisField a) => Var -> Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
   EVar (Variable x) ->
     do
@@ -282,7 +282,7 @@ cs_of_exp out e = case e of
     -- We special-case linear combinations in this way to avoid having
     -- to introduce new multiplication gates for multiplication by
     -- constant scalars.
-    let go_linear :: (PrimeField a) => [Exp a] -> State (CEnv a) [Either (Var, a) a]
+    let go_linear :: (GaloisField a) => [Exp a] -> State (CEnv a) [Either (Var, a) a]
         go_linear [] = return []
         go_linear (EBinop Mult [EVar (Variable x), EVal coeff] : es') =
           do
@@ -333,7 +333,7 @@ cs_of_exp out e = case e of
         rev_pol (Left (x, c) : ls) = Left (x, -c) : rev_pol ls
         rev_pol (Right c : ls) = Right (-c) : rev_pol ls
 
-        go_other :: (PrimeField a) => [Exp a] -> State (CEnv a) [Var]
+        go_other :: (GaloisField a) => [Exp a] -> State (CEnv a) [Var]
         go_other [] = return []
         go_other (EVar (Variable x) : es') =
           do
@@ -424,7 +424,7 @@ must_dataflow SimplifyDataflow = True
 -- system.  Takes as input the constraints, the input variables, and
 -- the output variables, and return the corresponding R1CS.
 r1cs_of_constraints ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   SimplParam ->
   ConstraintSystem a ->
   R1CS a
@@ -452,7 +452,7 @@ r1cs_of_constraints simpl cs =
 -- expression, the expression's input variables, and the name of the
 -- output variable.
 constraints_of_texp ::
-  ( PrimeField a,
+  ( GaloisField a,
     Typeable ty
   ) =>
   -- | Output variable

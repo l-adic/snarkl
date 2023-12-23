@@ -9,7 +9,7 @@ where
 
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.State (State, gets, modify, runState)
-import Data.Field.Galois (PrimeField)
+import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -19,7 +19,7 @@ import qualified Snarkl.Language.Expr as Core
 
 data Exp :: Type -> Type where
   EVar :: Variable -> Exp a
-  EVal :: (PrimeField a) => a -> Exp a
+  EVal :: (GaloisField a) => a -> Exp a
   EUnop :: UnOp -> Exp a -> Exp a
   EBinop :: Op -> [Exp a] -> Exp a
   EIf :: Exp a -> Exp a -> Exp a -> Exp a

@@ -7,7 +7,7 @@ module Snarkl.Constraint.Simplify
 where
 
 import Control.Monad.State (State, runState, when)
-import Data.Field.Galois (PrimeField)
+import Data.Field.Galois (GaloisField)
 import Data.List (foldl')
 import qualified Data.Set as Set
 import Snarkl.Common (Assgn, Var, intMapToMap)
@@ -40,7 +40,7 @@ import qualified Snarkl.Constraint.UnionFind as UF
 -- normalizing a multiplicative constraint, it may be necessary to
 -- convert it into an additive constraint.
 subst_constr ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   Constraint a ->
   State (SEnv a) (Constraint a)
 subst_constr !constr = case constr of
@@ -145,7 +145,7 @@ is_taut constr =
     CMagic _ xs mf -> mf xs
 
 -- | Remove tautologous constraints.
-remove_tauts :: (PrimeField a) => [Constraint a] -> State (SEnv a) [Constraint a]
+remove_tauts :: (GaloisField a) => [Constraint a] -> State (SEnv a) [Constraint a]
 remove_tauts sigma =
   do
     sigma_taut <-
@@ -160,7 +160,7 @@ remove_tauts sigma =
 
 -- | Learn bindings and variable equalities from constraint 'constr'.
 learn ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   Constraint a ->
   State (SEnv a) ()
 learn = go
@@ -176,7 +176,7 @@ learn = go
     go _ = return ()
 
 do_simplify ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   -- | Snarkl.Constraint.Solve mode? If 'True', use Magic.
   Bool ->
   -- | Initial variable assignment
@@ -220,7 +220,7 @@ do_simplify in_solve_mode env cs =
         cs0
 
 simplify ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   [Var] ->
   ConstraintSet a ->
   State (SEnv a) (ConstraintSet a)
@@ -261,7 +261,7 @@ simplify pinned_vars sigma =
         return $ pin_eqns ++ sigma0
 
 simplify_rec ::
-  (PrimeField a) =>
+  (GaloisField a) =>
   -- | Initial constraint set
   ConstraintSet a ->
   -- | Resulting simplified constraint set
@@ -278,7 +278,7 @@ simplify_rec sigma =
           else simplify_rec sigma'
   where
     simplify_once ::
-      (PrimeField a) =>
+      (GaloisField a) =>
       ConstraintSet a ->
       -- \^ Initial constraint set
       State (SEnv a) (ConstraintSet a)

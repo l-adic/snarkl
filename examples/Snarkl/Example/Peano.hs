@@ -2,7 +2,7 @@
 
 module Snarkl.Example.Peano where
 
-import Data.Field.Galois (Prime)
+import Data.Field.Galois (GaloisField, Prime)
 import GHC.TypeLits (KnownNat)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
@@ -24,24 +24,24 @@ type TF = 'TFSum ('TFConst 'TUnit) 'TFId
 
 type TNat = 'TMu TF
 
-nat_zero :: (KnownNat p) => Comp TNat p
+nat_zero :: (GaloisField k) => Comp TNat k
 nat_zero =
   do
     x <- inl unit
     roll x
 
-nat_succ :: (KnownNat p) => TExp TNat (Prime p) -> Comp TNat p
+nat_succ :: (GaloisField k) => TExp TNat k -> Comp TNat k
 nat_succ n =
   do
     x <- inr n
     roll x
 
 nat_eq ::
-  (KnownNat p) =>
+  (GaloisField k) =>
   Int ->
-  TExp TNat (Prime p) ->
-  TExp TNat (Prime p) ->
-  Comp 'TBool p
+  TExp TNat k ->
+  TExp TNat k ->
+  Comp 'TBool k
 nat_eq level n m
   | level > 0 =
       do
@@ -59,7 +59,7 @@ nat_eq level n m
   | otherwise =
       return false
 
-nat_of_int :: (KnownNat p) => Int -> Comp TNat p
+nat_of_int :: (GaloisField k) => Int -> Comp TNat k
 nat_of_int 0 = nat_zero
 nat_of_int n =
   do

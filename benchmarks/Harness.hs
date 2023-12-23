@@ -2,7 +2,7 @@
 
 module Harness where
 
-import Data.Field.Galois (Prime)
+import Data.Field.Galois (GaloisField, Prime, PrimeField)
 import qualified Data.IntMap.Lazy as IntMap
 import qualified Data.Set as Set
 import Data.Typeable
@@ -15,15 +15,15 @@ import Snarkl.Toplevel
 import System.IO (hPutStrLn, stderr)
 
 -- Just interpret.
-test_interp :: (Typeable ty, KnownNat p) => Comp ty p -> [Int] -> (Prime p)
+test_interp :: (Typeable ty, GaloisField k) => Comp ty k -> [Int] -> k
 test_interp mf inputs =
   comp_interp mf (map fromIntegral inputs)
 
 -- Just elaborate to TExp.
-test_texp :: (Typeable ty) => Comp ty p -> IO ()
+test_texp :: (Typeable ty) => Comp ty k -> IO ()
 test_texp mf = (hPutStrLn stderr . show . extract_rat . lastSeq . comp_texp . texp_of_comp) mf
   where
-    extract_rat :: TExp ty (Prime p) -> Int
+    extract_rat :: TExp ty k -> Int
     extract_rat te =
       case te of
         TEVar _ -> 0
@@ -36,7 +36,7 @@ test_texp mf = (hPutStrLn stderr . show . extract_rat . lastSeq . comp_texp . te
         TEBot -> 7
 
 -- Just compile to constraints (no simplification yet).
-test_constraints :: (Typeable ty, KnownNat p) => Comp ty p -> IO ()
+test_constraints :: (Typeable ty, GaloisField k) => Comp ty k -> IO ()
 test_constraints mf =
   let texp_pkg = texp_of_comp mf
       constrs = constrs_of_texp texp_pkg
@@ -46,7 +46,7 @@ test_constraints mf =
             cs_constraints constrs
 
 -- Snarkl.Compile to constraints and simplify.
-test_simplify :: (Typeable ty, KnownNat p) => Comp ty p -> IO ()
+test_simplify :: (Typeable ty, GaloisField k) => Comp ty k -> IO ()
 test_simplify mf =
   let texp_pkg = texp_of_comp mf
       constrs = constrs_of_texp texp_pkg
@@ -58,19 +58,19 @@ test_simplify mf =
 
 -- Generate (simplified) R1CS, but don't run it yet.  (No witness is
 -- generated.) Also, serialize the r1cs to stderr.
-test_r1csgen :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> IO ()
+test_r1csgen :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> IO ()
 test_r1csgen simpl mf =
   do
     r1csgen_comp "test" simpl mf
 
 -- Same as 'test_r1cs', but also generates and serializes
 -- a satisfying assignment, as well as serializing the given inputs.
-test_witgen :: (Integral a, Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [a] -> IO ()
+test_witgen :: (Integral a, Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [a] -> IO ()
 test_witgen simpl mf inputs =
   do
     witgen_comp "test" simpl mf (map fromIntegral inputs)
 
-test_keygen :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> IO ()
+test_keygen :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> IO ()
 test_keygen simpl mf inputs =
   do
     exit <- keygen_comp "test" simpl mf (map fromIntegral inputs)
@@ -78,7 +78,7 @@ test_keygen simpl mf inputs =
       ExitSuccess -> Prelude.return ()
       ExitFailure err -> failWith $ ErrMsg $ "test_full failed with " ++ show err
 
-test_proofgen :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> IO ()
+test_proofgen :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> IO ()
 test_proofgen simpl mf inputs =
   do
     exit <- proofgen_comp "test" simpl mf (map fromIntegral inputs)
@@ -87,7 +87,7 @@ test_proofgen simpl mf inputs =
       ExitFailure err -> failWith $ ErrMsg $ "test_full failed with " ++ show err
 
 -- Run libsnark on the resulting files.
-test_crypto :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> IO ()
+test_crypto :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> IO ()
 test_crypto simpl mf inputs =
   do
     exit <- snarkify_comp "test" simpl mf (map fromIntegral inputs)
@@ -100,6 +100,6 @@ test_crypto simpl mf inputs =
 -- on the inputs provided. Both results are checked to match 'res'.
 -- The function outputs a 'Result' that details number of variables and
 -- constraints in the resulting constraint system.
-test_numconstrs :: (Typeable ty, KnownNat p) => SimplParam -> Comp ty p -> [Int] -> Prime p -> IO ()
+test_numconstrs :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> k -> IO ()
 test_numconstrs simpl mf inputs res =
   benchmark_comp (simpl, mf, map fromIntegral inputs, res)

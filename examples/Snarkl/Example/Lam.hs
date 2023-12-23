@@ -6,7 +6,7 @@
 
 module Snarkl.Example.Lam where
 
-import Data.Field.Galois (Prime)
+import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
 import Snarkl.Errors
@@ -35,7 +35,7 @@ type TFSubst = 'TFSum ('TFConst 'TField) ('TFProd ('TFConst TTerm) 'TFId)
 
 type TSubst = 'TMu TFSubst
 
-subst_nil :: (KnownNat p) => TExp 'TField (Prime p) -> State (Env p) (TExp TSubst (Prime p))
+subst_nil :: (GaloisField k) => TExp 'TField k -> State (Env k) (TExp TSubst k)
 subst_nil n =
   do
     n' <- inl n
@@ -68,27 +68,27 @@ type TF = 'TFSum ('TFConst 'TField) ('TFSum 'TFId ('TFProd 'TFId 'TFId))
 type TTerm = 'TMu TF
 
 varN ::
-  (KnownNat p) =>
-  TExp 'TField (Prime p) ->
-  Comp TTerm p
+  (GaloisField k) =>
+  TExp 'TField k ->
+  Comp TTerm k
 varN e =
   do
     v <- inl e
     roll v
 
 varN' ::
-  (KnownNat p) =>
+  (GaloisField k) =>
   Int ->
-  Comp TTerm p
+  Comp TTerm k
 varN' i =
   do
     v <- inl (exp_of_int i)
     roll v
 
 lam ::
-  (KnownNat p) =>
-  TExp TTerm (Prime p) ->
-  Comp TTerm p
+  (GaloisField k) =>
+  TExp TTerm k ->
+  Comp TTerm k
 lam t =
   do
     t' <- inl t
@@ -96,10 +96,10 @@ lam t =
     roll v
 
 app ::
-  (KnownNat p) =>
-  TExp TTerm (Prime p) ->
-  TExp TTerm (Prime p) ->
-  Comp TTerm p
+  (GaloisField k) =>
+  TExp TTerm k ->
+  TExp TTerm k ->
+  Comp TTerm k
 app t1 t2 =
   do
     t <- pair t1 t2
@@ -109,14 +109,14 @@ app t1 t2 =
 
 case_term ::
   ( Typeable ty,
-    Zippable ty p,
-    KnownNat p
+    Zippable ty k,
+    GaloisField k
   ) =>
-  TExp TTerm (Prime p) ->
-  (TExp 'TField (Prime p) -> Comp ty p) ->
-  (TExp TTerm (Prime p) -> Comp ty p) ->
-  (TExp TTerm (Prime p) -> TExp TTerm (Prime p) -> Comp ty p) ->
-  Comp ty p
+  TExp TTerm k ->
+  (TExp 'TField k -> Comp ty k) ->
+  (TExp TTerm k -> Comp ty k) ->
+  (TExp TTerm k -> TExp TTerm k -> Comp ty k) ->
+  Comp ty k
 case_term t f_var f_lam f_app =
   do
     t' <- unroll t
@@ -128,7 +128,7 @@ case_term t f_var f_lam f_app =
         e2 <- fst_pair p
         f_app e1 e2
 
-is_lam :: (KnownNat p) => TExp TTerm (Prime p) -> Comp 'TBool p
+is_lam :: (GaloisField k) => TExp TTerm k -> Comp 'TBool k
 is_lam t =
   case_term
     t
@@ -137,10 +137,10 @@ is_lam t =
     (\_ _ -> return false)
 
 shift ::
-  (KnownNat p) =>
-  TExp 'TField (Prime p) ->
-  TExp TTerm (Prime p) ->
-  Comp TTerm p
+  (GaloisField k) =>
+  TExp 'TField k ->
+  TExp TTerm k ->
+  Comp TTerm k
 shift n t = fix go t
   where
     go self t0 =
@@ -159,7 +159,7 @@ shift n t = fix go t
               app t1' t2'
         )
 
-compose :: (KnownNat p) => TExp TSubst (Prime p) -> TExp ('TMu TFSubst) (Prime p) -> State (Env p) (TExp ('TMu TFSubst) (Prime p))
+compose :: (GaloisField k) => TExp TSubst k -> TExp ('TMu TFSubst) k -> State (Env k) (TExp ('TMu TFSubst) k)
 compose sigma1 sigma2 =
   do
     p <- pair sigma1 sigma2
@@ -182,7 +182,7 @@ compose sigma1 sigma2 =
                         -- Var(n)
                         (\n -> subst_nil $ n + m)
                         -- _ . s1'
-                        (\_ s1' -> subst_nil (m - fromPrimeField 1) >>= recur s1')
+                        (\_ s1' -> subst_nil (m - fromField 1) >>= recur s1')
               )
               -- t' . s2'
               ( \t' s2' ->
@@ -192,7 +192,7 @@ compose sigma1 sigma2 =
                     subst_cons t'' s2''
               )
 
-subst_term :: (KnownNat p) => TExp ('TMu TFSubst) (Prime p) -> TExp TTerm (Prime p) -> State (Env p) (TExp ('TMu TF) (Prime p))
+subst_term :: (GaloisField k) => TExp ('TMu TFSubst) k -> TExp TTerm k -> State (Env k) (TExp ('TMu TF) k)
 subst_term sigma t =
   do
     p <- pair sigma t
@@ -214,14 +214,14 @@ subst_term sigma t =
                         do
                           if return (zeq n)
                             then return t'
-                            else varN (n - fromPrimeField 1) >>= recur sigma'
+                            else varN (n - fromField 1) >>= recur sigma'
                     )
               )
               -- Lam t1
               ( \t1 ->
                   do
-                    var0 <- varN (fromPrimeField 0)
-                    sigma1 <- subst_nil (fromPrimeField 1)
+                    var0 <- varN (fromField 0)
+                    sigma1 <- subst_nil (fromField 1)
                     sigma2 <- compose sigma1 sigma
                     sigma' <- subst_cons var0 sigma2
                     t1' <- recur sigma' t1
@@ -236,10 +236,10 @@ subst_term sigma t =
               )
 
 beta ::
-  (KnownNat p) =>
-  TExp TTerm (Prime p) ->
-  TExp TTerm (Prime p) ->
-  Comp TTerm p
+  (GaloisField k) =>
+  TExp TTerm k ->
+  TExp TTerm k ->
+  Comp TTerm k
 beta t1 t2 =
   case_term
     t1
@@ -248,14 +248,14 @@ beta t1 t2 =
     -- Lam t1'
     ( \t1' ->
         do
-          id_subst <- subst_nil (fromPrimeField 0)
+          id_subst <- subst_nil (fromField 0)
           sigma <- subst_cons t2 id_subst
           subst_term sigma t1'
     )
     -- App _ _
     (\_ _ -> failWith $ ErrMsg "beta expects an abstraction")
 
-step :: (KnownNat p) => TExp TTerm (Prime p) -> Comp TTerm p
+step :: (GaloisField k) => TExp TTerm k -> Comp TTerm k
 step t =
   case_term
     t
@@ -263,7 +263,7 @@ step t =
     (\_ -> return t)
     (\t1 t2 -> beta t1 t2)
 
-whnf :: (KnownNat p) => TExp TTerm (Prime p) -> Comp TTerm p
+whnf :: (GaloisField k) => TExp TTerm k -> Comp TTerm k
 whnf t = fix go t
   where
     go self t0 =
@@ -276,14 +276,14 @@ whnf t = fix go t
           (\_ _ -> self t')
 
 -- \x y -> x
-term_lam :: (KnownNat p) => Comp TTerm p
+term_lam :: (GaloisField k) => Comp TTerm k
 term_lam =
   do
     x <- varN' 1
     t <- lam x
     lam t
 
-term_app :: (KnownNat p) => Comp TTerm p
+term_app :: (GaloisField k) => Comp TTerm k
 term_app =
   do
     t <- term_lam
@@ -291,9 +291,9 @@ term_app =
 
 -- (\x y -> x) (\x1 y1 -> x1)
 -- ~~> (\y -> (\x1 y1 -> x1))
-beta_test1 :: (KnownNat p) => Comp 'TField p
+beta_test1 :: (GaloisField k) => Comp 'TField k
 beta_test1 =
   do
     t <- term_app
     whnf t
-    return (fromPrimeField 0)
+    return (fromField 0)
