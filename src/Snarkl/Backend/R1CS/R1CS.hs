@@ -1,3 +1,6 @@
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Snarkl.Backend.R1CS.R1CS
   ( R1C (..),
     R1CS (..),
@@ -7,7 +10,8 @@ module Snarkl.Backend.R1CS.R1CS
 where
 
 import Control.Parallel.Strategies
-import Data.Field.Galois (GaloisField)
+import qualified Data.Aeson as A
+import Data.Field.Galois (GaloisField, PrimeField)
 import qualified Data.IntMap.Lazy as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
@@ -20,8 +24,31 @@ import Snarkl.Errors
 data R1C a where
   R1C :: (GaloisField a) => (Poly a, Poly a, Poly a) -> R1C a
 
+instance (PrimeField a) => A.ToJSON (R1C a) where
+  toJSON (R1C (aV, bV, cV)) =
+    A.object
+      [ "A" A..= aV,
+        "B" A..= bV,
+        "C" A..= cV
+      ]
+
 instance (Show a) => Show (R1C a) where
   show (R1C (aV, bV, cV)) = show aV ++ "*" ++ show bV ++ "==" ++ show cV
+
+{-
+
+{
+ "r1cs":{
+ "version":"1.0",
+ "field_characteristic":"133581199851807797997178235848527563401",
+ "extension_degree":1,
+ "instances":3,
+ "witnesses":5,
+ "constraints":2000,
+ "optimized":true
+0 }
+
+-}
 
 data R1CS a = R1CS
   { r1cs_clauses :: [R1C a],

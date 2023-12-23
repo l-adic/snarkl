@@ -1,6 +1,9 @@
-module Snarkl.Backend.R1CS.Serialize (serialize_r1cs, serialize_assgn) where
+{-# LANGUAGE RecordWildCards #-}
 
-import Data.Field.Galois (PrimeField, fromP)
+module Snarkl.Backend.R1CS.Serialize (serialize_r1cs, serialize_assgn, seriliazeR1CSHeader) where
+
+import qualified Data.Aeson as A
+import Data.Field.Galois (GaloisField (char, deg), PrimeField, fromP)
 import qualified Data.IntMap.Lazy as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Backend.R1CS.R1CS
@@ -46,3 +49,12 @@ serialize_r1cs cs =
         ++ show (length $ r1cs_clauses cs)
         ++ "\n"
         ++ r1c_strings
+
+seriliazeR1CSHeader :: (GaloisField k) => R1CS k -> A.Value
+seriliazeR1CSHeader (R1CS {..} :: R1CS k) =
+  A.object
+    [ "field_characteristic" A..= char (undefined :: k),
+      "extension_degree" A..= deg (undefined :: k),
+      "n_constraints" A..= length r1cs_clauses,
+      "n_variables" A..= r1cs_num_vars
+    ]

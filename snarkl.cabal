@@ -74,12 +74,14 @@ library
     UndecidableInstances
 
   build-depends:
-      base           >=4.7
+      aeson
+    , base           >=4.7
     , Cabal          >=1.22
     , containers     >=0.5   && <0.7
     , criterion      >=1.0
     , galois-field   >=1.0.4
     , hspec          >=2.0
+    , jsonl          >=0.1.4
     , mtl            >=2.2   && <2.3
     , parallel       >=3.2   && <3.3
     , prettyprinter

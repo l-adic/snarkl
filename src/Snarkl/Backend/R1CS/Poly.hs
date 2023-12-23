@@ -1,6 +1,9 @@
+{-# LANGUAGE InstanceSigs #-}
+
 module Snarkl.Backend.R1CS.Poly where
 
-import Data.Field.Galois (GaloisField)
+import qualified Data.Aeson as A
+import Data.Field.Galois (GaloisField, PrimeField (fromP))
 import qualified Data.IntMap.Lazy as Map
 import Snarkl.Common
 
@@ -9,6 +12,12 @@ data Poly a where
 
 instance (Show a) => Show (Poly a) where
   show (Poly m) = show m
+
+instance (PrimeField a) => A.ToJSON (Poly a) where
+  toJSON :: Poly a -> A.Value
+  toJSON (Poly m) =
+    let kvs = map (\(var, coeff) -> (fromP coeff, show var)) $ Map.toList m
+     in A.toJSON kvs
 
 -- | The constant polynomial equal 'c'
 const_poly :: (GaloisField a) => a -> Poly a
