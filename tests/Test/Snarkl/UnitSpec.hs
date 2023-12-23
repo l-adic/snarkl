@@ -42,7 +42,7 @@ spec = do
       it "5-1" $ test_comp @_ @F_BN128 Simplify prog5 [4] `shouldReturn` Right (4 ^ (101 :: Integer))
       it "5-2" $ test_comp @_ @F_BN128 Simplify prog5 [5] `shouldReturn` Right (5 ^ (101 :: Integer))
       -- TODO: INVESTIGATE: FAILS with "EXCEEDS FIELD SIZE"
-      -- it "5-2" $ test_comp @_ @P_BN128 Simplify prog5 [5] `shouldReturn` Right (5^(101::Integer))
+      it "5-2" $ test_comp @_ @F_BN128 Simplify prog5 [5] `shouldReturn` Right (5 ^ (101 :: Integer))
       it "5-3" $ test_comp @_ @F_BN128 Simplify prog5 [0] `shouldReturn` Right 0
       it "5-4" $ test_comp @_ @F_BN128 Simplify prog5 [-1] `shouldReturn` Right (-1)
 
