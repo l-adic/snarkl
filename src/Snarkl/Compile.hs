@@ -9,9 +9,11 @@ module Snarkl.Compile
     get_constraints,
     constraints_of_texp,
     r1cs_of_constraints,
+    _Var,
   )
 where
 
+import Control.Lens (Iso', iso, view, (#), (^.))
 import Control.Monad.State
   ( State,
     gets,
@@ -20,11 +22,11 @@ import Control.Monad.State
   )
 import Data.Either (fromRight)
 import Data.Field.Galois (GaloisField)
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS.R1CS (R1CS)
-import Snarkl.Common (Op (..), UnOp (..), Var)
+import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint.Constraints
   ( Constraint (CMagic, CMult),
     ConstraintSystem (ConstraintSystem),
@@ -76,7 +78,7 @@ fresh_var :: State (CEnv a) Var
 fresh_var =
   do
     next <- get_next_var
-    set_next_var (next + 1)
+    set_next_var (incVar next)
     return next
 
 -- | Add constraint 'x = y'
@@ -102,13 +104,13 @@ encode_or :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_or (x, y, z) =
   do
     x_mult_y <- fresh_var
-    cs_of_exp x_mult_y (EBinop Mult [EVar (Variable x), EVar (Variable y)])
+    cs_of_exp x_mult_y (EBinop Mult [EVar (_Var # x), EVar (_Var # y)])
     cs_of_exp
       x_mult_y
       ( EBinop
           Sub
-          [ EBinop Add [EVar (Variable x), EVar (Variable y)],
-            EVar (Variable z)
+          [ EBinop Add [EVar (_Var # x), EVar (_Var # y)],
+            EVar (_Var # z)
           ]
       )
 
@@ -147,11 +149,11 @@ encode_boolean_eq (x, y, z) = cs_of_exp z e
     e =
       EBinop
         Add
-        [ EBinop Mult [EVar (Variable x), EVar (Variable y)],
+        [ EBinop Mult [EVar (_Var # x), EVar (_Var # y)],
           EBinop
             Mult
-            [ EBinop Sub [EVal 1, EVar (Variable x)],
-              EBinop Sub [EVal 1, EVar (Variable y)]
+            [ EBinop Sub [EVal 1, EVar (_Var # x)],
+              EBinop Sub [EVal 1, EVar (_Var # y)]
             ]
         ]
 
@@ -162,8 +164,8 @@ encode_eq (x, y, z) = cs_of_exp z e
   where
     e =
       EAssert
-        (EVar (Variable z))
-        (EUnop ZEq (EBinop Sub [EVar (Variable x), EVar (Variable y)]))
+        (EVar (_Var # z))
+        (EUnop ZEq (EBinop Sub [EVar (_Var # x), EVar (_Var # y)]))
 
 -- | Constraint 'y = x!=0 ? 1 : 0'.
 -- The encoding is:
@@ -183,8 +185,8 @@ encode_zneq (x, y) =
     nm <- fresh_var
     add_constraint (CMagic nm [x, m] mf)
     -- END magic.
-    cs_of_exp y (EBinop Mult [EVar (Variable x), EVar (Variable m)])
-    cs_of_exp neg_y (EBinop Sub [EVal 1, EVar (Variable y)])
+    cs_of_exp y (EBinop Mult [EVar (_Var # x), EVar (_Var # m)])
+    cs_of_exp neg_y (EBinop Sub [EVal 1, EVar (_Var # y)])
     add_constraint
       (CMult (1, neg_y) (1, x) (0, Nothing))
   where
@@ -211,7 +213,7 @@ encode_zeq (x, y) =
   do
     neg_y <- fresh_var
     encode_zneq (x, neg_y)
-    cs_of_exp y (EBinop Sub [EVal 1, EVar (Variable neg_y)])
+    cs_of_exp y (EBinop Sub [EVal 1, EVar (_Var # neg_y)])
 
 -- | Encode the constraint 'un_op x = y'
 encode_unop :: (GaloisField a) => UnOp -> (Var, Var) -> State (CEnv a) ()
@@ -255,15 +257,15 @@ encode_linear out xs =
 
 cs_of_exp :: (GaloisField a) => Var -> Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
-  EVar (Variable x) ->
+  EVar x ->
     do
-      ensure_equal (out, x)
+      ensure_equal (out, view _Var x)
   EVal c ->
     do
       ensure_const (out, c)
-  EUnop op (EVar (Variable x)) ->
+  EUnop op (EVar x) ->
     do
-      encode_unop op (x, out)
+      encode_unop op (view _Var x, out)
   EUnop op e1 ->
     do
       e1_out <- fresh_var
@@ -284,14 +286,14 @@ cs_of_exp out e = case e of
     -- constant scalars.
     let go_linear :: (GaloisField a) => [Exp a] -> State (CEnv a) [Either (Var, a) a]
         go_linear [] = return []
-        go_linear (EBinop Mult [EVar (Variable x), EVal coeff] : es') =
+        go_linear (EBinop Mult [EVar x, EVal coeff] : es') =
           do
             labels <- go_linear es'
-            return $ Left (x, coeff) : labels
-        go_linear (EBinop Mult [EVal coeff, EVar (Variable y)] : es') =
+            return $ Left (x ^. _Var, coeff) : labels
+        go_linear (EBinop Mult [EVal coeff, EVar y] : es') =
           do
             labels <- go_linear es'
-            return $ Left (y, coeff) : labels
+            return $ Left (y ^. _Var, coeff) : labels
         go_linear (EBinop Mult [e_left, EVal coeff] : es') =
           do
             e_left_out <- fresh_var
@@ -308,10 +310,10 @@ cs_of_exp out e = case e of
           do
             labels <- go_linear es'
             return $ Right c : labels
-        go_linear (EVar (Variable x) : es') =
+        go_linear (EVar x : es') =
           do
             labels <- go_linear es'
-            return $ Left (x, 1) : labels
+            return $ Left (x ^. _Var, 1) : labels
 
         -- The 'go_linear' catch-all case (i.e., no optimization)
         go_linear (e1 : es') =
@@ -335,10 +337,10 @@ cs_of_exp out e = case e of
 
         go_other :: (GaloisField a) => [Exp a] -> State (CEnv a) [Var]
         go_other [] = return []
-        go_other (EVar (Variable x) : es') =
+        go_other (EVar x : es') =
           do
             labels <- go_other es'
-            return $ x : labels
+            return $ (x ^. _Var) : labels
         go_other (e1 : es') =
           do
             e1_out <- fresh_var
@@ -388,8 +390,8 @@ cs_of_exp out e = case e of
   -- compilation of e2 directly.
   EAssert e1 e2 ->
     do
-      let Variable x = var_of_exp e1
-      cs_of_exp x e2
+      let x = var_of_exp e1
+      cs_of_exp (x ^. _Var) e2
   ESeq le ->
     do
       x <- fresh_var -- x is garbage
@@ -463,7 +465,7 @@ constraints_of_texp ::
   TExp ty a ->
   ConstraintSystem a
 constraints_of_texp out in_vars te =
-  let cenv_init = CEnv Set.empty (out + 1)
+  let cenv_init = CEnv Set.empty (incVar out)
       (constrs, _) = runState go cenv_init
    in constrs
   where
@@ -471,7 +473,7 @@ constraints_of_texp out in_vars te =
       let boolean_in_vars =
             Set.toList $
               Set.fromList in_vars
-                `Set.intersection` Set.fromList (map (\(Variable v) -> v) $ booleanVarsOfTexp te)
+                `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
           e0 = expOfTExp te
           e = do_const_prop e0
       -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
@@ -488,3 +490,6 @@ constraints_of_texp out in_vars te =
           num_constraint_vars
           in_vars
           [out]
+
+_Var :: Iso' Variable Var
+_Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)

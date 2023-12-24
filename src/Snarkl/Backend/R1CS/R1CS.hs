@@ -12,7 +12,7 @@ where
 import Control.Parallel.Strategies
 import qualified Data.Aeson as A
 import Data.Field.Galois (GaloisField, PrimeField)
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.Map as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
 import Snarkl.Errors
@@ -72,7 +72,7 @@ sat_r1c w c
   where
     inner :: (GaloisField a) => Poly a -> Assgn a -> a
     inner (Poly v) w' =
-      let c0 = Map.findWithDefault 0 (-1) v
+      let c0 = Map.findWithDefault 0 (Var (-1)) v
        in Map.foldlWithKey (f w') c0 v
 
     f w' acc v_key v_val =

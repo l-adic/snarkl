@@ -82,6 +82,7 @@ library
     , galois-field   >=1.0.4
     , hspec          >=2.0
     , jsonl          >=0.1.4
+    , lens
     , mtl            >=2.2   && <2.3
     , parallel       >=3.2   && <3.3
     , prettyprinter

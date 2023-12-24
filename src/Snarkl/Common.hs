@@ -2,13 +2,15 @@
 
 module Snarkl.Common where
 
-import qualified Data.IntMap.Lazy as IntMap
 import qualified Data.Map as Map
 import Prettyprinter
 
-type Var = Int
+newtype Var = Var Int deriving (Eq, Ord, Show)
 
-type Assgn a = IntMap.IntMap a
+incVar :: Var -> Var
+incVar (Var i) = Var (i + 1)
+
+type Assgn a = Map.Map Var a
 
 data UnOp = ZEq
   deriving (Eq, Show)
@@ -62,6 +64,3 @@ isAssoc op = case op of
   XOr -> True
   Eq -> True
   BEq -> True
-
-intMapToMap :: IntMap.IntMap v -> Map.Map Int v
-intMapToMap = Map.fromList . IntMap.toList
