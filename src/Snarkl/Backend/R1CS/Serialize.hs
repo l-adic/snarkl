@@ -1,14 +1,14 @@
 module Snarkl.Backend.R1CS.Serialize (serialize_r1cs, serialize_assgn) where
 
 import Data.Field.Galois (PrimeField, fromP)
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.Map as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Backend.R1CS.R1CS
 import Snarkl.Common
 
 serialize_assgn :: (PrimeField k) => Assgn k -> String
 serialize_assgn m =
-  let binds = Map.toAscList $ Map.mapKeys (+ 1) m
+  let binds = Map.toAscList $ Map.mapKeys incVar m
    in concat $
         map (\(_, v) -> show (fromP v) ++ "\n") binds
 
@@ -16,10 +16,10 @@ serialize_poly :: (PrimeField k) => Poly k -> String
 serialize_poly p = case p of
   Poly m ->
     let size = Map.size m
-        binds = Map.toList $ Map.mapKeys (+ 1) m
+        binds = Map.toList $ Map.mapKeys incVar m
         string_binds =
           map
-            ( \(k, v) ->
+            ( \(Var k, v) ->
                 show k
                   ++ "\n"
                   ++ show (fromP v)

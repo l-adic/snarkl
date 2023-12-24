@@ -1,7 +1,7 @@
 module Snarkl.Backend.R1CS.Poly where
 
 import Data.Field.Galois (GaloisField)
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.Map as Map
 import Snarkl.Common
 
 data Poly a where
@@ -12,7 +12,7 @@ instance (Show a) => Show (Poly a) where
 
 -- | The constant polynomial equal 'c'
 const_poly :: (GaloisField a) => a -> Poly a
-const_poly c = Poly $ Map.insert (-1) c Map.empty
+const_poly c = Poly $ Map.insert (Var (-1)) c Map.empty
 
 -- | The polynomial equal variable 'x'
 var_poly ::

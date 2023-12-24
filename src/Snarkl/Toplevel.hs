@@ -55,17 +55,20 @@ module Snarkl.Toplevel
   )
 where
 
+import Control.Lens (view)
 import Data.Field.Galois (GaloisField, PrimeField)
-import qualified Data.IntMap.Lazy as IntMap
 import Data.List (sort)
-import qualified Data.Map.Strict as Map
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Typeable (Typeable)
 import Prettyprinter (Pretty (pretty))
 import Snarkl.Backend.R1CS
+import Snarkl.Common (Var (Var))
 import Snarkl.Compile
   ( SimplParam,
     constraints_of_texp,
     r1cs_of_constraints,
+    _Var,
   )
 import Snarkl.Constraint.Constraints
 import Snarkl.Constraint.Simplify
@@ -171,7 +174,7 @@ constrs_of_texp ::
   (Typeable ty, GaloisField k) =>
   TExpPkg ty k ->
   ConstraintSystem k
-constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp out (map (\(Variable v) -> v) in_vars) e
+constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp (Var out) (map (view _Var) in_vars) e
 
 -- | Snarkl.Compile Snarkl computations to constraint systems.
 constrs_of_comp ::
@@ -212,10 +215,10 @@ r1cs_of_comp ::
 r1cs_of_comp simpl = (r1cs_of_constrs simpl) . constrs_of_comp
 
 -- | For a given R1CS and inputs, calculate a satisfying assignment.
-wit_of_r1cs :: [k] -> R1CS k -> IntMap.IntMap k
+wit_of_r1cs :: [k] -> R1CS k -> Map Var k
 wit_of_r1cs inputs r1cs =
   let in_vars = r1cs_in_vars r1cs
-      f = r1cs_gen_witness r1cs . IntMap.fromList
+      f = r1cs_gen_witness r1cs . Map.fromList
    in case length in_vars /= length inputs of
         True ->
           failWith $
@@ -233,7 +236,7 @@ wit_of_r1cs inputs r1cs =
 -- | For a given R1CS and inputs, serialize the input variable assignment.
 serialize_inputs :: (PrimeField k) => [k] -> R1CS k -> String
 serialize_inputs inputs r1cs =
-  let inputs_assgn = IntMap.fromList $ zip (r1cs_in_vars r1cs) inputs
+  let inputs_assgn = Map.fromList $ zip (r1cs_in_vars r1cs) inputs
    in serialize_assgn inputs_assgn
 
 -- | For a given R1CS and inputs, serialize the witness variable assignment.
@@ -241,7 +244,7 @@ serialize_witnesses :: (PrimeField k) => [k] -> R1CS k -> String
 serialize_witnesses inputs r1cs =
   let num_in_vars = length $ r1cs_in_vars r1cs
       assgn = wit_of_r1cs inputs r1cs
-      inputs_assgn = IntMap.fromList $ drop num_in_vars $ IntMap.toAscList assgn
+      inputs_assgn = Map.fromList $ drop num_in_vars $ Map.toAscList assgn
    in serialize_assgn inputs_assgn
 
 ------------------------------------------------------
@@ -490,7 +493,7 @@ execute simpl mf inputs =
       [out_var] = r1cs_out_vars r1cs
       ng = num_constraints r1cs
       wit = wit_of_r1cs inputs r1cs
-      out = case IntMap.lookup out_var wit of
+      out = case Map.lookup out_var wit of
         Nothing ->
           failWith $
             ErrMsg
