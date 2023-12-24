@@ -16,7 +16,7 @@ instance (Show a) => Show (Poly a) where
 instance (PrimeField a) => A.ToJSON (Poly a) where
   toJSON :: Poly a -> A.Value
   toJSON (Poly m) =
-    let kvs = map (\(var, coeff) -> (fromP coeff, show var)) $ Map.toList m
+    let kvs = map (\(var, coeff) -> (fromP coeff, var)) $ Map.toList m
      in A.toJSON kvs
 
 -- | The constant polynomial equal 'c'

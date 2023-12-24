@@ -2,10 +2,11 @@
 
 module Snarkl.Common where
 
+import qualified Data.Aeson as A
 import qualified Data.Map as Map
 import Prettyprinter
 
-newtype Var = Var Int deriving (Eq, Ord, Show)
+newtype Var = Var Int deriving (Eq, Ord, Show, A.ToJSON)
 
 incVar :: Var -> Var
 incVar (Var i) = Var (i + 1)

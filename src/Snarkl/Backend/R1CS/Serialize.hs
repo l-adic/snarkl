@@ -1,13 +1,17 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Snarkl.Backend.R1CS.Serialize (serialize_r1cs, serialize_assgn, seriliazeR1CSHeader) where
+module Snarkl.Backend.R1CS.Serialize (serialize_r1cs, serialize_assgn, serializeR1CSAsJson) where
 
 import qualified Data.Aeson as A
+import Data.ByteString.Builder (toLazyByteString)
+import Data.ByteString.Lazy (writeFile)
 import Data.Field.Galois (GaloisField (char, deg), PrimeField, fromP)
 import qualified Data.Map as Map
+import JSONL (jsonLine, jsonlBuilder)
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Backend.R1CS.R1CS
 import Snarkl.Common
+import Prelude hiding (writeFile)
 
 serialize_assgn :: (PrimeField k) => Assgn k -> String
 serialize_assgn m =
@@ -50,11 +54,40 @@ serialize_r1cs cs =
         ++ "\n"
         ++ r1c_strings
 
-seriliazeR1CSHeader :: (GaloisField k) => R1CS k -> A.Value
-seriliazeR1CSHeader (R1CS {..} :: R1CS k) =
-  A.object
-    [ "field_characteristic" A..= char (undefined :: k),
-      "extension_degree" A..= deg (undefined :: k),
-      "n_constraints" A..= length r1cs_clauses,
-      "n_variables" A..= r1cs_num_vars
-    ]
+--------------------------------------------------------------------------------
+
+data R1CSHeader k = R1CSHeader
+  { field_characteristic :: Integer,
+    extension_degree :: Integer,
+    n_constraints :: Int,
+    n_variables :: Int,
+    input_variables :: [Var],
+    output_variables :: [Var]
+  }
+
+instance (GaloisField k) => A.ToJSON (R1CSHeader k) where
+  toJSON (R1CSHeader {..}) =
+    A.object
+      [ "field_characteristic" A..= field_characteristic,
+        "extension_degree" A..= extension_degree,
+        "n_constraints" A..= n_constraints,
+        "n_variables" A..= n_variables,
+        "input_variables" A..= input_variables,
+        "output_variables" A..= output_variables
+      ]
+
+r1csToHeader :: (GaloisField k) => R1CS k -> R1CSHeader k
+r1csToHeader x@(R1CS {..} :: R1CS k) =
+  R1CSHeader
+    { field_characteristic = toInteger $ char (undefined :: k),
+      extension_degree = toInteger $ deg (undefined :: k),
+      n_constraints = num_constraints x,
+      n_variables = r1cs_num_vars,
+      input_variables = r1cs_in_vars,
+      output_variables = r1cs_out_vars
+    }
+
+serializeR1CSAsJson :: (PrimeField k) => FilePath -> R1CS k -> IO ()
+serializeR1CSAsJson fp x =
+  let b = jsonLine (r1csToHeader x) <> jsonlBuilder (r1cs_clauses x)
+   in writeFile fp (toLazyByteString b)

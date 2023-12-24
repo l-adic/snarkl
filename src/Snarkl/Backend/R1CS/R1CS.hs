@@ -24,31 +24,16 @@ import Snarkl.Errors
 data R1C a where
   R1C :: (GaloisField a) => (Poly a, Poly a, Poly a) -> R1C a
 
-instance (PrimeField a) => A.ToJSON (R1C a) where
-  toJSON (R1C (aV, bV, cV)) =
+instance (PrimeField k) => A.ToJSON (R1C k) where
+  toJSON (R1C (a, b, c)) =
     A.object
-      [ "A" A..= aV,
-        "B" A..= bV,
-        "C" A..= cV
+      [ "A" A..= a,
+        "B" A..= b,
+        "C" A..= c
       ]
 
 instance (Show a) => Show (R1C a) where
   show (R1C (aV, bV, cV)) = show aV ++ "*" ++ show bV ++ "==" ++ show cV
-
-{-
-
-{
- "r1cs":{
- "version":"1.0",
- "field_characteristic":"133581199851807797997178235848527563401",
- "extension_degree":1,
- "instances":3,
- "witnesses":5,
- "constraints":2000,
- "optimized":true
-0 }
-
--}
 
 data R1CS a = R1CS
   { r1cs_clauses :: [R1C a],
