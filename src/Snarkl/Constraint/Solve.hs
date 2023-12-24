@@ -30,6 +30,9 @@ solve ::
   Assgn a
 solve cs env =
   let pinned_vars = cs_in_vars cs ++ cs_out_vars cs
+      -- NOTE: This looks really bad, but actually the only time that solve is called
+      -- is right after renumber_constraints, which ensures that the variables are
+      -- numbered from 0 to n-1, where n is the number of variables.
       all_vars = Var <$> [0 .. cs_num_vars cs - 1]
       (assgn, cs') = do_simplify True env cs
    in if all_assigned all_vars assgn
