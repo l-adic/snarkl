@@ -55,6 +55,7 @@ module Snarkl.Toplevel
   )
 where
 
+import Data.Field.Galois (GaloisField, PrimeField)
 import qualified Data.IntMap.Lazy as IntMap
 import Data.List (sort)
 import qualified Data.Map.Strict as Map
@@ -69,7 +70,6 @@ import Snarkl.Compile
 import Snarkl.Constraint.Constraints
 import Snarkl.Constraint.Simplify
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field)
 import Snarkl.Interp (interp)
 import Snarkl.Language
 import System.Exit (ExitCode (..))
@@ -97,12 +97,12 @@ import qualified Prelude as P
 ----------------------------------------------------
 
 -- | Using the executable semantics for the 'TExp' language, execute
--- the computation on the provided inputs, returning the 'Rational' result.
+-- the computation on the provided inputs, returning the 'k' result.
 comp_interp ::
-  (Typeable ty) =>
-  Comp ty ->
-  [Rational] ->
-  Rational
+  (Typeable ty, GaloisField k) =>
+  Comp ty k ->
+  [k] ->
+  k
 comp_interp mf inputs =
   let TExpPkg _ in_vars e = texp_of_comp mf
       input_map = Map.fromList $ zip in_vars inputs
@@ -118,28 +118,28 @@ comp_interp mf inputs =
 ------------------------------------------------------
 
 -- | The result of desugaring a Snarkl computation.
-data TExpPkg ty = TExpPkg
+data TExpPkg ty k = TExpPkg
   { -- | The number of free variables in the computation.
     comp_num_vars :: Int,
     -- | The variables marked as inputs.
     comp_input_vars :: [Variable],
     -- | The resulting 'TExp'.
-    comp_texp :: TExp ty Rational
+    comp_texp :: TExp ty k
   }
   deriving (Show)
 
-instance (Typeable ty) => Pretty (TExpPkg ty) where
+instance (Typeable ty, Pretty k) => Pretty (TExpPkg ty k) where
   pretty (TExpPkg _ _ e) = pretty e
 
-deriving instance (Eq (TExp ty Rational)) => Eq (TExpPkg ty)
+deriving instance (Eq (TExp ty k)) => Eq (TExpPkg ty k)
 
 -- | Desugar a 'Comp'utation to a pair of:
 --   the total number of vars,
 --   the input vars,
 --   the 'TExp'.
 texp_of_comp ::
-  Comp ty ->
-  TExpPkg ty
+  Comp ty k ->
+  TExpPkg ty k
 texp_of_comp mf =
   case run mf of
     Left err -> failWith err
@@ -148,7 +148,7 @@ texp_of_comp mf =
           in_vars = sort $ input_vars rho
        in TExpPkg nv in_vars e
   where
-    run :: State Env a -> CompResult Env a
+    run :: State (Env k) a -> CompResult (Env k) a
     run mf0 =
       runState
         mf0
@@ -168,16 +168,16 @@ texp_of_comp mf =
 
 -- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
 constrs_of_texp ::
-  (Typeable ty) =>
-  TExpPkg ty ->
-  ConstraintSystem Rational
+  (Typeable ty, GaloisField k) =>
+  TExpPkg ty k ->
+  ConstraintSystem k
 constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp out (map (\(Variable v) -> v) in_vars) e
 
 -- | Snarkl.Compile Snarkl computations to constraint systems.
 constrs_of_comp ::
-  (Typeable ty) =>
-  Comp ty ->
-  ConstraintSystem Rational
+  (Typeable ty, GaloisField k) =>
+  Comp ty k ->
+  ConstraintSystem k
 constrs_of_comp = constrs_of_texp . texp_of_comp
 
 ------------------------------------------------------
@@ -188,7 +188,7 @@ constrs_of_comp = constrs_of_texp . texp_of_comp
 
 -- | Snarkl.Compile constraint systems to 'R1CS'. Re-exported from 'Constraints.hs'.
 r1cs_of_constrs ::
-  (Field a) =>
+  (GaloisField a) =>
   SimplParam ->
   -- | Constraints
   ConstraintSystem a ->
@@ -197,22 +197,22 @@ r1cs_of_constrs = r1cs_of_constraints
 
 -- | Snarkl.Compile 'TExp's to 'R1CS'.
 r1cs_of_texp ::
-  (Typeable ty) =>
+  (Typeable ty, GaloisField k) =>
   SimplParam ->
-  TExpPkg ty ->
-  R1CS Rational
+  TExpPkg ty k ->
+  R1CS k
 r1cs_of_texp simpl = (r1cs_of_constrs simpl) . constrs_of_texp
 
 -- | Snarkl.Compile Snarkl computations to 'R1CS'.
 r1cs_of_comp ::
-  (Typeable ty) =>
+  (Typeable ty, GaloisField k) =>
   SimplParam ->
-  Comp ty ->
-  R1CS Rational
+  Comp ty k ->
+  R1CS k
 r1cs_of_comp simpl = (r1cs_of_constrs simpl) . constrs_of_comp
 
 -- | For a given R1CS and inputs, calculate a satisfying assignment.
-wit_of_r1cs :: [Rational] -> R1CS Rational -> IntMap.IntMap Rational
+wit_of_r1cs :: [k] -> R1CS k -> IntMap.IntMap k
 wit_of_r1cs inputs r1cs =
   let in_vars = r1cs_in_vars r1cs
       f = r1cs_gen_witness r1cs . IntMap.fromList
@@ -231,13 +231,13 @@ wit_of_r1cs inputs r1cs =
           f (zip in_vars inputs)
 
 -- | For a given R1CS and inputs, serialize the input variable assignment.
-serialize_inputs :: [Rational] -> R1CS Rational -> String
+serialize_inputs :: (PrimeField k) => [k] -> R1CS k -> String
 serialize_inputs inputs r1cs =
   let inputs_assgn = IntMap.fromList $ zip (r1cs_in_vars r1cs) inputs
    in serialize_assgn inputs_assgn
 
 -- | For a given R1CS and inputs, serialize the witness variable assignment.
-serialize_witnesses :: [Rational] -> R1CS Rational -> String
+serialize_witnesses :: (PrimeField k) => [k] -> R1CS k -> String
 serialize_witnesses inputs r1cs =
   let num_in_vars = length $ r1cs_in_vars r1cs
       assgn = wit_of_r1cs inputs r1cs
@@ -254,7 +254,7 @@ serialize_witnesses inputs r1cs =
 -- This function creates/overwrites files prefixed with 'filePrefix',
 -- within the scripts/ subdirectory. 'snarkify_comp' also
 -- assumes that it's run in working directory 'base-of-snarkl-repo'.
-snarkify_comp :: (Typeable ty) => String -> SimplParam -> Comp ty -> [Rational] -> IO ExitCode
+snarkify_comp :: forall ty k. (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
 snarkify_comp filePrefix simpl c inputs =
   do
     let r1cs = r1cs_of_comp simpl c
@@ -294,7 +294,7 @@ snarkify_comp filePrefix simpl c inputs =
 
 -- Like snarkify_comp, but only generate witnesses and keys
 -- Serializes r1cs, inputs, and witnesses to files.
-keygen_comp :: (Typeable ty) => String -> SimplParam -> Comp ty -> [Rational] -> IO ExitCode
+keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
 keygen_comp filePrefix simpl c inputs =
   do
     let r1cs = r1cs_of_comp simpl c
@@ -335,7 +335,7 @@ keygen_comp filePrefix simpl c inputs =
 -- Like snarkify_comp, but only generate keys and proof
 -- (no verification)
 -- Serializes r1cs, inputs, witnesses.
-proofgen_comp :: (Typeable ty) => String -> SimplParam -> Comp ty -> [Rational] -> IO ExitCode
+proofgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
 proofgen_comp filePrefix simpl c inputs =
   do
     let r1cs = r1cs_of_comp simpl c
@@ -374,7 +374,7 @@ proofgen_comp filePrefix simpl c inputs =
     waitForProcess hdl
 
 -- Like snarkify_comp, but only generate and serialize the r1cs
-r1csgen_comp :: (Typeable ty) => String -> SimplParam -> Comp ty -> IO ()
+r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
 r1csgen_comp filePrefix simpl c =
   do
     let r1cs = r1cs_of_comp simpl c
@@ -390,7 +390,7 @@ r1csgen_comp filePrefix simpl c =
 -- Like snarkify_comp, but only generate the witness
 -- (no key generation or proof)
 -- Serializes r1cs, inputs, and witnesses to files.
-witgen_comp :: (Typeable ty) => String -> SimplParam -> Comp ty -> [Rational] -> IO ()
+witgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
 witgen_comp filePrefix simpl c inputs =
   do
     let r1cs = r1cs_of_comp simpl c
@@ -448,21 +448,21 @@ instance (Show a) => Show (Result a) where
 -- | Snarkl.Compile a computation to R1CS, and run it on the provided inputs.
 -- Also, interprets the computation using the executable semantics and
 -- checks that the results match.
-result_of_comp :: (Typeable ty) => SimplParam -> Comp ty -> [Rational] -> Result Rational
+result_of_comp :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> Result k
 result_of_comp simpl mf inputs =
   execute simpl mf inputs
 
 -- | Same as 'result_of_comp', but specialized to integer arguments
 -- and results. Returns just the integer result.
-int_of_comp :: (Typeable ty) => SimplParam -> Comp ty -> [Int] -> Int
+int_of_comp :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> k
 int_of_comp simpl mf args =
-  truncate $ result_result $ result_of_comp simpl mf (map fromIntegral args)
+  result_result $ result_of_comp simpl mf (map fromIntegral args)
 
 -- | Same as 'int_of_comp', but additionally runs resulting R1CS
 -- through key generation, proof generation, and verification stages
 -- of 'libsnark'.  TODO: This function does duplicate R1CS generation,
 -- once for 'libsnark' and a second time for 'int_of_comp'.
-test_comp :: (Typeable ty) => SimplParam -> Comp ty -> [Int] -> IO (Either ExitCode Int)
+test_comp :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> IO (Either ExitCode k)
 test_comp simpl mf args =
   do
     exit_code <- snarkify_comp "hspec" simpl mf (map fromIntegral args)
@@ -481,7 +481,7 @@ test_comp simpl mf args =
 --   (3) Check whether 'w' satisfies the constraint system produced in (1).
 --   (4) Check whether the R1CS result matches the interpreter result.
 --   (5) Return the 'Result'.
-execute :: (Typeable ty) => SimplParam -> Comp ty -> [Rational] -> Result Rational
+execute :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> Result k
 execute simpl mf inputs =
   let TExpPkg nv in_vars e = texp_of_comp mf
       r1cs = r1cs_of_texp simpl (TExpPkg nv in_vars e)
@@ -518,7 +518,7 @@ execute simpl mf inputs =
 -- | 'execute' computation, reporting error if result doesn't match
 -- the return value provided by the caller. Also, serializes the
 -- resulting 'R1CS'.
-benchmark_comp :: (Typeable ty) => (SimplParam, Comp ty, [Rational], Rational) -> IO ()
+benchmark_comp :: (Typeable ty, PrimeField k) => (SimplParam, Comp ty k, [k], k) -> IO ()
 benchmark_comp (simpl, prog, inputs, res) =
   let print_ln = print_ln_to_file stdout
       print_ln_to_file h s = (P.>>) (hPutStrLn h s) (hFlush h)

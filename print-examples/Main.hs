@@ -5,6 +5,7 @@ module Main where
 import Data.Foldable (traverse_)
 import Prettyprinter
 import Prettyprinter.Render.String (renderString)
+import Snarkl.Field ()
 import Snarkl.Toplevel (texp_of_comp)
 import Test.Snarkl.Unit.Programs
 

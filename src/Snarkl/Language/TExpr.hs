@@ -22,12 +22,12 @@ module Snarkl.Language.TExpr
   )
 where
 
+import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Typeable (Proxy (..), Typeable, eqT, typeOf, typeRep, type (:~:) (Refl))
 import Prettyprinter (Pretty (pretty), line, parens, (<+>))
 import Snarkl.Common (Op, UnOp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field (one, zero))
 import Snarkl.Language.Expr (Variable)
 import qualified Snarkl.Language.LambdaExpr as LE
 
@@ -128,7 +128,7 @@ instance Pretty (TOp ty1 ty2 ty3) where
   pretty (TOp op) = pretty op
 
 data Val :: Ty -> Type -> Type where
-  VField :: (Field a) => a -> Val 'TField a
+  VField :: (GaloisField a) => a -> Val 'TField a
   VTrue :: Val 'TBool a
   VFalse :: Val 'TBool a
   VUnit :: Val 'TUnit a
@@ -194,7 +194,7 @@ instance (Eq a) => Eq (TExp (b :: Ty) a) where
   TEBot == TEBot = True
   _ == _ = False
 
-lambdaExpOfTExp :: (Field a, Typeable ty) => TExp ty a -> LE.Exp a
+lambdaExpOfTExp :: (GaloisField a, Typeable ty) => TExp ty a -> LE.Exp a
 lambdaExpOfTExp te = case te of
   TEVar (TVar x) -> LE.EVar x
   TEVal v -> lambdaExpOfVal v
@@ -211,11 +211,11 @@ lambdaExpOfTExp te = case te of
   TEAbs (TVar v) e -> LE.EAbs v (lambdaExpOfTExp e)
   TEApp e1 e2 -> LE.EApp (lambdaExpOfTExp e1) (lambdaExpOfTExp e2)
   where
-    lambdaExpOfVal :: (Field a) => Val ty a -> LE.Exp a
+    lambdaExpOfVal :: (GaloisField a) => Val ty a -> LE.Exp a
     lambdaExpOfVal v = case v of
       VField c -> LE.EVal c
-      VTrue -> LE.EVal one
-      VFalse -> LE.EVal zero
+      VTrue -> LE.EVal 1
+      VFalse -> LE.EVal 0
       VUnit -> LE.EUnit
       VLoc l -> failWith $ ErrMsg $ "unresolved location " ++ show l
 

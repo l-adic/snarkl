@@ -52,6 +52,7 @@ where
 import Control.Monad (forM, replicateM)
 import Control.Monad.Supply (Supply, runSupply)
 import Control.Monad.Supply.Class (MonadSupply (fresh))
+import Data.Field.Galois (GaloisField)
 import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
 import Data.Typeable (Typeable)
@@ -96,7 +97,7 @@ runState :: State s a -> s -> CompResult s a
 runState mf s = case mf of
   State f -> f s
 
-raise_err :: ErrMsg -> Comp ty
+raise_err :: ErrMsg -> Comp ty k
 raise_err msg = State (\_ -> Left msg)
 
 -- | We have to define our own bind operator, unfortunately,
@@ -149,9 +150,9 @@ data ObjBind
     ( Show
     )
 
-data AnalBind
+data AnalBind k
   = AnalBool Bool
-  | AnalConst Rational
+  | AnalConst k
   | AnalBot
   deriving
     ( Show
@@ -164,35 +165,35 @@ type ObjMap =
     )
     ObjBind -- maps to result r
 
-data Env = Env
+data Env k = Env
   { next_variable :: Int,
     next_loc :: Int,
     input_vars :: [Variable],
     obj_map :: ObjMap,
-    anal_map :: Map.Map Variable AnalBind -- supporting simple constprop analyses
+    anal_map :: Map.Map Variable (AnalBind k) -- supporting simple constprop analyses
   }
   deriving (Show)
 
-type Comp ty = State Env (TExp ty Rational)
+type Comp ty k = State (Env k) (TExp ty k)
 
 {-----------------------------------------------
  Units, Booleans (used below)
 ------------------------------------------------}
 
-unit :: TExp 'TUnit Rational
+unit :: TExp 'TUnit k
 unit = TEVal VUnit
 
-false :: TExp 'TBool Rational
+false :: TExp 'TBool k
 false = TEVal VFalse
 
-true :: TExp 'TBool Rational
+true :: TExp 'TBool k
 true = TEVal VTrue
 
 {-----------------------------------------------
  Arrays
 ------------------------------------------------}
 
-arr :: Int -> Comp ('TArr ty)
+arr :: Int -> Comp ('TArr ty) k
 arr 0 = raise_err $ ErrMsg "array must have size > 0"
 arr len =
   State
@@ -226,7 +227,7 @@ arr len =
           )
 
 -- Like 'arr', but declare fresh array variables as inputs.
-input_arr :: Int -> Comp ('TArr ty)
+input_arr :: Int -> Comp ('TArr ty) k
 input_arr 0 = raise_err $ ErrMsg "array must have size > 0"
 input_arr len =
   State
@@ -269,7 +270,7 @@ input_arr len =
     new_vars :: Supply [Variable]
     new_vars = replicateM len (Variable <$> fresh)
 
-get_addr :: (Loc, Int) -> Comp ty
+get_addr :: (Loc, Int) -> Comp ty k
 get_addr (l, i) =
   State
     ( \s -> case Map.lookup (l, i) (obj_map s) of
@@ -287,9 +288,10 @@ get_addr (l, i) =
 
 guard ::
   (Typeable ty2) =>
-  (TExp ty Rational -> State Env (TExp ty2 Rational)) ->
-  TExp ty Rational ->
-  State Env (TExp ty2 Rational)
+  (GaloisField k) =>
+  (TExp ty k -> State (Env k) (TExp ty2 k)) ->
+  TExp ty k ->
+  State (Env k) (TExp ty2 k)
 guard f e =
   do
     b <- is_bot e
@@ -300,18 +302,19 @@ guard f e =
 
 guarded_get_addr ::
   (Typeable ty2) =>
-  TExp ty Rational ->
+  (GaloisField k) =>
+  TExp ty k ->
   Int ->
-  State Env (TExp ty2 Rational)
+  State (Env k) (TExp ty2 k)
 guarded_get_addr e i =
   guard (\e0 -> get_addr (locOfTexp e0, i)) e
 
-get :: (Typeable ty) => (TExp ('TArr ty) Rational, Int) -> Comp ty
+get :: (Typeable ty) => (GaloisField k) => (TExp ('TArr ty) k, Int) -> Comp ty k
 get (TEBot, _) = return TEBot
 get (a, i) = guarded_get_addr a i
 
 -- | Smart constructor for TEAssert
-te_assert :: (Typeable ty) => TExp ty Rational -> TExp ty Rational -> Comp 'TUnit
+te_assert :: (Typeable ty) => (GaloisField k) => TExp ty k -> TExp ty k -> Comp 'TUnit k
 te_assert x@(TEVar _) e =
   do
     e_bot <- is_bot e
@@ -332,9 +335,10 @@ te_assert _ e =
 -- in the object map.
 set_addr ::
   (Typeable ty) =>
-  (TExp ('TArr ty) Rational, Int) ->
-  TExp ty Rational ->
-  Comp 'TUnit
+  (GaloisField k) =>
+  (TExp ('TArr ty) k, Int) ->
+  TExp ty k ->
+  Comp 'TUnit k
 -- The following specialization (to variable expressions) is an
 -- optimization: we avoid introducing a fresh variable.
 set_addr (TEVal (VLoc (TLoc l)), i) (TEVar (TVar x)) =
@@ -359,7 +363,7 @@ set_addr (TEVal (VLoc (TLoc l)), i) e =
 set_addr (e1, _) _ =
   raise_err $ ErrMsg ("expected " ++ show e1 ++ " a loc")
 
-set :: (Typeable ty) => (TExp ('TArr ty) Rational, Int) -> TExp ty Rational -> Comp 'TUnit
+set :: (Typeable ty, GaloisField k) => (TExp ('TArr ty) k, Int) -> TExp ty k -> Comp 'TUnit k
 set (a, i) e = set_addr (a, i) e
 
 {-----------------------------------------------
@@ -368,11 +372,12 @@ set (a, i) e = set_addr (a, i) e
 
 pair ::
   ( Typeable ty1,
-    Typeable ty2
+    Typeable ty2,
+    GaloisField k
   ) =>
-  TExp ty1 Rational ->
-  TExp ty2 Rational ->
-  Comp ('TProd ty1 ty2)
+  TExp ty1 k ->
+  TExp ty2 k ->
+  Comp ('TProd ty1 ty2) k
 pair te1 te2 =
   do
     l <- fresh_loc
@@ -408,16 +413,18 @@ pair te1 te2 =
 
 fst_pair ::
   (Typeable ty1) =>
-  TExp ('TProd ty1 ty2) Rational ->
-  Comp ty1
+  (GaloisField k) =>
+  TExp ('TProd ty1 ty2) k ->
+  Comp ty1 k
 fst_pair TEBot = return TEBot
 fst_pair e = guarded_get_addr e 0
 
 snd_pair ::
-  ( Typeable ty2
+  ( Typeable ty2,
+    GaloisField k
   ) =>
-  TExp ('TProd ty1 ty2) Rational ->
-  Comp ty2
+  TExp ('TProd ty1 ty2) k ->
+  Comp ty2 k
 snd_pair TEBot = return TEBot
 snd_pair e = guarded_get_addr e 1
 
@@ -425,11 +432,11 @@ snd_pair e = guarded_get_addr e 1
  Auxiliary functions
 ------------------------------------------------}
 
-debug_state :: State Env (TExp 'TUnit a)
+debug_state :: (GaloisField k) => State (Env k) (TExp 'TUnit a)
 debug_state =
   State (\s -> Left $ ErrMsg $ show s)
 
-fresh_var :: State Env (TExp ty a)
+fresh_var :: State (Env k) (TExp ty a)
 fresh_var =
   State
     ( \s ->
@@ -442,7 +449,7 @@ fresh_var =
               )
     )
 
-fresh_input :: State Env (TExp ty a)
+fresh_input :: State (Env k) (TExp ty a)
 fresh_input =
   State
     ( \s ->
@@ -456,7 +463,7 @@ fresh_input =
               )
     )
 
-fresh_loc :: State Env (TExp ty a)
+fresh_loc :: State (Env k) (TExp ty a)
 fresh_loc =
   State
     ( \s ->
@@ -468,7 +475,7 @@ fresh_loc =
           )
     )
 
-add_objects :: [((Loc, Int), ObjBind)] -> Comp 'TUnit
+add_objects :: [((Loc, Int), ObjBind)] -> Comp 'TUnit k
 add_objects binds =
   State
     ( \s ->
@@ -480,7 +487,7 @@ add_objects binds =
           )
     )
 
-add_statics :: [(Variable, AnalBind)] -> Comp 'TUnit
+add_statics :: [(Variable, AnalBind k)] -> Comp 'TUnit k
 add_statics binds =
   State
     ( \s ->
@@ -493,7 +500,7 @@ add_statics binds =
     )
 
 -- | Does boolean expression 'e' resolve (statically) to 'b'?
-is_bool :: TExp ty Rational -> Bool -> Comp 'TBool
+is_bool :: (GaloisField k) => TExp ty k -> Bool -> Comp 'TBool k
 is_bool (TEVal VFalse) False = return true
 is_bool (TEVal VTrue) True = return true
 is_bool e@(TEVar _) b =
@@ -510,24 +517,24 @@ is_bool e@(TEVar _) b =
     )
 is_bool _ _ = return false
 
-is_false :: TExp ty Rational -> Comp 'TBool
+is_false :: (GaloisField k) => TExp ty k -> Comp 'TBool k
 is_false = flip is_bool False
 
-is_true :: TExp ty Rational -> Comp 'TBool
+is_true :: (GaloisField k) => TExp ty k -> Comp 'TBool k
 is_true = flip is_bool True
 
 -- | Add binding 'x = b'.
-assert_bool :: TExp ty Rational -> Bool -> Comp 'TUnit
+assert_bool :: (GaloisField k) => TExp ty k -> Bool -> Comp 'TUnit k
 assert_bool (TEVar (TVar x)) b = add_statics [(x, AnalBool b)]
 assert_bool e _ = raise_err $ ErrMsg $ "expected " ++ show e ++ " a variable"
 
-assert_false :: TExp ty Rational -> Comp 'TUnit
+assert_false :: (GaloisField k) => TExp ty k -> Comp 'TUnit k
 assert_false = flip assert_bool False
 
-assert_true :: TExp ty Rational -> Comp 'TUnit
+assert_true :: (GaloisField k) => TExp ty k -> Comp 'TUnit k
 assert_true = flip assert_bool True
 
-var_is_bot :: TExp ty Rational -> Comp 'TBool
+var_is_bot :: (GaloisField k) => TExp ty k -> Comp 'TBool k
 var_is_bot e@(TEVar (TVar _)) =
   State
     ( \s ->
@@ -541,7 +548,7 @@ var_is_bot e@(TEVar (TVar _)) =
     )
 var_is_bot _ = return false
 
-is_bot :: TExp ty Rational -> Comp 'TBool
+is_bot :: (GaloisField k) => TExp ty k -> Comp 'TBool k
 is_bot e =
   case e of
     e0@(TEVar _) -> var_is_bot e0
@@ -551,7 +558,7 @@ is_bot e =
     TEBot -> return true
     _ -> return false
   where
-    either_is_bot :: TExp ty1 Rational -> TExp ty2 Rational -> Comp 'TBool
+    either_is_bot :: (GaloisField k) => TExp ty1 k -> TExp ty2 k -> Comp 'TBool k
     either_is_bot e10 e20 =
       do
         e1_bot <- is_bot e10
@@ -561,6 +568,6 @@ is_bot e =
           (_, TEVal VTrue) -> return true
           _ -> return false
 
-assert_bot :: TExp ty Rational -> Comp 'TUnit
+assert_bot :: (GaloisField k) => TExp ty k -> Comp 'TUnit k
 assert_bot (TEVar (TVar x)) = add_statics [(x, AnalBot)]
 assert_bot e = raise_err $ ErrMsg $ "in assert_bot, expected " ++ show e ++ " a variable"

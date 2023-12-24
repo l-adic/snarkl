@@ -2,7 +2,9 @@
 
 module Snarkl.Example.Tree where
 
+import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
+import GHC.TypeLits (KnownNat)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
@@ -23,16 +25,16 @@ type TF a = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst a) ('TFProd 'TFId 'TFId)
 
 type TTree a = 'TMu (TF a)
 
-type Rat = TExp 'TField Rational
+type Rat k = TExp 'TField k
 
-type Tree a = TExp (TTree a) Rational
+type Tree a k = TExp (TTree a) k
 
-leaf :: (Typeable a) => Comp (TTree a)
+leaf :: (Typeable a, GaloisField k) => Comp (TTree a) k
 leaf = do
   t <- inl unit
   roll t
 
-node :: (Typeable a) => TExp a Rational -> Tree a -> Tree a -> Comp (TTree a)
+node :: (Typeable a, GaloisField k) => TExp a k -> Tree a k -> Tree a k -> Comp (TTree a) k
 node v t1 t2 = do
   p <- pair t1 t2
   p' <- pair v p
@@ -41,13 +43,14 @@ node v t1 t2 = do
 
 case_tree ::
   ( Typeable a,
+    GaloisField k,
     Typeable a1,
-    Zippable a1
+    Zippable a1 k
   ) =>
-  Tree a ->
-  Comp a1 ->
-  (TExp a Rational -> Tree a -> Tree a -> Comp a1) ->
-  Comp a1
+  Tree a k ->
+  Comp a1 k ->
+  (TExp a k -> Tree a k -> Tree a k -> Comp a1 k) ->
+  Comp a1 k
 case_tree t f_leaf f_node = do
   t' <- unroll t
   case_sum (\_ -> f_leaf) go t'
@@ -62,12 +65,13 @@ case_tree t f_leaf f_node = do
 map_tree ::
   ( Typeable a,
     Typeable a1,
-    Zippable a1,
-    Derive a1
+    Zippable a1 k,
+    Derive a1 k,
+    GaloisField k
   ) =>
-  (TExp a Rational -> State Env (TExp a1 Rational)) ->
-  TExp (TTree a) Rational ->
-  Comp (TTree a1)
+  (TExp a k -> State (Env k) (TExp a1 k)) ->
+  TExp (TTree a) k ->
+  Comp (TTree a1) k
 map_tree f t =
   fix go t
   where
@@ -86,24 +90,26 @@ map_tree f t =
  Test cases
  ------------------------------------------------}
 
+tree1 :: (GaloisField k) => Comp (TTree 'TField) k
 tree1 = do
   b <- fresh_input
   l1 <- leaf
   l2 <- leaf
-  t1' <- if return b then node 77.0 l1 l2 else leaf
+  t1' <- if return b then node (fromField 77) l1 l2 else leaf
   l3 <- leaf
-  t2 <- node 2.0 t1' l3
+  t2 <- node (fromField 2) t1' l3
   return t2
 
+tree_test1 :: (GaloisField k) => Comp 'TField k
 tree_test1 = do
   t <- tree1
   case_tree
     t
-    (return 99.0)
+    (return (fromField 99))
     ( \_ tl _ -> do
         case_tree
           tl
-          (return 88.0)
+          (return (fromField 88))
           ( \v _ _ -> do
               return v
           )

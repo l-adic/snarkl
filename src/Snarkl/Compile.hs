@@ -19,6 +19,7 @@ import Control.Monad.State
     runState,
   )
 import Data.Either (fromRight)
+import Data.Field.Galois (GaloisField)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -37,7 +38,6 @@ import Snarkl.Constraint.SimplMonad (bind_of_var, bind_var)
 import Snarkl.Constraint.Simplify (do_simplify)
 import Snarkl.Constraint.Solve (solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field (add, inv, neg, one, zero))
 import Snarkl.Language
   ( Exp (..),
     TExp,
@@ -80,25 +80,25 @@ fresh_var =
     return next
 
 -- | Add constraint 'x = y'
-ensure_equal :: (Field a) => (Var, Var) -> State (CEnv a) ()
+ensure_equal :: (GaloisField a) => (Var, Var) -> State (CEnv a) ()
 ensure_equal (x, y) =
   add_constraint $
-    cadd zero [(x, one), (y, neg one)]
+    cadd 0 [(x, 1), (y, -1)]
 
 -- | Add constraint 'x = c'
-ensure_const :: (Field a) => (Var, a) -> State (CEnv a) ()
+ensure_const :: (GaloisField a) => (Var, a) -> State (CEnv a) ()
 ensure_const (x, c) =
   add_constraint $
-    cadd c [(x, neg one)]
+    cadd c [(x, -1)]
 
 -- | Add constraint 'b^2 = b'.
-ensure_boolean :: (Field a) => Var -> State (CEnv a) ()
+ensure_boolean :: (GaloisField a) => Var -> State (CEnv a) ()
 ensure_boolean b =
   encode_binop Mult (b, b, b)
 
 -- | Constraint 'x \/ y = z'.
 -- The encoding is: x+y - z = x*y; assumes x and y are boolean.
-encode_or :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_or :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_or (x, y, z) =
   do
     x_mult_y <- fresh_var
@@ -114,18 +114,18 @@ encode_or (x, y, z) =
 
 -- | Constraint 'x xor y = z'.
 -- The encoding is: x+y - z = 2(x*y); assumes x and y are boolean.
-encode_xor :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_xor :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_xor (x, y, z) =
   do
     x_mult_y <- fresh_var
     encode_binop Mult (x, y, x_mult_y)
     add_constraint $
       cadd
-        zero
-        [ (x, one),
-          (y, one),
-          (z, neg one),
-          (x_mult_y, neg (one `add` one))
+        0
+        [ (x, 1),
+          (y, 1),
+          (z, -1),
+          (x_mult_y, -2)
         ]
 
 -- -- The following desugaring is preferable, but generates more constraints.
@@ -141,7 +141,7 @@ encode_xor (x, y, z) =
 
 -- | Constraint 'x == y = z' ASSUMING x, y are boolean.
 -- The encoding is: x*y + (1-x)*(1-y) = z.
-encode_boolean_eq :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_boolean_eq :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_boolean_eq (x, y, z) = cs_of_exp z e
   where
     e =
@@ -150,14 +150,14 @@ encode_boolean_eq (x, y, z) = cs_of_exp z e
         [ EBinop Mult [EVar (Variable x), EVar (Variable y)],
           EBinop
             Mult
-            [ EBinop Sub [EVal one, EVar (Variable x)],
-              EBinop Sub [EVal one, EVar (Variable y)]
+            [ EBinop Sub [EVal 1, EVar (Variable x)],
+              EBinop Sub [EVal 1, EVar (Variable y)]
             ]
         ]
 
 -- | Constraint 'x == y = z'.
 -- The encoding is: z = (x-y == 0).
-encode_eq :: (Field a) => (Var, Var, Var) -> State (CEnv a) ()
+encode_eq :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_eq (x, y, z) = cs_of_exp z e
   where
     e =
@@ -171,7 +171,7 @@ encode_eq (x, y, z) = cs_of_exp z e
 --    x*m = y
 -- /\ (1-y)*x = 0
 -- Cf. p7. of [pinnochio-sp13], which follows [setty-usenix12].
-encode_zneq :: (Field a) => (Var, Var) -> State (CEnv a) ()
+encode_zneq :: (GaloisField a) => (Var, Var) -> State (CEnv a) ()
 encode_zneq (x, y) =
   do
     m <- fresh_var
@@ -184,9 +184,9 @@ encode_zneq (x, y) =
     add_constraint (CMagic nm [x, m] mf)
     -- END magic.
     cs_of_exp y (EBinop Mult [EVar (Variable x), EVar (Variable m)])
-    cs_of_exp neg_y (EBinop Sub [EVal one, EVar (Variable y)])
+    cs_of_exp neg_y (EBinop Sub [EVal 1, EVar (Variable y)])
     add_constraint
-      (CMult (one, neg_y) (one, x) (zero, Nothing))
+      (CMult (1, neg_y) (1, x) (0, Nothing))
   where
     mf [x0, m0] =
       do
@@ -194,44 +194,33 @@ encode_zneq (x, y) =
         case tx of
           Left _ -> return False
           Right c ->
-            if c == zero
+            if c == 0
               then do
-                bind_var (m0, zero)
+                bind_var (m0, 0)
                 return True
-              else case inv c of
-                Nothing ->
-                  failWith $
-                    ErrMsg
-                      ( "expected "
-                          ++ show x0
-                          ++ "=="
-                          ++ show c
-                          ++ " to be invertible"
-                      )
-                Just c' ->
-                  do
-                    bind_var (m0, c')
-                    return True
+              else do
+                bind_var (m0, recip c)
+                return True
     mf _ =
       failWith $
         ErrMsg "internal error in 'encode_zeq'"
 
 -- | Constraint 'y == x==0:1?0'
-encode_zeq :: (Field a) => (Var, Var) -> State (CEnv a) ()
+encode_zeq :: (GaloisField a) => (Var, Var) -> State (CEnv a) ()
 encode_zeq (x, y) =
   do
     neg_y <- fresh_var
     encode_zneq (x, neg_y)
-    cs_of_exp y (EBinop Sub [EVal one, EVar (Variable neg_y)])
+    cs_of_exp y (EBinop Sub [EVal 1, EVar (Variable neg_y)])
 
 -- | Encode the constraint 'un_op x = y'
-encode_unop :: (Field a) => UnOp -> (Var, Var) -> State (CEnv a) ()
+encode_unop :: (GaloisField a) => UnOp -> (Var, Var) -> State (CEnv a) ()
 encode_unop op (x, y) = go op
   where
     go ZEq = encode_zeq (x, y)
 
 -- | Encode the constraint 'x op y = z'.
-encode_binop :: (Field a) => Op -> (Var, Var, Var) -> State (CEnv a) ()
+encode_binop :: (GaloisField a) => Op -> (Var, Var, Var) -> State (CEnv a) ()
 encode_binop op (x, y, z) = go op
   where
     go And = encode_binop Mult (x, y, z)
@@ -241,30 +230,30 @@ encode_binop op (x, y, z) = go op
     go BEq = encode_boolean_eq (x, y, z)
     go Add =
       add_constraint $
-        cadd zero [(x, one), (y, one), (z, neg one)]
+        cadd 0 [(x, 1), (y, 1), (z, -1)]
     go Sub =
       add_constraint $
-        cadd zero [(x, one), (y, neg one), (z, neg one)]
+        cadd 0 [(x, 1), (y, -1), (z, -1)]
     go Mult =
       add_constraint $
-        CMult (one, x) (one, y) (one, Just z)
+        CMult (1, x) (1, y) (1, Just z)
     go Div =
       add_constraint $
-        CMult (one, y) (one, z) (one, Just x)
+        CMult (1, y) (1, z) (1, Just x)
 
-encode_linear :: (Field a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
+encode_linear :: (GaloisField a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
 encode_linear out xs =
-  let c = foldl (flip add) zero $ map (fromRight zero) xs
+  let c = foldl (flip (+)) 0 $ map (fromRight 0) xs
    in add_constraint $
         cadd c $
-          (out, neg one) : remove_consts xs
+          (out, -1) : remove_consts xs
   where
     remove_consts :: [Either (Var, a) a] -> [(Var, a)]
     remove_consts [] = []
     remove_consts (Left p : l) = p : remove_consts l
     remove_consts (Right _ : l) = remove_consts l
 
-cs_of_exp :: (Field a) => Var -> Exp a -> State (CEnv a) ()
+cs_of_exp :: (GaloisField a) => Var -> Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
   EVar (Variable x) ->
     do
@@ -293,7 +282,7 @@ cs_of_exp out e = case e of
     -- We special-case linear combinations in this way to avoid having
     -- to introduce new multiplication gates for multiplication by
     -- constant scalars.
-    let go_linear :: (Field a) => [Exp a] -> State (CEnv a) [Either (Var, a) a]
+    let go_linear :: (GaloisField a) => [Exp a] -> State (CEnv a) [Either (Var, a) a]
         go_linear [] = return []
         go_linear (EBinop Mult [EVar (Variable x), EVal coeff] : es') =
           do
@@ -322,7 +311,7 @@ cs_of_exp out e = case e of
         go_linear (EVar (Variable x) : es') =
           do
             labels <- go_linear es'
-            return $ Left (x, one) : labels
+            return $ Left (x, 1) : labels
 
         -- The 'go_linear' catch-all case (i.e., no optimization)
         go_linear (e1 : es') =
@@ -330,7 +319,7 @@ cs_of_exp out e = case e of
             e1_out <- fresh_var
             cs_of_exp e1_out e1
             labels <- go_linear es'
-            return $ Left (e1_out, one) : labels
+            return $ Left (e1_out, 1) : labels
 
         go_sub [] = return []
         go_sub (e1 : es') =
@@ -341,10 +330,10 @@ cs_of_exp out e = case e of
               k : ls -> return $ k : rev_pol ls
 
         rev_pol [] = []
-        rev_pol (Left (x, c) : ls) = Left (x, neg c) : rev_pol ls
-        rev_pol (Right c : ls) = Right (neg c) : rev_pol ls
+        rev_pol (Left (x, c) : ls) = Left (x, -c) : rev_pol ls
+        rev_pol (Right c : ls) = Right (-c) : rev_pol ls
 
-        go_other :: (Field a) => [Exp a] -> State (CEnv a) [Var]
+        go_other :: (GaloisField a) => [Exp a] -> State (CEnv a) [Var]
         go_other [] = return []
         go_other (EVar (Variable x) : es') =
           do
@@ -390,7 +379,7 @@ cs_of_exp out e = case e of
         EBinop
           Add
           [ EBinop Mult [b, e1],
-            EBinop Mult [EBinop Sub [EVal one, b], e2]
+            EBinop Mult [EBinop Sub [EVal 1, b], e2]
           ]
 
   -- NOTE: when compiling assignments, the naive thing to do is
@@ -414,7 +403,7 @@ cs_of_exp out e = case e of
           go garbage_var le'
   EUnit ->
     -- NOTE: [[ EUnit ]]_{out} = [[ EVal zero ]]_{out}.
-    do cs_of_exp out (EVal zero)
+    do cs_of_exp out (EVal 0)
 
 data SimplParam
   = NoSimplify
@@ -435,7 +424,7 @@ must_dataflow SimplifyDataflow = True
 -- system.  Takes as input the constraints, the input variables, and
 -- the output variables, and return the corresponding R1CS.
 r1cs_of_constraints ::
-  (Field a) =>
+  (GaloisField a) =>
   SimplParam ->
   ConstraintSystem a ->
   R1CS a
@@ -463,7 +452,7 @@ r1cs_of_constraints simpl cs =
 -- expression, the expression's input variables, and the name of the
 -- output variable.
 constraints_of_texp ::
-  ( Field a,
+  ( GaloisField a,
     Typeable ty
   ) =>
   -- | Output variable

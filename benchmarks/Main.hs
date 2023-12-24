@@ -1,12 +1,23 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
+
 module Main where
 
 import Criterion.Main
+import Data.Field.Galois (GaloisField, Prime)
+import Data.Typeable (Typeable)
 import Harness
 import Snarkl.Compile (SimplParam (..))
 import qualified Snarkl.Example.Keccak as Keccak
 import qualified Snarkl.Example.List as List
 import qualified Snarkl.Example.Matrix as Matrix
+import Snarkl.Field (F_BN128, P_BN128)
+import Snarkl.Language (Comp, fromField)
 
+mk_bgroup :: (Typeable ty) => String -> Comp ty F_BN128 -> [Int] -> F_BN128 -> Benchmark
 mk_bgroup nm mf inputs result =
   bgroup
     nm
@@ -28,7 +39,7 @@ the_benchmarks =
       "input-matrix70"
       (Matrix.test2 70)
       ((Matrix.t2_m0 4900) ++ (Matrix.t2_m1 4900))
-      2048215153250
+      (2048215153250 :: F_BN128)
   ]
 
 run_benchmarks =

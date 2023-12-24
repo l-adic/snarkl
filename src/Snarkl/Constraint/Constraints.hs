@@ -15,13 +15,13 @@ module Snarkl.Constraint.Constraints
 where
 
 import Control.Monad.State (State)
+import Data.Field.Galois (GaloisField, Prime)
 import qualified Data.IntMap.Lazy as Map
 import qualified Data.Set as Set
 import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
 import Snarkl.Common (Assgn, Var)
 import Snarkl.Constraint.SimplMonad (SEnv)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Field (Field (add, one, zero))
 
 ----------------------------------------------------------------
 --            Intermediate Constraint Language
@@ -35,28 +35,28 @@ newtype CoeffList k v = CoeffList {asList :: [(k, v)]}
 -- implicitly removed. Smart constructor 'cadd' (below) enforces this
 -- invariant.
 
-coeff_insert :: (Eq k, Field a) => k -> a -> CoeffList k a -> CoeffList k a
+coeff_insert :: (Eq k, GaloisField a) => k -> a -> CoeffList k a -> CoeffList k a
 coeff_insert k a l = CoeffList $ go (asList l)
   where
     go [] = [(k, a)]
     go (scrut@(k', a') : l') =
       if k == k'
-        then (k, add a a') : l'
+        then (k, a + a') : l'
         else scrut : go l'
 
-coeff_merge :: (Eq k, Field a) => CoeffList k a -> CoeffList k a
+coeff_merge :: (Eq k, GaloisField a) => CoeffList k a -> CoeffList k a
 coeff_merge l = go (CoeffList []) (asList l)
   where
     go acc [] = acc
     go acc ((k, a) : l') =
       go (coeff_insert k a acc) l'
 
-remove_zeros :: (Field a) => CoeffList k a -> CoeffList k a
+remove_zeros :: (GaloisField a) => CoeffList k a -> CoeffList k a
 remove_zeros (CoeffList l) = CoeffList $ go [] l
   where
     go acc [] = acc
     go acc ((_, a) : l')
-      | a == zero =
+      | a == 0 =
           go acc l'
     go acc (scrut@(_, _) : l')
       | otherwise =
@@ -74,7 +74,7 @@ data Constraint a
   | CMagic Var [Var] ([Var] -> State (SEnv a) Bool)
 
 -- | Smart constructor enforcing CoeffList invariant
-cadd :: (Field a) => a -> [(Var, a)] -> Constraint a
+cadd :: (GaloisField a) => a -> [(Var, a)] -> Constraint a
 cadd !a !l = CAdd a (remove_zeros $ coeff_merge $ CoeffList l)
 
 type ConstraintSet a = Set.Set (Constraint a)
@@ -141,7 +141,7 @@ compare_constr !_ !(CMagic _ _ _) = LT
 compare_constr !(CMagic _ _ _) !_ = GT
 
 instance (Ord a) => Ord (Constraint a) where
-  {-# SPECIALIZE instance Ord (Constraint Rational) #-}
+  {-# SPECIALIZE instance Ord (Constraint (Prime p)) #-}
   compare = compare_constr
 
 instance (Show a) => Show (Constraint a) where
@@ -166,7 +166,7 @@ instance (Show a) => Show (Constraint a) where
 ----------------------------------------------------------------
 
 r1cs_of_cs ::
-  (Field a) =>
+  (GaloisField a) =>
   -- | Constraints
   ConstraintSystem a ->
   -- | Witness generator
@@ -182,9 +182,9 @@ r1cs_of_cs cs =
     go [] = []
     go (CAdd a m : cs') =
       R1C
-        ( const_poly one,
+        ( const_poly 1,
           Poly $ Map.insert (-1) a $ Map.fromList (asList m),
-          const_poly zero
+          const_poly 0
         )
         : go cs'
     go (CMult cx dy (e, Nothing) : cs') =
@@ -210,7 +210,7 @@ constraint_vars cs =
 --   variables in the (renumbered) constraint set and the (possibly
 --   renumbered) in and out variables.
 renumber_constraints ::
-  (Field a) =>
+  (GaloisField a) =>
   ConstraintSystem a ->
   ( Var -> Var,
     ConstraintSystem a

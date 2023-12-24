@@ -1,9 +1,16 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Snarkl.Example.Games where
 
+import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
+import GHC.TypeLits (KnownNat, Nat)
 import Snarkl.Errors
+import Snarkl.Field (F_BN128)
 import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
@@ -26,36 +33,36 @@ import Prelude hiding
   "Functional Pearl: Every Bit Counts", ICFP 2010
  ---------------------------------------------------------}
 
-data ISO (t :: Ty) (s :: Ty) = Iso
-  { to :: TExp t Rational -> Comp s,
-    from :: TExp s Rational -> Comp t
+data ISO (t :: Ty) (s :: Ty) k = Iso
+  { to :: TExp t k -> Comp s k,
+    from :: TExp s k -> Comp t k
   }
 
-data Game :: Ty -> * where
+data Game :: Ty -> * -> * where
   Single ::
-    forall (s :: Ty) (t :: Ty).
+    forall (s :: Ty) (t :: Ty) k.
     ( Typeable s,
       Typeable t
     ) =>
-    ISO t s ->
-    Game t
+    ISO t s k ->
+    Game t k
   Split ::
-    forall (t1 :: Ty) (t2 :: Ty) (t :: Ty).
+    forall (t1 :: Ty) (t2 :: Ty) (t :: Ty) k.
     ( Typeable t1,
       Typeable t2,
       Typeable t,
-      Zippable t1,
-      Zippable t2,
-      Zippable t,
-      Derive t1,
-      Derive t2
+      Zippable t1 k,
+      Zippable t2 k,
+      Zippable t k,
+      Derive t1 k,
+      Derive t2 k
     ) =>
-    ISO t ('TSum t1 t2) ->
-    Game t1 ->
-    Game t2 ->
-    Game t
+    ISO t ('TSum t1 t2) k ->
+    Game t1 k ->
+    Game t2 k ->
+    Game t k
 
-decode :: Game t -> Comp t
+decode :: (GaloisField k) => Game t k -> Comp t k
 decode (Single (Iso _ bld)) =
   do
     x <- fresh_input
@@ -71,26 +78,26 @@ decode (Split (Iso _ bld) g1 g2) =
     v2 <- bld s2
     if return x then return v2 else return v1
 
-field_game :: Game 'TField
+field_game :: Game 'TField p
 field_game = Single (Iso return return)
 
-bool_game :: Game 'TBool
+bool_game :: (GaloisField k) => Game 'TBool k
 bool_game =
   Single
     ( Iso
-        (\be -> if return be then return 1.0 else return 0.0)
+        (\be -> if return be then return (fromField 1) else return (fromField 0))
         (\te -> if return (zeq te) then return false else return true)
     )
 
-unit_game :: Game 'TUnit
-unit_game = Single (Iso (\_ -> return 1.0) (\_ -> return unit))
+unit_game :: (GaloisField k) => Game 'TUnit k
+unit_game = Single (Iso (\_ -> return (fromField 1)) (\(_ :: TExp 'TField k) -> return unit))
 
-fail_game :: (Typeable ty) => Game ty
+fail_game :: (Typeable ty) => Game ty p
 fail_game =
   Single
     ( Iso
         (\_ -> failWith $ ErrMsg "fail-games can't encode")
-        ( \(_ :: TExp 'TField Rational) ->
+        ( \(_ :: TExp 'TField k) ->
             failWith $ ErrMsg "fail-games can't decode"
         )
     )
@@ -98,54 +105,58 @@ fail_game =
 sum_game ::
   ( Typeable t1,
     Typeable t2,
-    Zippable t1,
-    Zippable t2,
-    Derive t1,
-    Derive t2
+    Zippable t1 k,
+    Zippable t2 k,
+    Derive t1 k,
+    Derive t2 k,
+    GaloisField k
   ) =>
-  Game t1 ->
-  Game t2 ->
-  Game ('TSum t1 t2)
+  Game t1 k ->
+  Game t2 k ->
+  Game ('TSum t1 t2) k
 sum_game g1 g2 =
   Split (Iso return return) g1 g2
 
-basic_game :: Game ('TSum 'TField 'TField)
+basic_game :: (GaloisField k) => Game ('TSum 'TField 'TField) k
 basic_game = sum_game field_game field_game
 
-basic_test :: Comp 'TField
+basic_test :: (GaloisField k) => Comp 'TField k
 basic_test =
   do
     s <- decode basic_game
     case_sum return return s
 
+t1 :: F_BN128
 t1 = comp_interp basic_test [0, 23, 88] -- 23
 
+t2 :: F_BN128
 t2 = comp_interp basic_test [1, 23, 88] -- 88
 
 (+>) ::
   ( Typeable t,
     Typeable s,
-    Zippable t,
-    Zippable s
+    Zippable t k,
+    Zippable s k
   ) =>
-  Game t ->
-  ISO s t ->
-  Game s
+  Game t k ->
+  ISO s t k ->
+  Game s k
 (Single j) +> i = Single (i `seqI` j)
 (Split j g1 g2) +> i = Split (i `seqI` j) g1 g2
 
-idI :: ISO a a
+idI :: ISO a a p
 idI = Iso return return
 
 prodI ::
   ( Typeable a,
     Typeable b,
     Typeable c,
-    Typeable d
+    Typeable d,
+    GaloisField k
   ) =>
-  ISO a b ->
-  ISO c d ->
-  ISO ('TProd a c) ('TProd b d)
+  ISO a b k ->
+  ISO c d k ->
+  ISO ('TProd a c) ('TProd b d) k
 prodI (Iso f g) (Iso f' g') =
   Iso
     ( \p -> do
@@ -163,14 +174,15 @@ prodI (Iso f g) (Iso f' g') =
         pair y1 y2
     )
 
-seqI :: (Typeable b) => ISO a b -> ISO b c -> ISO a c
+seqI :: (Typeable b) => ISO a b p -> ISO b c p -> ISO a c p
 seqI (Iso f g) (Iso f' g') = Iso (\a -> f a >>= f') (\c -> g' c >>= g)
 
 prodLInputI ::
   ( Typeable a,
-    Typeable b
+    Typeable b,
+    GaloisField k
   ) =>
-  ISO ('TProd a b) b
+  ISO ('TProd a b) b k
 prodLInputI =
   Iso
     snd_pair
@@ -183,14 +195,15 @@ prodLSumI ::
   ( Typeable a,
     Typeable b,
     Typeable c,
-    Zippable a,
-    Zippable b,
-    Zippable c,
-    Derive a,
-    Derive b,
-    Derive c
+    Zippable a k,
+    Zippable b k,
+    Zippable c k,
+    Derive a k,
+    Derive b k,
+    Derive c k,
+    GaloisField k
   ) =>
-  ISO ('TProd ('TSum b c) a) ('TSum ('TProd b a) ('TProd c a))
+  ISO ('TProd ('TSum b c) a) ('TSum ('TProd b a) ('TProd c a)) k
 prodLSumI =
   Iso
     ( \p -> do
@@ -226,14 +239,15 @@ prodLSumI =
 
 prod_game ::
   ( Typeable b,
-    Zippable a,
-    Zippable b,
-    Derive a,
-    Derive b
+    Zippable a k,
+    Zippable b k,
+    Derive a k,
+    Derive b k,
+    GaloisField k
   ) =>
-  Game a ->
-  Game b ->
-  Game ('TProd a b)
+  Game a k ->
+  Game b k ->
+  Game ('TProd a b) k
 prod_game (Single iso) g2 = g2 +> iso'
   where
     iso' = prodI iso idI `seqI` prodLInputI
@@ -242,75 +256,79 @@ prod_game (Split iso g1a g1b) g2 =
   where
     iso' = prodI iso idI `seqI` prodLSumI
 
-basic_game2 :: Game ('TProd 'TField 'TField)
+basic_game2 :: (GaloisField k) => Game ('TProd 'TField 'TField) k
 basic_game2 = prod_game field_game field_game
 
-basic_test2 :: Comp 'TField
+basic_test2 :: (GaloisField k) => Comp 'TField k
 basic_test2 =
   do
     p <- decode basic_game2
     fst_pair p
 
+t3 :: F_BN128
 t3 = comp_interp basic_test2 [88, 23] -- fst (23, 88) = 23
 
-basic_game3 :: Game ('TProd ('TProd 'TField 'TField) 'TField)
+basic_game3 :: (GaloisField k) => Game ('TProd ('TProd 'TField 'TField) 'TField) k
 basic_game3 =
   prod_game
     (prod_game field_game field_game)
     field_game
 
-basic_test3 :: Comp 'TField
+basic_test3 :: (GaloisField k) => Comp 'TField k
 basic_test3 =
   do
     p <- decode basic_game3
     p2 <- fst_pair p
     snd_pair p2
 
+t4 :: F_BN128
 t4 = comp_interp basic_test3 [0, 1, 2]
 
 {---------------------------------------------------------
   Generic Games
  ---------------------------------------------------------}
 
-class Gameable (a :: Ty) where
-  mkGame :: Game a
+class Gameable (a :: Ty) k where
+  mkGame :: Game a k
 
-instance Gameable 'TField where
+instance Gameable 'TField p where
   mkGame = field_game
 
-instance Gameable 'TBool where
+instance (GaloisField k) => Gameable 'TBool k where
   mkGame = bool_game
 
-instance Gameable 'TUnit where
+instance (GaloisField k) => Gameable 'TUnit k where
   mkGame = unit_game
 
 instance
   ( Typeable a,
     Typeable b,
-    Zippable a,
-    Zippable b,
-    Derive a,
-    Derive b,
-    Gameable a,
-    Gameable b
+    Zippable a k,
+    Zippable b k,
+    Derive a k,
+    Derive b k,
+    Gameable a k,
+    Gameable b k,
+    GaloisField k
   ) =>
-  Gameable ('TProd a b)
+  Gameable ('TProd a b) k
   where
   mkGame = prod_game mkGame mkGame
 
 instance
   ( Typeable a,
     Typeable b,
-    Zippable a,
-    Zippable b,
-    Derive a,
-    Derive b,
-    Gameable a,
-    Gameable b
+    Zippable a k,
+    Zippable b k,
+    Derive a k,
+    Derive b k,
+    Gameable a k,
+    Gameable b k,
+    GaloisField k
   ) =>
-  Gameable ('TSum a b)
+  Gameable ('TSum a b) k
   where
   mkGame = sum_game mkGame mkGame
 
-gdecode :: (Gameable t) => Comp t
+gdecode :: (Gameable t k, GaloisField k) => Comp t k
 gdecode = decode mkGame
