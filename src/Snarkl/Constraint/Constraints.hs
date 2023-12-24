@@ -16,10 +16,10 @@ where
 
 import Control.Monad.State (State)
 import Data.Field.Galois (GaloisField, Prime)
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
-import Snarkl.Common (Assgn, Var)
+import Snarkl.Common (Assgn, Var (Var))
 import Snarkl.Constraint.SimplMonad (SEnv)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
@@ -183,7 +183,7 @@ r1cs_of_cs cs =
     go (CAdd a m : cs') =
       R1C
         ( const_poly 1,
-          Poly $ Map.insert (-1) a $ Map.fromList (asList m),
+          Poly $ Map.insert (Var (-1)) a $ Map.fromList (asList m),
           const_poly 0
         )
         : go cs'
@@ -224,7 +224,7 @@ renumber_constraints cs =
 
     var_map =
       Map.fromList $
-        zip (cs_in_vars cs ++ filter isnt_input all_vars) [0 ..]
+        zip (cs_in_vars cs ++ filter isnt_input all_vars) (Var <$> [0 ..])
       where
         isnt_input = not . flip Set.member in_vars_set
         in_vars_set = Set.fromList $ cs_in_vars cs

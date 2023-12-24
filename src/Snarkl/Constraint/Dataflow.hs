@@ -8,8 +8,6 @@ import Control.Monad.State
     gets,
     modify,
   )
-import qualified Data.IntMap as IntMap
-import Data.IntMap.Lazy (IntMap)
 import Data.List (foldl')
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -32,18 +30,18 @@ numberConstraints cs =
 
 -- | Creates a mapping from variables to the set of constraint IDs in which each variable appears.
 -- Implicitly uses the type alias 'Var' for the keys.
-gatherVars :: Map ConstraintId (Constraint a) -> IntMap (Set ConstraintId)
+gatherVars :: Map ConstraintId (Constraint a) -> Map Var (Set ConstraintId)
 gatherVars constr_map =
   let f m (cid, constr) =
         let vars = constraint_vars (Set.singleton constr)
          in foldl' (\acc x -> addVar x cid acc) m vars
-   in foldl' f IntMap.empty (Map.toList constr_map)
+   in foldl' f Map.empty (Map.toList constr_map)
   where
-    addVar :: Var -> ConstraintId -> IntMap (Set ConstraintId) -> IntMap (Set ConstraintId)
+    addVar :: Var -> ConstraintId -> Map Var (Set ConstraintId) -> Map Var (Set ConstraintId)
     addVar x cid m =
-      case IntMap.lookup x m of
-        Nothing -> IntMap.insert x (Set.singleton cid) m
-        Just s0 -> IntMap.insert x (Set.insert cid s0) m
+      case Map.lookup x m of
+        Nothing -> Map.insert x (Set.singleton cid) m
+        Just s0 -> Map.insert x (Set.insert cid s0) m
 
 newtype Roots a = DEnv {dfRoots :: Set Var}
 
@@ -52,7 +50,7 @@ addRoot x = modify (\s -> s {dfRoots = Set.insert x (dfRoots s)})
 
 data Env a = Env
   { constraints :: Map ConstraintId (Constraint a),
-    varMap :: IntMap (Set ConstraintId)
+    varMap :: Map Var (Set ConstraintId)
   }
 
 -- |  Removes constraints that are unreachable from the output variables of a ConstraintSystem.
@@ -81,7 +79,7 @@ removeUnreachable cs =
     lookupConstraints Env {constraints, varMap} roots =
       Set.foldl
         ( \s x ->
-            case IntMap.lookup x varMap of
+            case Map.lookup x varMap of
               Nothing -> s
               Just constraintIds ->
                 getConstraints constraintIds `Set.union` s
@@ -104,7 +102,7 @@ exploreVars ::
   State (Roots a) ()
 exploreVars _ [] = pure ()
 exploreVars env@(Env {constraints, varMap}) (r : rest) =
-  case IntMap.lookup r varMap of
+  case Map.lookup r varMap of
     Nothing -> exploreVars env rest
     Just cids ->
       do

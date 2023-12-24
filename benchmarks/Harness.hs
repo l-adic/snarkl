@@ -3,7 +3,7 @@
 module Harness where
 
 import Data.Field.Galois (GaloisField, Prime, PrimeField)
-import qualified Data.IntMap.Lazy as IntMap
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable
 import GHC.IO.Exception
@@ -50,7 +50,7 @@ test_simplify :: (Typeable ty, GaloisField k) => Comp ty k -> IO ()
 test_simplify mf =
   let texp_pkg = texp_of_comp mf
       constrs = constrs_of_texp texp_pkg
-      (_, constrs') = do_simplify False IntMap.empty constrs
+      (_, constrs') = do_simplify False Map.empty constrs
    in hPutStrLn stderr $
         show $
           Set.size $

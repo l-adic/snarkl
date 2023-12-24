@@ -4,11 +4,11 @@ module Snarkl.Constraint.Solve
 where
 
 import Data.Field.Galois (GaloisField)
-import qualified Data.IntMap.Lazy as Map
+import qualified Data.Map as Map
 import Data.Maybe
   ( isJust,
   )
-import Snarkl.Common (Assgn)
+import Snarkl.Common (Assgn, Var (..))
 import Snarkl.Constraint.Constraints
   ( ConstraintSystem (cs_in_vars, cs_num_vars, cs_out_vars),
   )
@@ -30,7 +30,7 @@ solve ::
   Assgn a
 solve cs env =
   let pinned_vars = cs_in_vars cs ++ cs_out_vars cs
-      all_vars = [0 .. cs_num_vars cs - 1]
+      all_vars = Var <$> [0 .. cs_num_vars cs - 1]
       (assgn, cs') = do_simplify True env cs
    in if all_assigned all_vars assgn
         then assgn
