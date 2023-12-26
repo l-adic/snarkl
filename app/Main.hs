@@ -8,4 +8,4 @@ main :: IO ()
 main = do
   let prog = Programs.prog1
   let r1cs = r1cs_of_comp NoSimplify prog
-  serializeR1CSAsJson "r1cs.json" r1cs
+  serializeR1CSAsJson "r1cs.jsonl" r1cs

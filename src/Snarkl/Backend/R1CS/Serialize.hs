@@ -68,7 +68,7 @@ data R1CSHeader k = R1CSHeader
 instance (GaloisField k) => A.ToJSON (R1CSHeader k) where
   toJSON (R1CSHeader {..}) =
     A.object
-      [ "field_characteristic" A..= field_characteristic,
+      [ "field_characteristic" A..= show field_characteristic,
         "extension_degree" A..= extension_degree,
         "n_constraints" A..= n_constraints,
         "n_variables" A..= n_variables,

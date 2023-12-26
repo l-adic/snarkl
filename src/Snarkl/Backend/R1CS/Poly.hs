@@ -13,10 +13,15 @@ data Poly a where
 instance (Show a) => Show (Poly a) where
   show (Poly m) = show m
 
+-- The reason we use incVar is that we want to use -1 as the constant
+-- coefficient (which turns out to be easier to work with internally but
+-- harder to work with downstream).
+-- The reason we use show is because it's hard to deserialize large integers
+-- in certain langauges (e.g. javascript, even rust).
 instance (PrimeField a) => A.ToJSON (Poly a) where
   toJSON :: Poly a -> A.Value
   toJSON (Poly m) =
-    let kvs = map (\(var, coeff) -> (fromP coeff, var)) $ Map.toList m
+    let kvs = map (\(var, coeff) -> (show $ fromP coeff, incVar var)) $ Map.toList m
      in A.toJSON kvs
 
 -- | The constant polynomial equal 'c'
