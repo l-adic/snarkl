@@ -1,8 +1,12 @@
+use ark_bn254::Bn254;
+use ark_ec::pairing::Pairing;
+use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError, Variable};
 use clap::{App, Arg};
 use num_bigint::BigUint;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::fmt::Debug;
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, BufReader};
 use std::str::FromStr;
 
 // Custom function to deserialize BigUint from a string
@@ -15,7 +19,7 @@ where
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Header {
+pub struct Header {
     extension_degree: i32,
     #[serde(deserialize_with = "deserialize_biguint")]
     field_characteristic: BigUint,
@@ -25,32 +29,97 @@ struct Header {
     output_variables: Vec<i32>,
 }
 
-// Custom function to deserialize a Vec<(BigUint, u64)> from an array of arrays
-fn deserialize_biguint_tuple_vec<'de, D>(deserializer: D) -> Result<Vec<(BigUint, u64)>, D::Error>
+fn deserialize_biguint_tuple_vec<'de, D, E>(
+    deserializer: D,
+) -> Result<Vec<(E::ScalarField, usize)>, D::Error>
 where
     D: Deserializer<'de>,
+    E: Pairing,
+    E::ScalarField: FromStr,
 {
-    // Expecting a vector of arrays, where each array is [String, u64]
-    let v: Vec<(String, u64)> = Deserialize::deserialize(deserializer)?;
+    let v: Vec<(String, usize)> = Deserialize::deserialize(deserializer)?;
     v.into_iter()
-        .map(|(biguint_str, uint)| {
-            let biguint = BigUint::from_str(&biguint_str).map_err(serde::de::Error::custom)?;
-            Ok((biguint, uint))
+        .map(|(s, uint)| {
+            E::ScalarField::from_str(&s)
+                .map(|field_element| (field_element, uint))
+                .map_err(|e| serde::de::Error::custom("Error in ScalarField parser"))
+            // Use Debug formatting
         })
         .collect()
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Entry {
-    #[serde(deserialize_with = "deserialize_biguint_tuple_vec")]
-    A: Vec<(BigUint, u64)>,
-    #[serde(deserialize_with = "deserialize_biguint_tuple_vec")]
-    B: Vec<(BigUint, u64)>,
-    #[serde(deserialize_with = "deserialize_biguint_tuple_vec")]
-    C: Vec<(BigUint, u64)>,
+#[derive(Deserialize, Debug, Clone)]
+pub struct R1C<E: Pairing> {
+    #[serde(deserialize_with = "deserialize_biguint_tuple_vec::<_, E>")]
+    A: Vec<(E::ScalarField, usize)>,
+    #[serde(deserialize_with = "deserialize_biguint_tuple_vec::<_, E>")]
+    B: Vec<(E::ScalarField, usize)>,
+    #[serde(deserialize_with = "deserialize_biguint_tuple_vec::<_, E>")]
+    C: Vec<(E::ScalarField, usize)>,
 }
+
+pub struct R1CSFile<E: Pairing> {
+    pub header: Header,
+    pub constraints: Vec<R1C<E>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct R1CS<E: Pairing> {
+    pub num_inputs: usize,
+    pub num_aux: usize,
+    pub num_variables: usize,
+    pub constraints: Vec<R1C<E>>,
+}
+
+impl<E: Pairing> From<R1CSFile<E>> for R1CS<E> {
+    fn from(file: R1CSFile<E>) -> Self {
+        let num_inputs = file.header.input_variables.len() as usize;
+        let num_variables = file.header.n_variables as usize;
+        let num_aux = num_variables - num_inputs;
+        R1CS {
+            num_aux,
+            num_inputs,
+            num_variables,
+            constraints: file.constraints,
+        }
+    }
+}
+
+fn generate_constraints<E: Pairing>(
+    r1cs: R1CS<E>,
+    cs: ConstraintSystemRef<E::ScalarField>,
+) -> Result<(), SynthesisError> {
+    // Start from 1 because Arkworks implicitly allocates One for the first input
+    for _ in 1..r1cs.num_inputs {
+        cs.new_input_variable(|| Ok(E::ScalarField::from(1u32)));
+    }
+
+    for _ in 0..r1cs.num_aux {
+        cs.new_witness_variable(|| Ok(E::ScalarField::from(1u32)));
+    }
+
+    let make_lc = |lc_data: &[(E::ScalarField, usize)]| {
+        lc_data.iter().fold(
+            LinearCombination::<E::ScalarField>::zero(),
+            |lc: LinearCombination<E::ScalarField>, (coeff, index)| {
+                lc + (*coeff, Variable::Instance(*index))
+            },
+        )
+    };
+
+    for constraint in &r1cs.constraints {
+        cs.enforce_constraint(
+            make_lc(&constraint.A),
+            make_lc(&constraint.B),
+            make_lc(&constraint.C),
+        )?;
+    }
+
+    Ok(())
+}
+
 fn main() -> io::Result<()> {
-    // Use clap to handle command line arguments
+    // Clap to handle command line arguments
     let matches = App::new("JSONL Parser")
         .version("1.0")
         .author("Your Name")
@@ -63,25 +132,39 @@ fn main() -> io::Result<()> {
         )
         .get_matches();
 
-    // Get the file name from the command line argument
+    // Get file name from command line argument
     let file_name = matches.value_of("file").unwrap();
 
-    // Open the file in read-only mode
+    // Open file in read-only mode
     let file = File::open(file_name)?;
-    let reader = io::BufReader::new(file);
+    let reader = BufReader::new(file);
 
-    for (index, line) in reader.lines().enumerate() {
-        let line = line?;
+    let mut lines = reader.lines();
 
-        // Parse the first line as the header, and others as entries
-        if index == 0 {
-            let header: Header = serde_json::from_str(&line).expect("Error parsing header");
-            println!("Header: {:?}", header);
-        } else {
-            let entry: Entry = serde_json::from_str(&line).expect("Error parsing entry");
-            println!("Entry {}: {:?}", index, entry);
-        }
-    }
+    // Read and parse header line
+    let header_line = lines.next().ok_or(io::Error::new(
+        io::ErrorKind::NotFound,
+        "Header line not found",
+    ))??;
+    let header: Header = serde_json::from_str(&header_line).expect("Error parsing header");
+
+    // Read and parse constraints
+    let constraints: Vec<R1C<Bn254>> = lines
+        .map(|line| {
+            let line = line.expect("Error reading line");
+            serde_json::from_str(&line).expect("Error parsing constraint")
+        })
+        .collect();
+
+    // Create R1CSFile and convert it into R1CS
+    let r1cs_file = R1CSFile {
+        header,
+        constraints,
+    };
+
+    let r1cs: R1CS<Bn254> = r1cs_file.into();
+
+    println!("R1CS: {:?}", r1cs);
 
     Ok(())
 }
