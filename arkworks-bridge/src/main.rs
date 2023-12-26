@@ -1,6 +1,11 @@
 use ark_bn254::Bn254;
+use ark_crypto_primitives::snark::SNARK;
 use ark_ec::pairing::Pairing;
-use ark_relations::r1cs::{ConstraintSystemRef, LinearCombination, SynthesisError, Variable};
+use ark_groth16::{self, Groth16};
+use ark_relations::r1cs::{
+    ConstraintSynthesizer, ConstraintSystemRef, LinearCombination, SynthesisError, Variable,
+};
+use ark_std::rand::thread_rng;
 use clap::{App, Arg};
 use num_bigint::BigUint;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -42,7 +47,7 @@ where
         .map(|(s, uint)| {
             E::ScalarField::from_str(&s)
                 .map(|field_element| (field_element, uint))
-                .map_err(|e| serde::de::Error::custom("Error in ScalarField parser"))
+                .map_err(|_| serde::de::Error::custom("Error in ScalarField parser"))
             // Use Debug formatting
         })
         .collect()
@@ -85,48 +90,48 @@ impl<E: Pairing> From<R1CSFile<E>> for R1CS<E> {
     }
 }
 
-fn generate_constraints<E: Pairing>(
-    r1cs: R1CS<E>,
-    cs: ConstraintSystemRef<E::ScalarField>,
-) -> Result<(), SynthesisError> {
-    // Start from 1 because Arkworks implicitly allocates One for the first input
-    for _ in 1..r1cs.num_inputs {
-        cs.new_input_variable(|| Ok(E::ScalarField::from(1u32)));
+impl<E: Pairing> ConstraintSynthesizer<E::ScalarField> for R1CS<E> {
+    fn generate_constraints(
+        self: Self,
+        cs: ConstraintSystemRef<E::ScalarField>,
+    ) -> Result<(), SynthesisError> {
+        // Start from 1 because Arkworks implicitly allocates One for the first input
+        for _ in 1..(self.num_inputs + 1) {
+            cs.new_input_variable(|| Ok(E::ScalarField::from(1u32)))?;
+        }
+
+        for _ in 0..self.num_aux {
+            cs.new_witness_variable(|| Ok(E::ScalarField::from(1u32)))?;
+        }
+
+        let make_lc = |lc_data: &[(E::ScalarField, usize)]| {
+            lc_data.iter().fold(
+                LinearCombination::<E::ScalarField>::zero(),
+                |lc: LinearCombination<E::ScalarField>, (coeff, index)| {
+                    lc + (*coeff, Variable::Instance(*index))
+                },
+            )
+        };
+
+        for constraint in &self.constraints {
+            cs.enforce_constraint(
+                make_lc(&constraint.A),
+                make_lc(&constraint.B),
+                make_lc(&constraint.C),
+            )?;
+        }
+
+        Ok(())
     }
-
-    for _ in 0..r1cs.num_aux {
-        cs.new_witness_variable(|| Ok(E::ScalarField::from(1u32)));
-    }
-
-    let make_lc = |lc_data: &[(E::ScalarField, usize)]| {
-        lc_data.iter().fold(
-            LinearCombination::<E::ScalarField>::zero(),
-            |lc: LinearCombination<E::ScalarField>, (coeff, index)| {
-                lc + (*coeff, Variable::Instance(*index))
-            },
-        )
-    };
-
-    for constraint in &r1cs.constraints {
-        cs.enforce_constraint(
-            make_lc(&constraint.A),
-            make_lc(&constraint.B),
-            make_lc(&constraint.C),
-        )?;
-    }
-
-    Ok(())
 }
 
 fn main() -> io::Result<()> {
     // Clap to handle command line arguments
-    let matches = App::new("JSONL Parser")
+    let matches = App::new("straw-arkworks-bridge")
         .version("1.0")
-        .author("Your Name")
-        .about("Parses JSONL files")
         .arg(
             Arg::with_name("file")
-                .help("The JSONL file to parse")
+                .help("The R1CS JSONL file to parse")
                 .required(true)
                 .index(1),
         )
@@ -165,6 +170,10 @@ fn main() -> io::Result<()> {
     let r1cs: R1CS<Bn254> = r1cs_file.into();
 
     println!("R1CS: {:?}", r1cs);
+
+    let setup = Groth16::<Bn254>::circuit_specific_setup(r1cs, &mut thread_rng()).unwrap();
+    println!("Setup: {:?}", setup);
+    // ::<Bn254, _, _>(r1cs, &mut thread_rng()).unwrap();
 
     Ok(())
 }
