@@ -21,7 +21,7 @@ impl<E: Pairing> ConstraintSynthesizer<E::ScalarField> for Circuit<E> {
         let mut witness_mapping: HashMap<usize, Variable> = HashMap::new();
 
         for v in self.r1cs.input_variables {
-            let var = cs.new_witness_variable(|| {
+            let var = cs.new_input_variable(|| {
                 Ok(match &self.witness {
                     None => E::ScalarField::ONE,
                     Some(witness) => witness.input_variables.get(&v).unwrap().clone(),

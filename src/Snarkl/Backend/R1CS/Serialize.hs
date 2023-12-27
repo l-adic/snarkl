@@ -72,8 +72,8 @@ instance (GaloisField k) => A.ToJSON (R1CSHeader k) where
         "extension_degree" A..= extension_degree,
         "n_constraints" A..= n_constraints,
         "n_variables" A..= n_variables,
-        "input_variables" A..= input_variables,
-        "output_variables" A..= output_variables
+        "input_variables" A..= map incVar input_variables,
+        "output_variables" A..= map incVar output_variables
       ]
 
 r1csToHeader :: (GaloisField k) => R1CS k -> R1CSHeader k
@@ -82,7 +82,7 @@ r1csToHeader x@(R1CS {..} :: R1CS k) =
     { field_characteristic = toInteger $ char (undefined :: k),
       extension_degree = toInteger $ deg (undefined :: k),
       n_constraints = num_constraints x,
-      n_variables = r1cs_num_vars,
+      n_variables = r1cs_num_vars + length r1cs_out_vars,
       input_variables = r1cs_in_vars,
       output_variables = r1cs_out_vars
     }

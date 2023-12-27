@@ -68,7 +68,7 @@ import Data.Typeable (Typeable)
 import JSONL (jsonLine, jsonlBuilder)
 import Prettyprinter (Pretty (pretty))
 import Snarkl.Backend.R1CS
-import Snarkl.Common (Assgn, Var (Var))
+import Snarkl.Common (Assgn, Var (Var), incVar)
 import Snarkl.Compile
   ( SimplParam,
     constraints_of_texp,
@@ -578,11 +578,16 @@ executeAndWriteArtifacts name simpl mf inputs =
                 ++ show out_interp
                 ++ " differs from actual result "
                 ++ show out
-        serializeR1CSAsJson (name <> "-r1cs.jsonl") r1cs
+        let r1csFP = name <> "-r1cs.jsonl"
+        serializeR1CSAsJson r1csFP r1cs
+        putStrLn $ "Wrote R1CS to file " <> r1csFP
         serializeWitnessAsJson name r1cs wit
 
 serializeWitnessAsJson :: (PrimeField k) => String -> R1CS k -> Assgn k -> IO ()
 serializeWitnessAsJson name r1cs assgn =
-  let inputs_assgn = Map.toAscList . fmap (show . fromP) $ assgn
+  let inputs_assgn = map (\(v, f) -> (incVar v, show $ fromP f)) $ Map.toAscList assgn
       b = jsonLine (r1csToHeader r1cs) <> jsonlBuilder inputs_assgn
-   in LBS.writeFile (name <> "-witness.jsonl") (toLazyByteString b)
+   in do
+        let witnessFP = name <> "-witness.jsonl"
+        LBS.writeFile witnessFP (toLazyByteString b)
+        putStrLn $ "Wrote witness to file " <> witnessFP
