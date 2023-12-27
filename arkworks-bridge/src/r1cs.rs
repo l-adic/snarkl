@@ -28,12 +28,12 @@ where
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct R1C<E: Pairing> {
-    #[serde(deserialize_with = "deserialize_coeff_tuple_vec::<_, E>")]
-    pub A: Vec<(E::ScalarField, usize)>,
-    #[serde(deserialize_with = "deserialize_coeff_tuple_vec::<_, E>")]
-    pub B: Vec<(E::ScalarField, usize)>,
-    #[serde(deserialize_with = "deserialize_coeff_tuple_vec::<_, E>")]
-    pub C: Vec<(E::ScalarField, usize)>,
+    #[serde(rename = "A", deserialize_with = "deserialize_coeff_tuple_vec::<_, E>")]
+    pub a: Vec<(E::ScalarField, usize)>,
+    #[serde(rename = "B", deserialize_with = "deserialize_coeff_tuple_vec::<_, E>")]
+    pub b: Vec<(E::ScalarField, usize)>,
+    #[serde(rename = "C", deserialize_with = "deserialize_coeff_tuple_vec::<_, E>")]
+    pub c: Vec<(E::ScalarField, usize)>,
 }
 
 pub struct R1CSFile<E: Pairing> {

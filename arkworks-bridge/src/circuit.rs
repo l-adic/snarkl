@@ -48,6 +48,8 @@ impl<E: Pairing> ConstraintSynthesizer<E::ScalarField> for Circuit<E> {
             } else if index == 0 {
                 Variable::One
             } else {
+                // This isn't possible because we constructed the input and witness mappings
+                // from the R1CS file, which should exhaustively list all variables.
                 panic!("Index {} is not a valid variable", index);
             }
         };
@@ -63,9 +65,9 @@ impl<E: Pairing> ConstraintSynthesizer<E::ScalarField> for Circuit<E> {
 
         for constraint in &self.r1cs.constraints {
             cs.enforce_constraint(
-                make_lc(&constraint.A),
-                make_lc(&constraint.B),
-                make_lc(&constraint.C),
+                make_lc(&constraint.a),
+                make_lc(&constraint.b),
+                make_lc(&constraint.c),
             )?;
         }
 
