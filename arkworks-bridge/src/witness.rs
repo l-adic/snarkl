@@ -37,8 +37,8 @@ pub struct Witness<E: Pairing> {
     pub witness_variables: HashMap<usize, E::ScalarField>,
 }
 
-impl<E: Pairing> Witness<E> {
-    pub fn new(file: WitnessFile<E>) -> Self {
+impl<E: Pairing> From<WitnessFile<E>> for Witness<E> {
+    fn from(file: WitnessFile<E>) -> Self {
         let mut input_variables: HashMap<usize, E::ScalarField> = HashMap::new();
         let mut witness_variables: HashMap<usize, E::ScalarField> = HashMap::new();
 
