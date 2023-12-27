@@ -3,104 +3,176 @@ mod header;
 mod r1cs;
 mod witness;
 
+use crate::circuit::Circuit;
+use crate::witness::Witness; // Import IntoDeserializer trait
 use ark_bn254::Bn254;
 use ark_crypto_primitives::snark::*;
-use ark_ec::pairing::Pairing;
 use ark_groth16::Groth16;
-use ark_relations::r1cs::{
-    ConstraintSynthesizer, ConstraintSystemRef, LinearCombination, SynthesisError, Variable,
-};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use clap::{App, Arg};
 use r1cs::{parse_r1cs_file, R1CS};
 use rand::thread_rng;
 use std::fs::File;
 use std::io::{self, BufReader};
+use std::path::PathBuf;
+use structopt::StructOpt;
 use witness::{parse_witness_file, WitnessFile};
 
-use crate::circuit::Circuit;
-use crate::witness::Witness; // Import IntoDeserializer trait
-
-impl<E: Pairing> ConstraintSynthesizer<E::ScalarField> for R1CS<E> {
-    fn generate_constraints(
-        self: Self,
-        cs: ConstraintSystemRef<E::ScalarField>,
-    ) -> Result<(), SynthesisError> {
-        // Start from 1 because Arkworks implicitly allocates One for the first input
-        for _ in self.inputs_variables {
-            cs.new_input_variable(|| Ok(E::ScalarField::from(1u32)))?;
-        }
-
-        for _ in self.witness_variables {
-            cs.new_witness_variable(|| Ok(E::ScalarField::from(1u32)))?;
-        }
-
-        let make_lc = |lc_data: &[(E::ScalarField, usize)]| {
-            lc_data.iter().fold(
-                LinearCombination::<E::ScalarField>::zero(),
-                |lc: LinearCombination<E::ScalarField>, (coeff, index)| {
-                    lc + (*coeff, Variable::Instance(*index))
-                },
-            )
-        };
-
-        for constraint in &self.constraints {
-            cs.enforce_constraint(
-                make_lc(&constraint.A),
-                make_lc(&constraint.B),
-                make_lc(&constraint.C),
-            )?;
-        }
-
-        Ok(())
-    }
+#[derive(StructOpt, Debug)]
+#[structopt(name = "straw-arkworks-bridge")]
+struct Cli {
+    #[structopt(subcommand)]
+    command: Command,
 }
-fn main() -> io::Result<()> {
-    // Clap to handle command line arguments
-    let matches = App::new("straw-arkworks-bridge")
-        .version("1.0")
-        .arg(
-            Arg::with_name("file")
-                .help("The R1CS JSONL file to parse")
-                .required(true)
-                .index(1),
-        )
-        .arg(
-            Arg::with_name("witness")
-                .help("Optional witness JSONL file")
-                .required(false)
-                .index(2),
-        )
-        .get_matches();
 
-    // Get file name from command line argument
-    let file_name = matches.value_of("file").unwrap();
+#[derive(StructOpt, Debug)]
+enum Command {
+    CreateTrustedSetup {
+        #[structopt(short, long, parse(from_os_str))]
+        r1cs_path: PathBuf,
 
-    // Open file in read-only mode
-    let file = File::open(file_name)?;
+        #[structopt(short, long, parse(from_os_str))]
+        output: PathBuf,
+    },
+    /// Read the proving key, witness file, and R1CS file to create a proof
+    CreateProof {
+        #[structopt(short, long, parse(from_os_str))]
+        proving_key: PathBuf,
+
+        #[structopt(short, long, parse(from_os_str))]
+        witness: PathBuf,
+
+        #[structopt(short, long, parse(from_os_str))]
+        r1cs: PathBuf,
+    },
+}
+
+fn create_trusted_setup(r1cs_path: PathBuf, output: PathBuf) -> io::Result<()> {
+    let file = File::open(r1cs_path)?;
     let reader = BufReader::new(file);
 
     let r1cs: R1CS<Bn254> = parse_r1cs_file(reader)?.into();
 
-    println!("R1CS: {:?}", r1cs);
+    let circuit = Circuit {
+        r1cs,
+        witness: None,
+    };
 
-    if let Some(witness_file_name) = matches.value_of("witness") {
-        let witness_file = File::open(witness_file_name)?;
-        let witness_reader = BufReader::new(witness_file);
+    let setup = Groth16::<Bn254>::circuit_specific_setup(circuit, &mut thread_rng()).unwrap();
 
-        let witness_file: WitnessFile<Bn254> = parse_witness_file(witness_reader)?;
+    // Serialize the proving key to the output file
+    let mut file = File::create(output)?;
+    setup.0.serialize_uncompressed(&mut file).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::Other,
+            format!("Failed to serialize proving key: {}", e),
+        )
+    })
+}
 
-        let witness = Witness::new(witness_file);
+fn create_proof(proving_key: PathBuf, witness: PathBuf, r1cs: PathBuf) -> io::Result<()> {
+    let file = File::open(proving_key)?;
+    let mut reader = BufReader::new(file);
 
-        println!("Witness file: {:?}", witness);
+    let proving_key =
+        <Groth16<Bn254> as ark_crypto_primitives::snark::SNARK<ark_bn254::Fr>>::ProvingKey::deserialize_uncompressed(&mut reader).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to deserialize proving key: {}", e),
+            )
+        })?;
 
-        let circuit = Circuit { r1cs, witness };
+    let file = File::open(witness)?;
+    let reader = BufReader::new(file);
 
-        let setup = Groth16::<Bn254>::circuit_specific_setup(circuit, &mut thread_rng()).unwrap();
+    let witness_file: WitnessFile<Bn254> = parse_witness_file(reader)?;
 
-        println!("Setup: {:?}", setup);
+    let witness = Witness::new(witness_file);
+
+    let file = File::open(r1cs)?;
+    let reader = BufReader::new(file);
+
+    let r1cs: R1CS<Bn254> = parse_r1cs_file(reader)?.into();
+
+    let circuit = Circuit {
+        r1cs,
+        witness: Some(witness),
+    };
+
+    let proof = Groth16::<Bn254>::prove(&proving_key, circuit, &mut thread_rng()).unwrap();
+
+    // Serialize the proof to stdout
+    proof
+        .serialize_uncompressed(&mut io::stdout())
+        .map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to serialize proof: {}", e),
+            )
+        })
+}
+
+/*
+fn verify_proof(verifying_key: PathBuf, proof: PathBuf, r1cs: PathBuf) -> io::Result<()> {
+    let file = File::open(verifying_key)?;
+    let mut reader = BufReader::new(file);
+
+    let verifying_key =
+        <Groth16<Bn254> as ark_crypto_primitives::snark::SNARK<ark_bn254::Fr>>::VerifyingKey::deserialize_uncompressed(&mut reader).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to deserialize verifying key: {}", e),
+            )
+        })?;
+
+    let file = File::open(proof)?;
+    let mut reader = BufReader::new(file);
+
+    let proof =
+        <Groth16<Bn254> as ark_crypto_primitives::snark::SNARK<ark_bn254::Fr>>::Proof::deserialize_uncompressed(&mut reader).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to deserialize proof: {}", e),
+            )
+        })?;
+
+    let file = File::open(r1cs)?;
+    let reader = BufReader::new(file);
+
+    let r1cs: R1CS<Bn254> = parse_r1cs_file(reader)?.into();
+
+    let circuit = Circuit {
+        r1cs,
+        witness: None,
+    };
+
+    let pvk = Groth16::<Bn254>::process_vk(&verifying_key).unwrap();
+
+    let result = Groth16::<Bn254>::verify_with_processed_vk(&pvk, &vec![], &proof).unwrap();
+
+    println!("Verification result: {}", result);
+
+    Ok(())
+}
+*/
+
+fn main() -> io::Result<()> {
+    // Clap to handle command line arguments
+
+    let args = Cli::from_args();
+
+    match args.command {
+        Command::CreateTrustedSetup { r1cs_path, output } => {
+            create_trusted_setup(r1cs_path, output)?;
+        }
+        Command::CreateProof {
+            proving_key,
+            witness,
+            r1cs,
+        } => {
+            create_proof(proving_key, witness, r1cs)?;
+        }
     }
-
-    // Rest of your code
 
     Ok(())
 }

@@ -43,23 +43,28 @@ pub struct R1CSFile<E: Pairing> {
 
 #[derive(Clone, Debug)]
 pub struct R1CS<E: Pairing> {
-    pub inputs_variables: HashSet<usize>,
-    pub witness_variables: HashSet<usize>,
+    pub input_variables: Vec<usize>,
+    pub witness_variables: Vec<usize>,
     pub constraints: Vec<R1C<E>>,
 }
 
 impl<E: Pairing> From<R1CSFile<E>> for R1CS<E> {
     fn from(file: R1CSFile<E>) -> Self {
-        let var_set = (0..file.header.n_variables).collect::<HashSet<usize>>();
-        let input_vars = file.header.input_variables.clone(); // Clone the input_variables
+        // The 0 variable is always the constant 1
+        let var_set: HashSet<usize> = (1..file.header.n_variables).collect();
+        let input_vars_set: HashSet<usize> =
+            file.header.input_variables.clone().into_iter().collect();
+
+        let mut input_variables: Vec<usize> = file.header.input_variables;
+        let mut witness_variables: Vec<usize> =
+            var_set.difference(&input_vars_set).copied().collect();
+
+        input_variables.sort();
+        witness_variables.sort();
 
         R1CS {
-            inputs_variables: file.header.input_variables,
-            witness_variables: var_set
-                .iter()
-                .copied() // Add the copied method here
-                .filter(|i| !input_vars.contains(i))
-                .collect(),
+            input_variables,
+            witness_variables,
             constraints: file.constraints,
         }
     }

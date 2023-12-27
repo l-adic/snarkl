@@ -1,12 +1,15 @@
+use std::collections::HashMap;
+
 use crate::{r1cs::R1CS, witness::Witness};
 use ark_ec::pairing::Pairing;
+use ark_ff::fields::Field;
 use ark_relations::r1cs::{
     ConstraintSynthesizer, ConstraintSystemRef, LinearCombination, SynthesisError, Variable,
-}; // Import IntoDeserializer trait
+};
 
 pub struct Circuit<E: Pairing> {
     pub r1cs: R1CS<E>,
-    pub witness: Witness<E>,
+    pub witness: Option<Witness<E>>,
 }
 
 impl<E: Pairing> ConstraintSynthesizer<E::ScalarField> for Circuit<E> {
@@ -14,20 +17,46 @@ impl<E: Pairing> ConstraintSynthesizer<E::ScalarField> for Circuit<E> {
         self: Self,
         cs: ConstraintSystemRef<E::ScalarField>,
     ) -> Result<(), SynthesisError> {
-        // Start from 1 because Arkworks implicitly allocates One for the first input
-        for _ in self.witness.input_variables {
-            cs.new_input_variable(|| Ok(E::ScalarField::from(1u32)))?;
+        let mut input_mapping: HashMap<usize, Variable> = HashMap::new();
+        let mut witness_mapping: HashMap<usize, Variable> = HashMap::new();
+
+        for v in self.r1cs.input_variables {
+            let var = cs.new_witness_variable(|| {
+                Ok(match &self.witness {
+                    None => E::ScalarField::ONE,
+                    Some(witness) => witness.input_variables.get(&v).unwrap().clone(),
+                })
+            })?;
+            input_mapping.insert(v, var);
         }
 
-        for _ in self.witness.aux_variables {
-            cs.new_witness_variable(|| Ok(E::ScalarField::from(1u32)))?;
+        for v in self.r1cs.witness_variables {
+            let var = cs.new_witness_variable(|| {
+                Ok(match &self.witness {
+                    None => E::ScalarField::ONE,
+                    Some(witness) => witness.witness_variables.get(&v).unwrap().clone(),
+                })
+            })?;
+            witness_mapping.insert(v, var);
         }
+
+        let make_index = |index| {
+            if input_mapping.contains_key(&index) {
+                input_mapping.get(&index).unwrap().clone()
+            } else if witness_mapping.contains_key(&index) {
+                witness_mapping.get(&index).unwrap().clone()
+            } else if index == 0 {
+                Variable::One
+            } else {
+                panic!("Index {} is not a valid variable", index);
+            }
+        };
 
         let make_lc = |lc_data: &[(E::ScalarField, usize)]| {
             lc_data.iter().fold(
                 LinearCombination::<E::ScalarField>::zero(),
                 |lc: LinearCombination<E::ScalarField>, (coeff, index)| {
-                    lc + (*coeff, Variable::Instance(*index))
+                    lc + (*coeff, make_index(*index))
                 },
             )
         };

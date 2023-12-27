@@ -34,25 +34,25 @@ pub struct WitnessFile<E: Pairing> {
 #[derive(Debug)]
 pub struct Witness<E: Pairing> {
     pub input_variables: HashMap<usize, E::ScalarField>,
-    pub aux_variables: HashMap<usize, E::ScalarField>,
+    pub witness_variables: HashMap<usize, E::ScalarField>,
 }
 
 impl<E: Pairing> Witness<E> {
     pub fn new(file: WitnessFile<E>) -> Self {
         let mut input_variables: HashMap<usize, E::ScalarField> = HashMap::new();
-        let mut aux_variables: HashMap<usize, E::ScalarField> = HashMap::new();
+        let mut witness_variables: HashMap<usize, E::ScalarField> = HashMap::new();
 
         file.witness.into_iter().for_each(|(index, value)| {
             if file.header.input_variables.contains(&index) {
                 input_variables.insert(index, value);
-            } else {
-                aux_variables.insert(index, value);
+            } else if index != 0 {
+                witness_variables.insert(index, value);
             }
         });
 
         Witness {
             input_variables,
-            aux_variables,
+            witness_variables,
         }
     }
 }

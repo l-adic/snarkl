@@ -1,6 +1,5 @@
 use num_bigint::BigUint;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::HashSet;
 use std::fmt::Debug;
 use std::str::FromStr; // Import IntoDeserializer trait
 
@@ -18,7 +17,7 @@ pub struct Header {
     pub extension_degree: usize,
     #[serde(deserialize_with = "deserialize_biguint")]
     pub field_characteristic: BigUint,
-    pub input_variables: HashSet<usize>,
+    pub input_variables: Vec<usize>,
     pub n_constraints: usize,
     pub n_variables: usize,
     pub output_variables: Vec<usize>,
