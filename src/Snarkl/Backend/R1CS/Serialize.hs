@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Snarkl.Backend.R1CS.Serialize (serialize_r1cs, serialize_assgn, serializeR1CSAsJson) where
+module Snarkl.Backend.R1CS.Serialize where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Builder (toLazyByteString)

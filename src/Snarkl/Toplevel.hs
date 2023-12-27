@@ -52,18 +52,23 @@ module Snarkl.Toplevel
     module Snarkl.Constraint.Constraints,
     module Snarkl.Constraint.Simplify,
     module Snarkl.Backend.R1CS,
+    executeAndWriteArtifacts,
   )
 where
 
 import Control.Lens (view)
-import Data.Field.Galois (GaloisField, PrimeField)
+import Control.Monad (unless)
+import Data.ByteString.Builder (toLazyByteString)
+import qualified Data.ByteString.Lazy as LBS
+import Data.Field.Galois (GaloisField, PrimeField (fromP))
 import Data.List (sort)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
+import JSONL (jsonLine, jsonlBuilder)
 import Prettyprinter (Pretty (pretty))
 import Snarkl.Backend.R1CS
-import Snarkl.Common (Var (Var))
+import Snarkl.Common (Assgn, Var (Var))
 import Snarkl.Compile
   ( SimplParam,
     constraints_of_texp,
@@ -489,9 +494,7 @@ execute simpl mf inputs =
   let TExpPkg nv in_vars e = texp_of_comp mf
       r1cs = r1cs_of_texp simpl (TExpPkg nv in_vars e)
       r1cs_string = serialize_r1cs r1cs
-      nw = r1cs_num_vars r1cs
       [out_var] = r1cs_out_vars r1cs
-      ng = num_constraints r1cs
       wit = wit_of_r1cs inputs r1cs
       out = case Map.lookup out_var wit of
         Nothing ->
@@ -516,6 +519,8 @@ execute simpl mf inputs =
                 ++ show out_interp
                 ++ " differs from actual result "
                 ++ show out
+      nw = r1cs_num_vars r1cs
+      ng = num_constraints r1cs
    in Result result nw ng out r1cs_string
 
 -- | 'execute' computation, reporting error if result doesn't match
@@ -543,3 +548,41 @@ benchmark_comp (simpl, prog, inputs, res) =
                     ++ show res'
         Result False _ _ _ _ ->
           print_ln $ "error: witness failed to satisfy constraints"
+
+--------------------------------------------------------------------------------
+executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
+executeAndWriteArtifacts name simpl mf inputs =
+  let TExpPkg nv in_vars e = texp_of_comp mf
+      r1cs = r1cs_of_texp simpl (TExpPkg nv in_vars e)
+      [out_var] = r1cs_out_vars r1cs
+      wit = wit_of_r1cs inputs r1cs
+      out = case Map.lookup out_var wit of
+        Nothing ->
+          failWith $
+            ErrMsg
+              ( "output variable "
+                  ++ show out_var
+                  ++ "not mapped, in\n  "
+                  ++ show wit
+              )
+        Just out_val -> out_val
+   in -- Interpret the program using the executable semantics and
+      -- the input assignment (a subset of 'wit').
+      -- Output the return value of 'e'.
+      do
+        let out_interp = comp_interp mf inputs
+        unless (out == out_interp Prelude.&& sat_r1cs wit r1cs) $
+          failWith $
+            ErrMsg $
+              "interpreter result "
+                ++ show out_interp
+                ++ " differs from actual result "
+                ++ show out
+        serializeR1CSAsJson (name <> "-r1cs.jsonl") r1cs
+        serializeWitnessAsJson name r1cs wit
+
+serializeWitnessAsJson :: (PrimeField k) => String -> R1CS k -> Assgn k -> IO ()
+serializeWitnessAsJson name r1cs assgn =
+  let inputs_assgn = Map.toAscList . fmap (show . fromP) $ assgn
+      b = jsonLine (r1csToHeader r1cs) <> jsonlBuilder inputs_assgn
+   in LBS.writeFile (name <> "-witness.jsonl") (toLazyByteString b)
