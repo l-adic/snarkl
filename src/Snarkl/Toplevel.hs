@@ -82,15 +82,12 @@ import System.Exit (ExitCode (..))
 import System.IO
   ( IOMode (WriteMode),
     hFlush,
-    hPutStr,
     hPutStrLn,
     stdout,
     withFile,
   )
 import System.Process
-  ( CreateProcess (cwd),
-    createProcess,
-    proc,
+  ( createProcess,
     shell,
     waitForProcess,
   )
@@ -301,130 +298,130 @@ serialize_witnesses inputs r1cs =
 
 -- Like snarkify_comp, but only generate witnesses and keys
 -- Serializes r1cs, inputs, and witnesses to files.
-keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
-keygen_comp filePrefix simpl c inputs =
-  do
-    let r1cs = r1cs_of_comp simpl c
-        r1cs_file = filePrefix ++ ".r1cs"
-        inputs_file = filePrefix ++ ".inputs"
-        wits_file = filePrefix ++ ".wits"
-        run_r1cs = "./run-keygen.sh"
-
-    withFile
-      ("scripts/" ++ r1cs_file)
-      WriteMode
-      ( \h ->
-          hPutStrLn h $ serialize_r1cs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ inputs_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_inputs inputs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ wits_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_witnesses inputs r1cs
-      )
-
-    (_, _, _, hdl) <-
-      createProcess
-        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
-          { cwd = Just "scripts"
-          }
-
-    waitForProcess hdl
+-- keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
+-- keygen_comp filePrefix simpl c inputs =
+--  do
+--    let r1cs = r1cs_of_comp simpl c
+--        r1cs_file = filePrefix ++ ".r1cs"
+--        inputs_file = filePrefix ++ ".inputs"
+--        wits_file = filePrefix ++ ".wits"
+--        run_r1cs = "./run-keygen.sh"
+--
+--    withFile
+--      ("scripts/" ++ r1cs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStrLn h $ serialize_r1cs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ inputs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_inputs inputs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ wits_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_witnesses inputs r1cs
+--      )
+--
+--    (_, _, _, hdl) <-
+--      createProcess
+--        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
+--          { cwd = Just "scripts"
+--          }
+--
+--    waitForProcess hdl
 
 -- Like snarkify_comp, but only generate keys and proof
 -- (no verification)
 -- Serializes r1cs, inputs, witnesses.
-proofgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
-proofgen_comp filePrefix simpl c inputs =
-  do
-    let r1cs = r1cs_of_comp simpl c
-        r1cs_file = filePrefix ++ ".r1cs"
-        inputs_file = filePrefix ++ ".inputs"
-        wits_file = filePrefix ++ ".wits"
-        run_r1cs = "./run-proofgen.sh"
-
-    withFile
-      ("scripts/" ++ r1cs_file)
-      WriteMode
-      ( \h ->
-          hPutStrLn h $ serialize_r1cs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ inputs_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_inputs inputs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ wits_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_witnesses inputs r1cs
-      )
-
-    (_, _, _, hdl) <-
-      createProcess
-        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
-          { cwd = Just "scripts"
-          }
-
-    waitForProcess hdl
+-- proofgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
+-- proofgen_comp filePrefix simpl c inputs =
+--  do
+--    let r1cs = r1cs_of_comp simpl c
+--        r1cs_file = filePrefix ++ ".r1cs"
+--        inputs_file = filePrefix ++ ".inputs"
+--        wits_file = filePrefix ++ ".wits"
+--        run_r1cs = "./run-proofgen.sh"
+--
+--    withFile
+--      ("scripts/" ++ r1cs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStrLn h $ serialize_r1cs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ inputs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_inputs inputs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ wits_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_witnesses inputs r1cs
+--      )
+--
+--    (_, _, _, hdl) <-
+--      createProcess
+--        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
+--          { cwd = Just "scripts"
+--          }
+--
+--    waitForProcess hdl
 
 -- Like snarkify_comp, but only generate and serialize the r1cs
-r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
-r1csgen_comp filePrefix simpl c =
-  do
-    let r1cs = r1cs_of_comp simpl c
-        r1cs_file = filePrefix ++ ".r1cs"
-
-    withFile
-      ("scripts/" ++ r1cs_file)
-      WriteMode
-      ( \h ->
-          hPutStrLn h $ serialize_r1cs r1cs
-      )
+-- r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
+-- r1csgen_comp filePrefix simpl c =
+--  do
+--    let r1cs = r1cs_of_comp simpl c
+--        r1cs_file = filePrefix ++ ".r1cs"
+--
+--    withFile
+--      ("scripts/" ++ r1cs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStrLn h $ serialize_r1cs r1cs
+--      )
 
 -- Like snarkify_comp, but only generate the witness
 -- (no key generation or proof)
 -- Serializes r1cs, inputs, and witnesses to files.
-witgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
-witgen_comp filePrefix simpl c inputs =
-  do
-    let r1cs = r1cs_of_comp simpl c
-        r1cs_file = filePrefix ++ ".r1cs"
-        inputs_file = filePrefix ++ ".inputs"
-        wits_file = filePrefix ++ ".wits"
-
-    withFile
-      ("scripts/" ++ r1cs_file)
-      WriteMode
-      ( \h ->
-          hPutStrLn h $ serialize_r1cs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ inputs_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_inputs inputs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ wits_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_witnesses inputs r1cs
-      )
+-- witgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
+-- witgen_comp filePrefix simpl c inputs =
+--  do
+--    let r1cs = r1cs_of_comp simpl c
+--        r1cs_file = filePrefix ++ ".r1cs"
+--        inputs_file = filePrefix ++ ".inputs"
+--        wits_file = filePrefix ++ ".wits"
+--
+--    withFile
+--      ("scripts/" ++ r1cs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStrLn h $ serialize_r1cs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ inputs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_inputs inputs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ wits_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_witnesses inputs r1cs
+--      )
 
 ------------------------------------------------------
 --
@@ -590,6 +587,8 @@ executeAndWriteArtifacts name simpl mf inputs =
         LBS.writeFile inputsFP (serializeInputsAsJson r1cs inputs)
         putStrLn $ "Wrote inputs to file " <> inputsFP
 
+--------------------------------------------------------------------------------
+
 -- |                       *** WARNING ***
 -- This function creates/overwrites files prefixed with 'filePrefix',
 -- within the scripts/ subdirectory. 'snarkify_comp' also
@@ -617,3 +616,63 @@ snarkify_comp filePrefix simpl c inputs =
     (_, _, _, hdl) <- createProcess $ shell run_r1cs
 
     waitForProcess hdl
+
+keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
+keygen_comp filePrefix simpl c _ = do
+  let r1cs = r1cs_of_comp simpl c
+      r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
+      pk_file = "scripts/" ++ filePrefix <> "-pk"
+      vk_file = "scripts/" ++ filePrefix ++ "-vk"
+      -- run_r1cs = "echo $PATH"
+      run_r1cs =
+        mconcat
+          [ "arkworks-bridge create-trusted-setup ",
+            "--r1cs " <> r1cs_file <> " ",
+            "--verifying-key " <> vk_file <> " ",
+            "--proving-key " <> pk_file
+          ]
+  LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
+
+  (_, _, _, hdl) <- createProcess $ shell run_r1cs
+
+  waitForProcess hdl
+
+proofgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
+proofgen_comp filePrefix simpl c inputs = do
+  let r1cs = r1cs_of_comp simpl c
+      wit = wit_of_r1cs inputs r1cs
+      r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
+      pk_file = "scripts/" ++ filePrefix <> "-pk"
+      wits_file = "scripts/" ++ filePrefix ++ "-witness.jsonl"
+      proof_file = "scripts/" ++ filePrefix ++ "-proof"
+      -- run_r1cs = "echo $PATH"
+      run_r1cs =
+        mconcat
+          [ "arkworks-bridge create-proof ",
+            "--witness " <> wits_file <> " ",
+            "--r1cs " <> r1cs_file <> " ",
+            "--output " <> proof_file <> " ",
+            "--proving-key " <> pk_file
+          ]
+  LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
+  LBS.writeFile wits_file (serializeWitnessAsJson r1cs wit)
+
+  (_, _, _, hdl) <- createProcess $ shell run_r1cs
+
+  waitForProcess hdl
+
+r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
+r1csgen_comp filePrefix simpl c =
+  do
+    let r1cs = r1cs_of_comp simpl c
+        r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
+    LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
+
+witgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
+witgen_comp filePrefix simpl c inputs = do
+  let r1cs = r1cs_of_comp simpl c
+      wit = wit_of_r1cs inputs r1cs
+      r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
+      wits_file = "scripts/" ++ filePrefix ++ "-witness.jsonl"
+  LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
+  LBS.writeFile wits_file (serializeWitnessAsJson r1cs wit)
