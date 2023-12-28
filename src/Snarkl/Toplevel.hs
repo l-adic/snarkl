@@ -58,17 +58,15 @@ where
 
 import Control.Lens (view)
 import Control.Monad (unless)
-import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Field.Galois (GaloisField, PrimeField (fromP))
+import Data.Field.Galois (GaloisField, PrimeField)
 import Data.List (sort)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
-import JSONL (jsonLine, jsonlBuilder)
 import Prettyprinter (Pretty (pretty))
 import Snarkl.Backend.R1CS
-import Snarkl.Common (Assgn, Var (Var), incVar)
+import Snarkl.Common (Var (Var))
 import Snarkl.Compile
   ( SimplParam,
     constraints_of_texp,
@@ -93,6 +91,7 @@ import System.Process
   ( CreateProcess (cwd),
     createProcess,
     proc,
+    shell,
     waitForProcess,
   )
 import Prelude
@@ -262,43 +261,43 @@ serialize_witnesses inputs r1cs =
 -- This function creates/overwrites files prefixed with 'filePrefix',
 -- within the scripts/ subdirectory. 'snarkify_comp' also
 -- assumes that it's run in working directory 'base-of-snarkl-repo'.
-snarkify_comp :: forall ty k. (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
-snarkify_comp filePrefix simpl c inputs =
-  do
-    let r1cs = r1cs_of_comp simpl c
-        r1cs_file = filePrefix ++ ".r1cs"
-        inputs_file = filePrefix ++ ".inputs"
-        wits_file = filePrefix ++ ".wits"
-        run_r1cs = "./run-r1cs.sh"
-
-    withFile
-      ("scripts/" ++ r1cs_file)
-      WriteMode
-      ( \h ->
-          hPutStrLn h $ serialize_r1cs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ inputs_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_inputs inputs r1cs
-      )
-
-    withFile
-      ("scripts/" ++ wits_file)
-      WriteMode
-      ( \h ->
-          hPutStr h $ serialize_witnesses inputs r1cs
-      )
-
-    (_, _, _, hdl) <-
-      createProcess
-        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
-          { cwd = Just "scripts"
-          }
-
-    waitForProcess hdl
+-- arkify_comp :: forall ty k. (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
+-- arkify_comp filePrefix simpl c inputs =
+--  do
+--    let r1cs = r1cs_of_comp simpl c
+--        r1cs_file = filePrefix ++ ".r1cs"
+--        inputs_file = filePrefix ++ ".inputs"
+--        wits_file = filePrefix ++ ".wits"
+--        run_r1cs = "./run-r1cs.sh"
+--
+--    withFile
+--      ("scripts/" ++ r1cs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStrLn h $ serialize_r1cs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ inputs_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_inputs inputs r1cs
+--      )
+--
+--    withFile
+--      ("scripts/" ++ wits_file)
+--      WriteMode
+--      ( \h ->
+--          hPutStr h $ serialize_witnesses inputs r1cs
+--      )
+--
+--    (_, _, _, hdl) <-
+--      createProcess
+--        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
+--          { cwd = Just "scripts"
+--          }
+--
+--    waitForProcess hdl
 
 -- Like snarkify_comp, but only generate witnesses and keys
 -- Serializes r1cs, inputs, and witnesses to files.
@@ -510,15 +509,17 @@ execute simpl mf inputs =
       -- the input assignment (a subset of 'wit').
       -- Output the return value of 'e'.
       out_interp = comp_interp mf inputs
-      result = case out_interp == out of
-        True -> sat_r1cs wit r1cs
-        False ->
-          failWith $
-            ErrMsg $
-              "interpreter result "
-                ++ show out_interp
-                ++ " differs from actual result "
-                ++ show out
+      result =
+        ( if out_interp == out
+            then sat_r1cs wit r1cs
+            else
+              failWith $
+                ErrMsg $
+                  "interpreter result "
+                    ++ show out_interp
+                    ++ " differs from actual result "
+                    ++ show out
+        )
       nw = r1cs_num_vars r1cs
       ng = num_constraints r1cs
    in Result result nw ng out r1cs_string
@@ -550,6 +551,7 @@ benchmark_comp (simpl, prog, inputs, res) =
           print_ln $ "error: witness failed to satisfy constraints"
 
 --------------------------------------------------------------------------------
+
 executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
 executeAndWriteArtifacts name simpl mf inputs =
   let TExpPkg nv in_vars e = texp_of_comp mf
@@ -579,15 +581,39 @@ executeAndWriteArtifacts name simpl mf inputs =
                 ++ " differs from actual result "
                 ++ show out
         let r1csFP = name <> "-r1cs.jsonl"
-        serializeR1CSAsJson r1csFP r1cs
+        LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
         putStrLn $ "Wrote R1CS to file " <> r1csFP
-        serializeWitnessAsJson name r1cs wit
-
-serializeWitnessAsJson :: (PrimeField k) => String -> R1CS k -> Assgn k -> IO ()
-serializeWitnessAsJson name r1cs assgn =
-  let inputs_assgn = map (\(v, f) -> (incVar v, show $ fromP f)) $ Map.toAscList assgn
-      b = jsonLine (r1csToHeader r1cs) <> jsonlBuilder inputs_assgn
-   in do
         let witnessFP = name <> "-witness.jsonl"
-        LBS.writeFile witnessFP (toLazyByteString b)
+        LBS.writeFile witnessFP (serializeWitnessAsJson r1cs wit)
         putStrLn $ "Wrote witness to file " <> witnessFP
+        let inputsFP = name <> "-inputs.jsonl"
+        LBS.writeFile inputsFP (serializeInputsAsJson r1cs inputs)
+        putStrLn $ "Wrote inputs to file " <> inputsFP
+
+-- |                       *** WARNING ***
+-- This function creates/overwrites files prefixed with 'filePrefix',
+-- within the scripts/ subdirectory. 'snarkify_comp' also
+-- assumes that it's run in working directory 'base-of-snarkl-repo'.
+snarkify_comp :: forall ty k. (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
+snarkify_comp filePrefix simpl c inputs =
+  do
+    let r1cs = r1cs_of_comp simpl c
+        wit = wit_of_r1cs inputs r1cs
+        r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
+        inputs_file = "scripts/" ++ filePrefix <> "-inputs.jsonl"
+        wits_file = "scripts/" ++ filePrefix ++ "-witness.jsonl"
+        -- run_r1cs = "echo $PATH"
+        run_r1cs =
+          mconcat
+            [ "arkworks-bridge run-r1cs ",
+              "--inputs " <> inputs_file <> " ",
+              "--witness " <> wits_file <> " ",
+              "--r1cs " <> r1cs_file
+            ]
+    LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
+    LBS.writeFile wits_file (serializeWitnessAsJson r1cs wit)
+    LBS.writeFile inputs_file (serializeInputsAsJson r1cs inputs)
+
+    (_, _, _, hdl) <- createProcess $ shell run_r1cs
+
+    waitForProcess hdl

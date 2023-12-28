@@ -1,6 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Snarkl.Backend.R1CS.R1CS
   ( R1C (..),
     R1CS (..),
@@ -13,6 +10,7 @@ import Control.Parallel.Strategies
 import qualified Data.Aeson as A
 import Data.Field.Galois (GaloisField, PrimeField)
 import qualified Data.Map as Map
+import Prettyprinter (Pretty (..), (<+>))
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
 import Snarkl.Errors
@@ -24,6 +22,8 @@ import Snarkl.Errors
 data R1C a where
   R1C :: (GaloisField a) => (Poly a, Poly a, Poly a) -> R1C a
 
+deriving instance (Show a) => Show (R1C a)
+
 instance (PrimeField k) => A.ToJSON (R1C k) where
   toJSON (R1C (a, b, c)) =
     A.object
@@ -32,8 +32,8 @@ instance (PrimeField k) => A.ToJSON (R1C k) where
         "C" A..= c
       ]
 
-instance (Show a) => Show (R1C a) where
-  show (R1C (aV, bV, cV)) = show aV ++ "*" ++ show bV ++ "==" ++ show cV
+instance (Pretty a) => Pretty (R1C a) where
+  pretty (R1C (aV, bV, cV)) = pretty aV <+> "*" <+> pretty bV <+> "==" <+> pretty cV
 
 data R1CS a = R1CS
   { r1cs_clauses :: [R1C a],
@@ -65,7 +65,7 @@ sat_r1c w c
 
 -- sat_r1cs: Does witness 'w' satisfy constraint set 'cs'?
 sat_r1cs :: (GaloisField a) => Assgn a -> R1CS a -> Bool
-sat_r1cs w cs = all id $ is_sat (r1cs_clauses cs)
+sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
   where
     is_sat cs0 = map g cs0 `using` parListChunk (chunk_sz cs0) rseq
     num_chunks = 32

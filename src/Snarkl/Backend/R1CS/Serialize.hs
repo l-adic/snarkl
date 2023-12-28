@@ -4,8 +4,9 @@ module Snarkl.Backend.R1CS.Serialize where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Builder (toLazyByteString)
-import Data.ByteString.Lazy (writeFile)
+import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField (char, deg), PrimeField, fromP)
+import Data.List (sortOn)
 import qualified Data.Map as Map
 import JSONL (jsonLine, jsonlBuilder)
 import Snarkl.Backend.R1CS.Poly
@@ -87,7 +88,21 @@ r1csToHeader x@(R1CS {..} :: R1CS k) =
       output_variables = r1cs_out_vars
     }
 
-serializeR1CSAsJson :: (PrimeField k) => FilePath -> R1CS k -> IO ()
-serializeR1CSAsJson fp x =
+serializeR1CSAsJson :: (PrimeField k) => R1CS k -> LBS.ByteString
+serializeR1CSAsJson x =
   let b = jsonLine (r1csToHeader x) <> jsonlBuilder (r1cs_clauses x)
-   in writeFile fp (toLazyByteString b)
+   in toLazyByteString b
+
+serializeWitnessAsJson :: (PrimeField k) => R1CS k -> Assgn k -> LBS.ByteString
+serializeWitnessAsJson r1cs assgn =
+  let inputs_assgn = map (\(v, f) -> (incVar v, show $ fromP f)) $ Map.toAscList assgn
+      b = jsonLine (r1csToHeader r1cs) <> jsonlBuilder inputs_assgn
+   in toLazyByteString b
+
+serializeInputsAsJson :: (PrimeField k) => R1CS k -> [k] -> LBS.ByteString
+serializeInputsAsJson r1cs inputs =
+  let inputs_assgn =
+        map (\(v, f) -> (incVar v, show $ fromP f)) $
+          sortOn fst $
+            zip (r1cs_in_vars r1cs) inputs
+   in toLazyByteString $ jsonlBuilder inputs_assgn
