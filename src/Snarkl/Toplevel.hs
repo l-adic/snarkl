@@ -651,7 +651,7 @@ proofgen_comp filePrefix simpl c inputs = do
           [ "arkworks-bridge create-proof ",
             "--witness " <> wits_file <> " ",
             "--r1cs " <> r1cs_file <> " ",
-            "--output " <> proof_file <> " ",
+            "--proof " <> proof_file <> " ",
             "--proving-key " <> pk_file
           ]
   LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
