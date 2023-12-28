@@ -16,6 +16,11 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Build and install arkworks-bridge binary
+      run: |
+        cd arkworks-bridge
+        cargo install --path .
+
     - uses: cachix/install-nix-action@v22
       with:
         nix_path: nixpkgs=channel:nixos-unstable
