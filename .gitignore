@@ -9,4 +9,5 @@ dist-newstyle/
 scripts/hspec*
 scripts/run-r1cs.log
 cppsrc/bin/
+snarkl-output
 

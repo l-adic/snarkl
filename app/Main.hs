@@ -12,7 +12,7 @@ import qualified Test.Snarkl.Unit.Programs as Programs
 
 main :: IO ()
 main = do
-  executeAndWriteArtifacts "./output" "prog2" NoSimplify (Programs.prog2 10) [1 :: F_BN128]
+  executeAndWriteArtifacts "./snarkl-output" "prog2" NoSimplify (Programs.prog2 10) [1 :: F_BN128]
 
 executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> IO ()
 executeAndWriteArtifacts fp name simpl mf inputs = do
