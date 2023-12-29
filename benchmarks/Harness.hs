@@ -5,7 +5,7 @@
 
 module Harness where
 
-import Control.Monad ((>>))
+import Control.Monad (unless, (>>))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, Prime, PrimeField)
 import qualified Data.Map as Map
@@ -138,17 +138,14 @@ benchmark_comp (simpl, prog, inputs, res) =
       print_ln_to_file h s = (Control.Monad.>>) (hPutStrLn h s) (hFlush h)
    in case execute simpl prog inputs of
         r@(Result True _ _ res' _ _) ->
-          if res == res'
-            then do
-              print_ln $ show r
-            else
-              print_ln $
-                show $
-                  "error: results don't match: "
-                    ++ "expected "
-                    ++ show res
-                    ++ " but got "
-                    ++ show res'
+          unless (res == res') $
+            print_ln $
+              show $
+                "error: results don't match: "
+                  ++ "expected "
+                  ++ show res
+                  ++ " but got "
+                  ++ show res'
         Result False _ _ _ _ _ ->
           print_ln "error: witness failed to satisfy constraints"
 

@@ -80,7 +80,6 @@ library
     , bytestring
     , Cabal          >=1.22
     , containers     >=0.5   && <0.7
-    , criterion      >=1.0
     , galois-field   >=1.0.4
     , hspec          >=2.0
     , jsonl          >=0.1.4
@@ -140,6 +139,7 @@ test-suite spec
 benchmark criterion
   type:               exitcode-stdio-1.0
   main-is:            Main.hs
+  ghc-options: -threaded -O2
   other-modules:
     Harness
     Snarkl.Example.Basic
