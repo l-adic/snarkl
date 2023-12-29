@@ -32,4 +32,6 @@ jobs:
 
     - run: nix build
 
-    - run: nix develop --command cabal run tests
+    - run: |
+        mkdir scripts
+        nix develop --command cabal run tests
