@@ -4,6 +4,7 @@ import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
+import Snarkl.Arkworks (mkInputsFilePath, mkR1CSFilePath, mkWitnessFilePath)
 import Snarkl.Compile (SimplParam (NoSimplify))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Field
@@ -18,12 +19,12 @@ executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => FilePath -> String ->
 executeAndWriteArtifacts fp name simpl mf inputs = do
   let Result {result_sat = isSatisfied, result_r1cs = r1cs, result_witness = wit} = execute simpl mf inputs
   unless isSatisfied $ failWith $ ErrMsg "R1CS is not satisfied"
-  let r1csFP = fp <> "/" <> name <> "-r1cs.jsonl"
+  let r1csFP = mkR1CSFilePath fp name
   LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
   putStrLn $ "Wrote R1CS to file " <> r1csFP
-  let witnessFP = fp <> "/" <> name <> "-witness.jsonl"
+  let witnessFP = mkWitnessFilePath fp name
   LBS.writeFile witnessFP (serializeWitnessAsJson r1cs wit)
   putStrLn $ "Wrote witness to file " <> witnessFP
-  let inputsFP = fp <> "/" <> name <> "-inputs.jsonl"
+  let inputsFP = mkInputsFilePath fp name
   LBS.writeFile inputsFP (serializeInputsAsJson r1cs inputs)
   putStrLn $ "Wrote inputs to file " <> inputsFP
