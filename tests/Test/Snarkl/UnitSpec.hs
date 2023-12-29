@@ -21,10 +21,6 @@ import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.Snarkl.Unit.Programs
 import Prelude
 
--- | Same as 'int_of_comp', but additionally runs resulting R1CS
--- through key generation, proof generation, and verification stages
--- of 'libsnark'.  TODO: This function does duplicate R1CS generation,
--- once for 'libsnark' and a second time for 'int_of_comp'.
 test_comp :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> IO (Either ExitCode k)
 test_comp simpl mf args =
   do

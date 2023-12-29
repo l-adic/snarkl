@@ -111,7 +111,7 @@ test_proofgen simpl mf inputs =
       ExitSuccess -> Prelude.return ()
       ExitFailure err -> failWith $ ErrMsg $ "test_full failed with " ++ show err
 
--- Run libsnark on the resulting files.
+-- Run arkworks on the resulting files.
 test_crypto :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> IO ()
 test_crypto simpl mf inputs =
   do
