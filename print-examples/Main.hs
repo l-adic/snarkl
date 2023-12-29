@@ -6,7 +6,7 @@ import Data.Foldable (traverse_)
 import Prettyprinter
 import Prettyprinter.Render.String (renderString)
 import Snarkl.Field ()
-import Snarkl.Toplevel (texp_of_comp)
+import Snarkl.Toplevel (compileCompToTexp)
 import Test.Snarkl.Unit.Programs
 
 main :: IO ()
@@ -54,7 +54,7 @@ main = do
     ]
   where
     printProg (name, prog) = do
-      let texp = texp_of_comp prog
+      let texp = compileCompToTexp prog
       -- this is just a sanity check because of the new Eq instances
       if texp /= texp
         then putStrLn ("--| " <> name <> " (FAILED)")

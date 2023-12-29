@@ -3,12 +3,8 @@ module Snarkl.Arkworks where
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
 import Data.Typeable (Typeable)
-import Snarkl.Backend.R1CS.Serialize
-  ( serializeInputsAsJson,
-    serializeR1CSAsJson,
-    serializeWitnessAsJson,
-  )
-import Snarkl.Compile (SimplParam, r1cs_of_comp, wit_of_r1cs)
+import Snarkl.Backend.R1CS
+import Snarkl.Compile (SimplParam, compileCompToR1CS)
 import Snarkl.Language (Comp)
 import qualified System.Exit as GHC
 import System.Process (createProcess, shell, waitForProcess)
@@ -20,7 +16,7 @@ data CMD k where
 
 runCMD :: (PrimeField k) => CMD k -> IO GHC.ExitCode
 runCMD (CreateTrustedSetup rootDir name simpl c) = do
-  let r1cs = r1cs_of_comp simpl c
+  let r1cs = compileCompToR1CS simpl c
       r1csFilePath = mkR1CSFilePath rootDir name
   LBS.writeFile r1csFilePath (serializeR1CSAsJson r1cs)
   let cmd =
@@ -34,7 +30,7 @@ runCMD (CreateTrustedSetup rootDir name simpl c) = do
   (_, _, _, hdl) <- createProcess $ shell cmd
   waitForProcess hdl
 runCMD (CreateProof rootDir name simpl c inputs) = do
-  let r1cs = r1cs_of_comp simpl c
+  let r1cs = compileCompToR1CS simpl c
       wit = wit_of_r1cs inputs r1cs
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
@@ -51,7 +47,7 @@ runCMD (CreateProof rootDir name simpl c inputs) = do
   (_, _, _, hdl) <- createProcess $ shell cmd
   waitForProcess hdl
 runCMD (RunR1CS rootDir name simpl c inputs) = do
-  let r1cs = r1cs_of_comp simpl c
+  let r1cs = compileCompToR1CS simpl c
       wit = wit_of_r1cs inputs r1cs
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name

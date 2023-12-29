@@ -210,12 +210,12 @@ The `Snarkl.Toplevel` provides support for "desugaring" high-level Snårkl compu
 
 ```
 p1 = arr_ex 1.0
-λ> texp_of_comp p1
+λ> compileCompToTexp p1
 TExpPkg {comp_num_vars = 4, comp_input_vars = [], comp_texp = var 2 := 1 % 1; var 3 := 1 % 1; var 2+var 3}
 
 ```
 
-Calling `texp_of_comp` on a Snårkl computation (e.g., of type `Comp 'TField`) kroduces a `TExpPkg` record that gives: 
+Calling `compileCompToTexp` on a Snårkl computation (e.g., of type `Comp 'TField`) kroduces a `TExpPkg` record that gives: 
 
 * the number of variables generated during desugaring;
 * the number of "input" variables (these are variables that must be instantiated by the user when the expression is compiled to R1CS form);
@@ -261,12 +261,12 @@ in which variable `0` is marked as an explicit input. When interpreting an expre
 
 # Compiling and Evaluating Rank-1 Constraints
 
-The Snårkl Snarkl.Toplevel makes it relatively easy to compile a Snårkl computation to R1CS-form (using `r1cs_of_comp`) and then to "execute" the result (`snarkify_comp`). 
+The Snårkl Snarkl.Toplevel makes it relatively easy to compile a Snårkl computation to R1CS-form (using `compileCompToR1CS`) and then to "execute" the result (`snarkify_comp`). 
 
 For example,
 
 ```
-λ> r1cs_of_comp p2
+λ> compileCompToR1CS p2
 ([fromList [(-1,1 % 1)]*fromList [(-1,0 % 1),(0,2 % 1),(1,(-1) % 1)]==fromList [(-1,0 % 1)]],2,[0],[1])
 ```
 

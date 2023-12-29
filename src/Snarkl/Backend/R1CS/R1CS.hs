@@ -2,6 +2,7 @@ module Snarkl.Backend.R1CS.R1CS
   ( R1C (..),
     R1CS (..),
     sat_r1cs,
+    wit_of_r1cs,
     num_constraints,
   )
 where
@@ -84,3 +85,21 @@ sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
                   ++ "\nin R1CS\n  "
                   ++ show cs
               )
+
+-- | For a given R1CS and inputs, calculate a satisfying assignment.
+wit_of_r1cs :: [k] -> R1CS k -> Assgn k
+wit_of_r1cs inputs r1cs =
+  let in_vars = r1cs_in_vars r1cs
+      f = r1cs_gen_witness r1cs . Map.fromList
+   in if length in_vars /= length inputs
+        then
+          failWith $
+            ErrMsg
+              ( "expected "
+                  ++ show (length in_vars)
+                  ++ " input(s)"
+                  ++ " but got "
+                  ++ show (length inputs)
+                  ++ " input(s)"
+              )
+        else f (zip in_vars inputs)

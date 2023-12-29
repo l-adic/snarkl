@@ -1,36 +1,29 @@
 module Main where
 
+import Control.Monad (unless)
+import qualified Data.ByteString.Lazy as LBS
+import Data.Field.Galois (PrimeField)
+import Data.Typeable (Typeable)
 import Snarkl.Compile (SimplParam (NoSimplify))
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Field
-import Snarkl.Toplevel (executeAndWriteArtifacts, r1cs_of_comp, serializeR1CSAsJson)
+import Snarkl.Toplevel
 import qualified Test.Snarkl.Unit.Programs as Programs
-
-{-
-
-prog2 n =
-  do
-    e <- fresh_input
-    let f i = exp_of_int i + e
-    return $ bigsum n f
-
-prog2 10 [1]
-  == bigsum 10 (\n -> exp_of_int n + 1)
-  == iter 10 (\n e -> (exp_of_int n + 1) + e) 0
-  == (\e -> exp_of_int 10 + 1) $ iter 9 (\n e -> (exp_of_int n + 1) + e) 0
-  == (\e -> exp_of_int 10 + 1) $ (\e -> exp_of_int 9 + 1) $ iter 8 (\n e -> (exp_of_int n + 1) + e) 0
-  ...
-  == (\e -> (exp_of_int 10 + 1) + e) $ (\e -> (exp_of_int 9 + 1) + e) $ ... $ (\e -> (exp_of_int 2 + 1) + e) $ (\e -> (exp_of_int 1 + 1) + e) $ (\n e -> (exp_of_int n + 1) + e) 0 0
-  == (\e -> (exp_of_int 10 + 1) + e) $ (\e -> (exp_of_int 9 + 1) + e) $ ... $ (\e -> (exp_of_int 2 + 1) + e) $ (\e -> (exp_of_int 1 + 1) + e) 1
-  == (\e -> (exp_of_int 10 + 1) + e) $ (\e -> (exp_of_int 9 + 1) + e) $ ... $ (\e -> (exp_of_int 2 + 1) + e) $ exp_of_int 1 + 1) + 1
-  == (\e -> (exp_of_int 10 + 1) + e) $ (\e -> (exp_of_int 9 + 1) + e) $ ... $ (exp_of_int 2 + 1) + ((exp_of_int 1 + 1) + (exp_of_int 0 + 1))
-  == sum_0^10 (\n -> exp_of_int n + 1)
-  == sum_0^10 (\n -> exp_of_int n) + sum_0^10 (\n -> 1)
-  == sum_0^10 (\n -> exp_of_int n) + 11
-  == ((10 * 10 + 1) / 2) + 11
-  == 66
-
--}
 
 main :: IO ()
 main = do
-  executeAndWriteArtifacts "prog2" NoSimplify (Programs.prog2 10) [1 :: F_BN128]
+  executeAndWriteArtifacts "./output" "prog2" NoSimplify (Programs.prog2 10) [1 :: F_BN128]
+
+executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> IO ()
+executeAndWriteArtifacts fp name simpl mf inputs = do
+  let Result {result_sat = isSatisfied, result_r1cs = r1cs, result_witness = wit} = execute simpl mf inputs
+  unless isSatisfied $ failWith $ ErrMsg "R1CS is not satisfied"
+  let r1csFP = fp <> "/" <> name <> "-r1cs.jsonl"
+  LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
+  putStrLn $ "Wrote R1CS to file " <> r1csFP
+  let witnessFP = fp <> "/" <> name <> "-witness.jsonl"
+  LBS.writeFile witnessFP (serializeWitnessAsJson r1cs wit)
+  putStrLn $ "Wrote witness to file " <> witnessFP
+  let inputsFP = fp <> "/" <> name <> "-inputs.jsonl"
+  LBS.writeFile inputsFP (serializeInputsAsJson r1cs inputs)
+  putStrLn $ "Wrote inputs to file " <> inputsFP

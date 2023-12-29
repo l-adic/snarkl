@@ -3,6 +3,9 @@
 
 module Test.Snarkl.UnitSpec where
 
+import Data.Field.Galois (PrimeField)
+import Data.Typeable (Typeable)
+import Snarkl.Arkworks (CMD (RunR1CS), runCMD)
 import Snarkl.Compile
 import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
@@ -10,11 +13,27 @@ import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
 import Snarkl.Field
+import Snarkl.Language (Comp)
 import Snarkl.Language.Syntax hiding (negate)
-import Snarkl.Toplevel (test_comp)
+import Snarkl.Toplevel (Result (result_result), execute)
+import System.Exit (ExitCode (..))
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.Snarkl.Unit.Programs
 import Prelude
+
+-- | Same as 'int_of_comp', but additionally runs resulting R1CS
+-- through key generation, proof generation, and verification stages
+-- of 'libsnark'.  TODO: This function does duplicate R1CS generation,
+-- once for 'libsnark' and a second time for 'int_of_comp'.
+test_comp :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> IO (Either ExitCode k)
+test_comp simpl mf args =
+  do
+    exit_code <- runCMD $ RunR1CS "./scripts" "hspec" simpl mf args
+    case exit_code of
+      ExitFailure _ -> Prelude.return $ Left exit_code
+      ExitSuccess -> Prelude.return $ Right int_of_comp
+  where
+    int_of_comp = result_result $ execute simpl mf args
 
 spec :: Spec
 spec = do
@@ -224,8 +243,8 @@ spec = do
 
   describe "Keccak Tests" $ do
     describe "keccak" $ do
-      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 2) input_vals `shouldReturn` Right 1
-      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 5) input_vals `shouldReturn` Right 1
+      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 2) (fromIntegral <$> input_vals) `shouldReturn` Right 1
+      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 5) (fromIntegral <$> input_vals) `shouldReturn` Right 1
 
       it "10-1" $ test_comp @_ @F_BN128 Simplify bool_prog10 [0, 0] `shouldReturn` Right 0
       it "10-2" $ test_comp @_ @F_BN128 Simplify bool_prog10 [0, 1] `shouldReturn` Right 1
@@ -281,5 +300,5 @@ spec = do
 
   describe "Keccak Tests" $ do
     describe "keccak" $ do
-      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 2) input_vals `shouldReturn` Right 1
-      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 5) input_vals `shouldReturn` Right 1
+      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 2) (fromIntegral <$> input_vals) `shouldReturn` Right 1
+      it "keccak-2" $ test_comp @_ @F_BN128 Simplify (keccak1 5) (fromIntegral <$> input_vals) `shouldReturn` Right 1

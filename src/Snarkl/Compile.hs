@@ -2,22 +2,14 @@
 
 {-# HLINT ignore "Use camelCase" #-}
 module Snarkl.Compile
-  ( CEnv (CEnv),
+  ( TExpPkg (..),
     SimplParam (..),
-    fresh_var,
-    cs_of_exp,
-    get_constraints,
-    constraints_of_texp,
-    r1cs_of_constraints,
-    _Var,
-    r1cs_of_texp,
-    r1cs_of_comp,
-    texp_of_comp,
-    TExpPkg (..),
-    wit_of_r1cs,
-    constrs_of_texp,
-    constrs_of_comp,
-    r1cs_of_constrs,
+    compileConstraintsToR1CS,
+    compileTExpToR1CS,
+    compileCompToR1CS,
+    compileCompToTexp,
+    compileTexpToConstraints,
+    compileCompToConstraints,
   )
 where
 
@@ -31,12 +23,11 @@ import qualified Control.Monad.State as State
 import Data.Either (fromRight)
 import Data.Field.Galois (GaloisField)
 import Data.List (sort)
-import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Prettyprinter (Pretty (..))
-import Snarkl.Backend.R1CS.R1CS (R1CS (r1cs_gen_witness, r1cs_in_vars))
+import Snarkl.Backend.R1CS.R1CS (R1CS)
 import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint.Constraints
   ( Constraint (CMagic, CMult),
@@ -426,30 +417,20 @@ data SimplParam
   | Simplify
   | SimplifyDataflow
 
-must_simplify :: SimplParam -> Bool
-must_simplify NoSimplify = False
-must_simplify Simplify = True
-must_simplify SimplifyDataflow = True
-
-must_dataflow :: SimplParam -> Bool
-must_dataflow NoSimplify = False
-must_dataflow Simplify = False
-must_dataflow SimplifyDataflow = True
-
 -- | Snarkl.Compile a list of arithmetic constraints to a rank-1 constraint
 -- system.  Takes as input the constraints, the input variables, and
 -- the output variables, and return the corresponding R1CS.
-r1cs_of_constraints ::
+compileConstraintsToR1CS ::
   (GaloisField a) =>
   SimplParam ->
   ConstraintSystem a ->
   R1CS a
-r1cs_of_constraints simpl cs =
+compileConstraintsToR1CS simpl cs =
   let -- Simplify resulting constraints.
-      (_, cs_simpl) =
+      cs_simpl =
         if must_simplify simpl
-          then do_simplify False Map.empty cs
-          else (undefined, cs)
+          then snd $ do_simplify False Map.empty cs
+          else cs
       cs_dataflow = if must_dataflow simpl then removeUnreachable cs_simpl else cs_simpl
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
@@ -463,50 +444,16 @@ r1cs_of_constraints simpl cs =
       -- before applying 'solve cs''.
       f = solve cs'
    in r1cs_of_cs cs' f
-
--- | Snarkl.Compile an expression to a constraint system.  Takes as input the
--- expression, the expression's input variables, and the name of the
--- output variable.
-constraints_of_texp ::
-  ( GaloisField a,
-    Typeable ty
-  ) =>
-  -- | Output variable
-  Var ->
-  -- | Input variables
-  [Var] ->
-  -- | Expression
-  TExp ty a ->
-  ConstraintSystem a
-constraints_of_texp out in_vars te =
-  let cenv_init = CEnv Set.empty (incVar out)
-      (constrs, _) = State.runState go cenv_init
-   in constrs
   where
-    go = do
-      let boolean_in_vars =
-            Set.toList $
-              Set.fromList in_vars
-                `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
-          e0 = expOfTExp te
-          e = do_const_prop e0
-      -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
-      cs_of_exp out e
-      -- Add boolean constraints
-      mapM_ ensure_boolean boolean_in_vars
-      cs <- get_constraints
-      let constraint_set = Set.fromList cs
-          num_constraint_vars =
-            length $ constraint_vars constraint_set
-      return $
-        ConstraintSystem
-          constraint_set
-          num_constraint_vars
-          in_vars
-          [out]
+    must_simplify :: SimplParam -> Bool
+    must_simplify NoSimplify = False
+    must_simplify Simplify = True
+    must_simplify SimplifyDataflow = True
 
-_Var :: Iso' Variable Var
-_Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
+    must_dataflow :: SimplParam -> Bool
+    must_dataflow NoSimplify = False
+    must_dataflow Simplify = False
+    must_dataflow SimplifyDataflow = True
 
 ------------------------------------------------------
 --
@@ -517,9 +464,9 @@ _Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
 -- | The result of desugaring a Snarkl computation.
 data TExpPkg ty k = TExpPkg
   { -- | The number of free variables in the computation.
-    comp_num_vars :: Int,
+    out_variable :: Variable,
     -- | The variables marked as inputs.
-    comp_input_vars :: [Variable],
+    comp_input_variables :: [Variable],
     -- | The resulting 'TExp'.
     comp_texp :: TExp ty k
   }
@@ -534,16 +481,16 @@ deriving instance (Eq (TExp ty k)) => Eq (TExpPkg ty k)
 --   the total number of vars,
 --   the input vars,
 --   the 'TExp'.
-texp_of_comp ::
+compileCompToTexp ::
   Comp ty k ->
   TExpPkg ty k
-texp_of_comp mf =
+compileCompToTexp mf =
   case run mf of
     Left err -> failWith err
     Right (e, rho) ->
-      let nv = next_variable rho
+      let out = Variable (next_variable rho)
           in_vars = sort $ input_vars rho
-       in TExpPkg nv in_vars e
+       in TExpPkg out in_vars e
   where
     run mf0 =
       runState
@@ -556,25 +503,45 @@ texp_of_comp mf =
             Map.empty
         )
 
-------------------------------------------------------
---
--- Constraint generation
---
-------------------------------------------------------
-
 -- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
-constrs_of_texp ::
+compileTexpToConstraints ::
   (Typeable ty, GaloisField k) =>
   TExpPkg ty k ->
   ConstraintSystem k
-constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp (Var out) (map (view _Var) in_vars) e
+compileTexpToConstraints (TExpPkg _out _in_vars te) =
+  let out = _out ^. _Var
+      in_vars = map (view _Var) _in_vars
+      cenv_init = CEnv Set.empty (incVar out)
+      (constrs, _) = State.runState go cenv_init
+      go = do
+        let boolean_in_vars =
+              Set.toList $
+                Set.fromList in_vars
+                  `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
+            e0 = expOfTExp te
+            e = do_const_prop e0
+        -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
+        cs_of_exp out e
+        -- Add boolean constraints
+        mapM_ ensure_boolean boolean_in_vars
+        cs <- get_constraints
+        let constraint_set = Set.fromList cs
+            num_constraint_vars =
+              length $ constraint_vars constraint_set
+        return $
+          ConstraintSystem
+            constraint_set
+            num_constraint_vars
+            in_vars
+            [out]
+   in constrs
 
 -- | Snarkl.Compile Snarkl computations to constraint systems.
-constrs_of_comp ::
+compileCompToConstraints ::
   (Typeable ty, GaloisField k) =>
   Comp ty k ->
   ConstraintSystem k
-constrs_of_comp = constrs_of_texp . texp_of_comp
+compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
 
 ------------------------------------------------------
 --
@@ -582,46 +549,25 @@ constrs_of_comp = constrs_of_texp . texp_of_comp
 --
 ------------------------------------------------------
 
--- | Snarkl.Compile constraint systems to 'R1CS'. Re-exported from 'Constraints.hs'.
-r1cs_of_constrs ::
-  (GaloisField a) =>
-  SimplParam ->
-  -- | Constraints
-  ConstraintSystem a ->
-  R1CS a
-r1cs_of_constrs = r1cs_of_constraints
-
 -- | Snarkl.Compile 'TExp's to 'R1CS'.
-r1cs_of_texp ::
+compileTExpToR1CS ::
   (Typeable ty, GaloisField k) =>
   SimplParam ->
   TExpPkg ty k ->
   R1CS k
-r1cs_of_texp simpl = (r1cs_of_constrs simpl) . constrs_of_texp
+compileTExpToR1CS simpl = compileConstraintsToR1CS simpl . compileTexpToConstraints
 
 -- | Snarkl.Compile Snarkl computations to 'R1CS'.
-r1cs_of_comp ::
+compileCompToR1CS ::
   (Typeable ty, GaloisField k) =>
   SimplParam ->
   Comp ty k ->
   R1CS k
-r1cs_of_comp simpl = (r1cs_of_constrs simpl) . constrs_of_comp
+compileCompToR1CS simpl = compileConstraintsToR1CS simpl . compileCompToConstraints
 
--- | For a given R1CS and inputs, calculate a satisfying assignment.
-wit_of_r1cs :: [k] -> R1CS k -> Map Var k
-wit_of_r1cs inputs r1cs =
-  let in_vars = r1cs_in_vars r1cs
-      f = r1cs_gen_witness r1cs . Map.fromList
-   in case length in_vars /= length inputs of
-        True ->
-          failWith $
-            ErrMsg
-              ( "expected "
-                  ++ show (length in_vars)
-                  ++ " input(s)"
-                  ++ " but got "
-                  ++ show (length inputs)
-                  ++ " input(s)"
-              )
-        False ->
-          f (zip in_vars inputs)
+--------------------------------------------------------------------------------
+
+_Var :: Iso' Variable Var
+_Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
+
+--------------------------------------------------------------------------------
