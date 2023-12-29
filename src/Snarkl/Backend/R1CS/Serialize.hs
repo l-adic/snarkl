@@ -1,13 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Snarkl.Backend.R1CS.Serialize
-  ( R1CSHeader (..),
-    r1csToHeader,
-    serializeInputsAsJson,
-    serializeR1CSAsJson,
-    serializeWitnessAsJson,
-  )
-where
+module Snarkl.Backend.R1CS.Serialize where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Builder (toLazyByteString)
@@ -69,3 +62,12 @@ serializeInputsAsJson r1cs inputs =
           sortOn fst $
             zip (r1cs_in_vars r1cs) inputs
    in toLazyByteString $ jsonlBuilder inputs_assgn
+
+mkR1CSFilePath :: FilePath -> String -> FilePath
+mkR1CSFilePath rootDir name = rootDir <> "/" <> name <> "-r1cs.jsonl"
+
+mkWitnessFilePath :: FilePath -> String -> FilePath
+mkWitnessFilePath rootDir name = rootDir <> "/" <> name <> "-witness.jsonl"
+
+mkInputsFilePath :: FilePath -> String -> FilePath
+mkInputsFilePath rootDir name = rootDir <> "/" <> name <> "-inputs.jsonl"

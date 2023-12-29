@@ -4,7 +4,6 @@ import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
-import Snarkl.Arkworks (mkInputsFilePath, mkR1CSFilePath, mkWitnessFilePath)
 import Snarkl.Compile (SimplParam (NoSimplify))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Field

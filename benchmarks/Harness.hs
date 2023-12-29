@@ -13,7 +13,6 @@ import qualified Data.Set as Set
 import Data.Typeable
 import GHC.IO.Exception
 import GHC.TypeLits (KnownNat)
-import Snarkl.Arkworks (CMD (CreateProof, CreateTrustedSetup, RunR1CS), runCMD)
 import Snarkl.Compile (SimplParam)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.TExpr
@@ -38,6 +37,7 @@ import Snarkl.Toplevel
     wit_of_r1cs,
   )
 import System.IO (hFlush, hPutStrLn, stderr, stdout)
+import Test.ArkworksBridge (CMD (CreateProof, CreateTrustedSetup, RunR1CS), runCMD)
 
 -- Just interpret.
 test_interp :: (Typeable ty, GaloisField k) => Comp ty k -> [Int] -> k
@@ -137,7 +137,7 @@ benchmark_comp (simpl, prog, inputs, res) =
   let print_ln = print_ln_to_file stdout
       print_ln_to_file h s = (Control.Monad.>>) (hPutStrLn h s) (hFlush h)
    in case execute simpl prog inputs of
-        r@(Result True _ _ res') ->
+        r@(Result True _ _ res' _ _) ->
           if res == res'
             then do
               print_ln $ show r
@@ -149,7 +149,7 @@ benchmark_comp (simpl, prog, inputs, res) =
                     ++ show res
                     ++ " but got "
                     ++ show res'
-        Result False _ _ _ ->
+        Result False _ _ _ _ _ ->
           print_ln "error: witness failed to satisfy constraints"
 
 keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode

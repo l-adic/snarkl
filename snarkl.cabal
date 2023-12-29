@@ -32,7 +32,6 @@ library
   exposed-modules:
     Control.Monad.Supply
     Control.Monad.Supply.Class
-    Snarkl.Arkworks
     Snarkl.Backend.R1CS
     Snarkl.Backend.R1CS.Poly
     Snarkl.Backend.R1CS.R1CS
@@ -112,6 +111,7 @@ test-suite spec
     Test.Snarkl.Unit.Programs
     Test.Snarkl.UnitSpec
     Test.UnionFindSpec
+    Test.ArkworksBridge
 
   default-extensions:
     DataKinds
@@ -124,6 +124,7 @@ test-suite spec
   default-language:   Haskell2010
   build-depends:
       base          >=4.7
+    , bytestring
     , Cabal         >=1.22
     , containers    >=0.5     && <0.6
     , criterion     >=1.0
@@ -150,6 +151,7 @@ benchmark criterion
     Snarkl.Example.Queue
     Snarkl.Example.Stack
     Snarkl.Example.Tree
+    Test.ArkworksBridge
 
   default-extensions:
     BangPatterns
@@ -164,7 +166,7 @@ benchmark criterion
     TypeSynonymInstances
     UndecidableInstances
 
-  hs-source-dirs:     benchmarks examples
+  hs-source-dirs:     benchmarks examples tests
   default-language:   Haskell2010
   build-depends:
       base          >=4.7

@@ -5,7 +5,6 @@ module Snarkl.Example.Basic where
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable (Typeable)
 import GHC.TypeLits (KnownNat)
-import Snarkl.Arkworks (CMD (RunR1CS), runCMD)
 import Snarkl.Compile
 import Snarkl.Field (F_BN128)
 import Snarkl.Language.Syntax
@@ -63,9 +62,6 @@ interp2' = comp_interp p2 [256]
 
 compile1 :: (GaloisField k) => R1CS k
 compile1 = compileCompToR1CS Simplify p1
-
-run1 :: IO ExitCode
-run1 = runCMD $ RunR1CS "./scripts" "example" Simplify p1 ([] :: [F_BN128])
 
 comp1 :: (GaloisField k, Typeable a) => Comp ('TSum 'TBool a) k
 comp1 = inl false

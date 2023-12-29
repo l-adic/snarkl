@@ -1,4 +1,4 @@
-module Snarkl.Arkworks where
+module Test.ArkworksBridge where
 
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
@@ -69,15 +69,6 @@ mkCommand :: String -> [(String, FilePath)] -> String
 mkCommand baseCMD kvs =
   let args = unwords $ map (\(k, v) -> "--" <> k <> " " <> v) kvs
    in "arkworks-bridge " <> baseCMD <> " " <> args
-
-mkR1CSFilePath :: FilePath -> String -> FilePath
-mkR1CSFilePath rootDir name = rootDir <> "/" <> name <> "-r1cs.jsonl"
-
-mkWitnessFilePath :: FilePath -> String -> FilePath
-mkWitnessFilePath rootDir name = rootDir <> "/" <> name <> "-witness.jsonl"
-
-mkInputsFilePath :: FilePath -> String -> FilePath
-mkInputsFilePath rootDir name = rootDir <> "/" <> name <> "-inputs.jsonl"
 
 mkProofFilePath :: FilePath -> String -> FilePath
 mkProofFilePath rootDir name = rootDir <> "/" <> name <> "-proof"
