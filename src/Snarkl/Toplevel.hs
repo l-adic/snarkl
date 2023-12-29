@@ -56,22 +56,23 @@ module Snarkl.Toplevel
   )
 where
 
-import Control.Lens (view)
 import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
-import Data.List (sort)
-import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
-import Prettyprinter (Pretty (pretty))
+import Snarkl.Arkworks (CMD (..), runCMD)
 import Snarkl.Backend.R1CS
-import Snarkl.Common (Var (Var))
 import Snarkl.Compile
   ( SimplParam,
-    constraints_of_texp,
-    r1cs_of_constraints,
-    _Var,
+    TExpPkg (..),
+    constrs_of_comp,
+    constrs_of_texp,
+    r1cs_of_comp,
+    r1cs_of_constrs,
+    r1cs_of_texp,
+    texp_of_comp,
+    wit_of_r1cs,
   )
 import Snarkl.Constraint.Constraints
 import Snarkl.Constraint.Simplify
@@ -85,11 +86,6 @@ import System.IO
     hPutStrLn,
     stdout,
     withFile,
-  )
-import System.Process
-  ( createProcess,
-    shell,
-    waitForProcess,
   )
 import Prelude
 import qualified Prelude as P
@@ -115,125 +111,6 @@ comp_interp mf inputs =
         Right (_, Nothing) -> failWith $ ErrMsg $ show e ++ " evaluated to bot"
         Right (_, Just v) -> v
 
-------------------------------------------------------
---
--- 'TExp'
---
-------------------------------------------------------
-
--- | The result of desugaring a Snarkl computation.
-data TExpPkg ty k = TExpPkg
-  { -- | The number of free variables in the computation.
-    comp_num_vars :: Int,
-    -- | The variables marked as inputs.
-    comp_input_vars :: [Variable],
-    -- | The resulting 'TExp'.
-    comp_texp :: TExp ty k
-  }
-  deriving (Show)
-
-instance (Typeable ty, Pretty k) => Pretty (TExpPkg ty k) where
-  pretty (TExpPkg _ _ e) = pretty e
-
-deriving instance (Eq (TExp ty k)) => Eq (TExpPkg ty k)
-
--- | Desugar a 'Comp'utation to a pair of:
---   the total number of vars,
---   the input vars,
---   the 'TExp'.
-texp_of_comp ::
-  Comp ty k ->
-  TExpPkg ty k
-texp_of_comp mf =
-  case run mf of
-    Left err -> failWith err
-    Right (e, rho) ->
-      let nv = next_variable rho
-          in_vars = sort $ input_vars rho
-       in TExpPkg nv in_vars e
-  where
-    run :: State (Env k) a -> CompResult (Env k) a
-    run mf0 =
-      runState
-        mf0
-        ( Env
-            (fromInteger 0)
-            (fromInteger 0)
-            []
-            Map.empty
-            Map.empty
-        )
-
-------------------------------------------------------
---
--- Constraint generation
---
-------------------------------------------------------
-
--- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
-constrs_of_texp ::
-  (Typeable ty, GaloisField k) =>
-  TExpPkg ty k ->
-  ConstraintSystem k
-constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp (Var out) (map (view _Var) in_vars) e
-
--- | Snarkl.Compile Snarkl computations to constraint systems.
-constrs_of_comp ::
-  (Typeable ty, GaloisField k) =>
-  Comp ty k ->
-  ConstraintSystem k
-constrs_of_comp = constrs_of_texp . texp_of_comp
-
-------------------------------------------------------
---
--- R1CS
---
-------------------------------------------------------
-
--- | Snarkl.Compile constraint systems to 'R1CS'. Re-exported from 'Constraints.hs'.
-r1cs_of_constrs ::
-  (GaloisField a) =>
-  SimplParam ->
-  -- | Constraints
-  ConstraintSystem a ->
-  R1CS a
-r1cs_of_constrs = r1cs_of_constraints
-
--- | Snarkl.Compile 'TExp's to 'R1CS'.
-r1cs_of_texp ::
-  (Typeable ty, GaloisField k) =>
-  SimplParam ->
-  TExpPkg ty k ->
-  R1CS k
-r1cs_of_texp simpl = (r1cs_of_constrs simpl) . constrs_of_texp
-
--- | Snarkl.Compile Snarkl computations to 'R1CS'.
-r1cs_of_comp ::
-  (Typeable ty, GaloisField k) =>
-  SimplParam ->
-  Comp ty k ->
-  R1CS k
-r1cs_of_comp simpl = (r1cs_of_constrs simpl) . constrs_of_comp
-
--- | For a given R1CS and inputs, calculate a satisfying assignment.
-wit_of_r1cs :: [k] -> R1CS k -> Map Var k
-wit_of_r1cs inputs r1cs =
-  let in_vars = r1cs_in_vars r1cs
-      f = r1cs_gen_witness r1cs . Map.fromList
-   in case length in_vars /= length inputs of
-        True ->
-          failWith $
-            ErrMsg
-              ( "expected "
-                  ++ show (length in_vars)
-                  ++ " input(s)"
-                  ++ " but got "
-                  ++ show (length inputs)
-                  ++ " input(s)"
-              )
-        False ->
-          f (zip in_vars inputs)
-
 -- | For a given R1CS and inputs, serialize the input variable assignment.
 serialize_inputs :: (PrimeField k) => [k] -> R1CS k -> String
 serialize_inputs inputs r1cs =
@@ -247,181 +124,6 @@ serialize_witnesses inputs r1cs =
       assgn = wit_of_r1cs inputs r1cs
       inputs_assgn = Map.fromList $ drop num_in_vars $ Map.toAscList assgn
    in serialize_assgn inputs_assgn
-
-------------------------------------------------------
---
--- Libsnark hooks
---
-------------------------------------------------------
-
--- |                       *** WARNING ***
--- This function creates/overwrites files prefixed with 'filePrefix',
--- within the scripts/ subdirectory. 'snarkify_comp' also
--- assumes that it's run in working directory 'base-of-snarkl-repo'.
--- arkify_comp :: forall ty k. (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
--- arkify_comp filePrefix simpl c inputs =
---  do
---    let r1cs = r1cs_of_comp simpl c
---        r1cs_file = filePrefix ++ ".r1cs"
---        inputs_file = filePrefix ++ ".inputs"
---        wits_file = filePrefix ++ ".wits"
---        run_r1cs = "./run-r1cs.sh"
---
---    withFile
---      ("scripts/" ++ r1cs_file)
---      WriteMode
---      ( \h ->
---          hPutStrLn h $ serialize_r1cs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ inputs_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_inputs inputs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ wits_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_witnesses inputs r1cs
---      )
---
---    (_, _, _, hdl) <-
---      createProcess
---        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
---          { cwd = Just "scripts"
---          }
---
---    waitForProcess hdl
-
--- Like snarkify_comp, but only generate witnesses and keys
--- Serializes r1cs, inputs, and witnesses to files.
--- keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
--- keygen_comp filePrefix simpl c inputs =
---  do
---    let r1cs = r1cs_of_comp simpl c
---        r1cs_file = filePrefix ++ ".r1cs"
---        inputs_file = filePrefix ++ ".inputs"
---        wits_file = filePrefix ++ ".wits"
---        run_r1cs = "./run-keygen.sh"
---
---    withFile
---      ("scripts/" ++ r1cs_file)
---      WriteMode
---      ( \h ->
---          hPutStrLn h $ serialize_r1cs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ inputs_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_inputs inputs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ wits_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_witnesses inputs r1cs
---      )
---
---    (_, _, _, hdl) <-
---      createProcess
---        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
---          { cwd = Just "scripts"
---          }
---
---    waitForProcess hdl
-
--- Like snarkify_comp, but only generate keys and proof
--- (no verification)
--- Serializes r1cs, inputs, witnesses.
--- proofgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
--- proofgen_comp filePrefix simpl c inputs =
---  do
---    let r1cs = r1cs_of_comp simpl c
---        r1cs_file = filePrefix ++ ".r1cs"
---        inputs_file = filePrefix ++ ".inputs"
---        wits_file = filePrefix ++ ".wits"
---        run_r1cs = "./run-proofgen.sh"
---
---    withFile
---      ("scripts/" ++ r1cs_file)
---      WriteMode
---      ( \h ->
---          hPutStrLn h $ serialize_r1cs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ inputs_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_inputs inputs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ wits_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_witnesses inputs r1cs
---      )
---
---    (_, _, _, hdl) <-
---      createProcess
---        (proc run_r1cs [r1cs_file, inputs_file, wits_file])
---          { cwd = Just "scripts"
---          }
---
---    waitForProcess hdl
-
--- Like snarkify_comp, but only generate and serialize the r1cs
--- r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
--- r1csgen_comp filePrefix simpl c =
---  do
---    let r1cs = r1cs_of_comp simpl c
---        r1cs_file = filePrefix ++ ".r1cs"
---
---    withFile
---      ("scripts/" ++ r1cs_file)
---      WriteMode
---      ( \h ->
---          hPutStrLn h $ serialize_r1cs r1cs
---      )
-
--- Like snarkify_comp, but only generate the witness
--- (no key generation or proof)
--- Serializes r1cs, inputs, and witnesses to files.
--- witgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
--- witgen_comp filePrefix simpl c inputs =
---  do
---    let r1cs = r1cs_of_comp simpl c
---        r1cs_file = filePrefix ++ ".r1cs"
---        inputs_file = filePrefix ++ ".inputs"
---        wits_file = filePrefix ++ ".wits"
---
---    withFile
---      ("scripts/" ++ r1cs_file)
---      WriteMode
---      ( \h ->
---          hPutStrLn h $ serialize_r1cs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ inputs_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_inputs inputs r1cs
---      )
---
---    withFile
---      ("scripts/" ++ wits_file)
---      WriteMode
---      ( \h ->
---          hPutStr h $ serialize_witnesses inputs r1cs
---      )
 
 ------------------------------------------------------
 --
@@ -595,71 +297,13 @@ executeAndWriteArtifacts name simpl mf inputs =
 -- assumes that it's run in working directory 'base-of-snarkl-repo'.
 snarkify_comp :: forall ty k. (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
 snarkify_comp filePrefix simpl c inputs =
-  do
-    let r1cs = r1cs_of_comp simpl c
-        wit = wit_of_r1cs inputs r1cs
-        r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
-        inputs_file = "scripts/" ++ filePrefix <> "-inputs.jsonl"
-        wits_file = "scripts/" ++ filePrefix ++ "-witness.jsonl"
-        -- run_r1cs = "echo $PATH"
-        run_r1cs =
-          mconcat
-            [ "arkworks-bridge run-r1cs ",
-              "--inputs " <> inputs_file <> " ",
-              "--witness " <> wits_file <> " ",
-              "--r1cs " <> r1cs_file
-            ]
-    LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
-    LBS.writeFile wits_file (serializeWitnessAsJson r1cs wit)
-    LBS.writeFile inputs_file (serializeInputsAsJson r1cs inputs)
-
-    (_, _, _, hdl) <- createProcess $ shell run_r1cs
-
-    waitForProcess hdl
+  runCMD $ RunR1CS "scripts" filePrefix simpl c inputs
 
 keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
-keygen_comp filePrefix simpl c _ = do
-  let r1cs = r1cs_of_comp simpl c
-      r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
-      pk_file = "scripts/" ++ filePrefix <> "-pk"
-      vk_file = "scripts/" ++ filePrefix ++ "-vk"
-      -- run_r1cs = "echo $PATH"
-      run_r1cs =
-        mconcat
-          [ "arkworks-bridge create-trusted-setup ",
-            "--r1cs " <> r1cs_file <> " ",
-            "--verifying-key " <> vk_file <> " ",
-            "--proving-key " <> pk_file
-          ]
-  LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
-
-  (_, _, _, hdl) <- createProcess $ shell run_r1cs
-
-  waitForProcess hdl
+keygen_comp filePrefix simpl c _ = runCMD $ CreateTrustedSetup "scripts" filePrefix simpl c
 
 proofgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
-proofgen_comp filePrefix simpl c inputs = do
-  let r1cs = r1cs_of_comp simpl c
-      wit = wit_of_r1cs inputs r1cs
-      r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
-      pk_file = "scripts/" ++ filePrefix <> "-pk"
-      wits_file = "scripts/" ++ filePrefix ++ "-witness.jsonl"
-      proof_file = "scripts/" ++ filePrefix ++ "-proof"
-      -- run_r1cs = "echo $PATH"
-      run_r1cs =
-        mconcat
-          [ "arkworks-bridge create-proof ",
-            "--witness " <> wits_file <> " ",
-            "--r1cs " <> r1cs_file <> " ",
-            "--proof " <> proof_file <> " ",
-            "--proving-key " <> pk_file
-          ]
-  LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
-  LBS.writeFile wits_file (serializeWitnessAsJson r1cs wit)
-
-  (_, _, _, hdl) <- createProcess $ shell run_r1cs
-
-  waitForProcess hdl
+proofgen_comp filePrefix simpl c inputs = runCMD $ CreateProof "scripts" filePrefix simpl c inputs
 
 r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
 r1csgen_comp filePrefix simpl c =

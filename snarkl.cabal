@@ -54,6 +54,7 @@ library
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
     Snarkl.Toplevel
+    Snarkl.Arkworks
 
   default-extensions:
     BangPatterns

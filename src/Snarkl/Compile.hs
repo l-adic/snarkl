@@ -10,6 +10,14 @@ module Snarkl.Compile
     constraints_of_texp,
     r1cs_of_constraints,
     _Var,
+    r1cs_of_texp,
+    r1cs_of_comp,
+    texp_of_comp,
+    TExpPkg (..),
+    wit_of_r1cs,
+    constrs_of_texp,
+    constrs_of_comp,
+    r1cs_of_constrs,
   )
 where
 
@@ -18,14 +26,17 @@ import Control.Monad.State
   ( State,
     gets,
     modify,
-    runState,
   )
+import qualified Control.Monad.State as State
 import Data.Either (fromRight)
 import Data.Field.Galois (GaloisField)
+import Data.List (sort)
+import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Snarkl.Backend.R1CS.R1CS (R1CS)
+import Prettyprinter (Pretty (..))
+import Snarkl.Backend.R1CS.R1CS (R1CS (r1cs_gen_witness, r1cs_in_vars))
 import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint.Constraints
   ( Constraint (CMagic, CMult),
@@ -41,12 +52,15 @@ import Snarkl.Constraint.Simplify (do_simplify)
 import Snarkl.Constraint.Solve (solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
-  ( Exp (..),
+  ( Comp,
+    Env (Env, input_vars, next_variable),
+    Exp (..),
     TExp,
     Variable (Variable),
     booleanVarsOfTexp,
     do_const_prop,
     expOfTExp,
+    runState,
     var_of_exp,
   )
 
@@ -466,7 +480,7 @@ constraints_of_texp ::
   ConstraintSystem a
 constraints_of_texp out in_vars te =
   let cenv_init = CEnv Set.empty (incVar out)
-      (constrs, _) = runState go cenv_init
+      (constrs, _) = State.runState go cenv_init
    in constrs
   where
     go = do
@@ -493,3 +507,121 @@ constraints_of_texp out in_vars te =
 
 _Var :: Iso' Variable Var
 _Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
+
+------------------------------------------------------
+--
+-- 'TExp'
+--
+------------------------------------------------------
+
+-- | The result of desugaring a Snarkl computation.
+data TExpPkg ty k = TExpPkg
+  { -- | The number of free variables in the computation.
+    comp_num_vars :: Int,
+    -- | The variables marked as inputs.
+    comp_input_vars :: [Variable],
+    -- | The resulting 'TExp'.
+    comp_texp :: TExp ty k
+  }
+  deriving (Show)
+
+instance (Typeable ty, Pretty k) => Pretty (TExpPkg ty k) where
+  pretty (TExpPkg _ _ e) = pretty e
+
+deriving instance (Eq (TExp ty k)) => Eq (TExpPkg ty k)
+
+-- | Desugar a 'Comp'utation to a pair of:
+--   the total number of vars,
+--   the input vars,
+--   the 'TExp'.
+texp_of_comp ::
+  Comp ty k ->
+  TExpPkg ty k
+texp_of_comp mf =
+  case run mf of
+    Left err -> failWith err
+    Right (e, rho) ->
+      let nv = next_variable rho
+          in_vars = sort $ input_vars rho
+       in TExpPkg nv in_vars e
+  where
+    run mf0 =
+      runState
+        mf0
+        ( Env
+            (fromInteger 0)
+            (fromInteger 0)
+            []
+            Map.empty
+            Map.empty
+        )
+
+------------------------------------------------------
+--
+-- Constraint generation
+--
+------------------------------------------------------
+
+-- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
+constrs_of_texp ::
+  (Typeable ty, GaloisField k) =>
+  TExpPkg ty k ->
+  ConstraintSystem k
+constrs_of_texp (TExpPkg out in_vars e) = constraints_of_texp (Var out) (map (view _Var) in_vars) e
+
+-- | Snarkl.Compile Snarkl computations to constraint systems.
+constrs_of_comp ::
+  (Typeable ty, GaloisField k) =>
+  Comp ty k ->
+  ConstraintSystem k
+constrs_of_comp = constrs_of_texp . texp_of_comp
+
+------------------------------------------------------
+--
+-- R1CS
+--
+------------------------------------------------------
+
+-- | Snarkl.Compile constraint systems to 'R1CS'. Re-exported from 'Constraints.hs'.
+r1cs_of_constrs ::
+  (GaloisField a) =>
+  SimplParam ->
+  -- | Constraints
+  ConstraintSystem a ->
+  R1CS a
+r1cs_of_constrs = r1cs_of_constraints
+
+-- | Snarkl.Compile 'TExp's to 'R1CS'.
+r1cs_of_texp ::
+  (Typeable ty, GaloisField k) =>
+  SimplParam ->
+  TExpPkg ty k ->
+  R1CS k
+r1cs_of_texp simpl = (r1cs_of_constrs simpl) . constrs_of_texp
+
+-- | Snarkl.Compile Snarkl computations to 'R1CS'.
+r1cs_of_comp ::
+  (Typeable ty, GaloisField k) =>
+  SimplParam ->
+  Comp ty k ->
+  R1CS k
+r1cs_of_comp simpl = (r1cs_of_constrs simpl) . constrs_of_comp
+
+-- | For a given R1CS and inputs, calculate a satisfying assignment.
+wit_of_r1cs :: [k] -> R1CS k -> Map Var k
+wit_of_r1cs inputs r1cs =
+  let in_vars = r1cs_in_vars r1cs
+      f = r1cs_gen_witness r1cs . Map.fromList
+   in case length in_vars /= length inputs of
+        True ->
+          failWith $
+            ErrMsg
+              ( "expected "
+                  ++ show (length in_vars)
+                  ++ " input(s)"
+                  ++ " but got "
+                  ++ show (length inputs)
+                  ++ " input(s)"
+              )
+        False ->
+          f (zip in_vars inputs)
