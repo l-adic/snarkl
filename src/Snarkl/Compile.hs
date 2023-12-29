@@ -29,18 +29,19 @@ import Data.Typeable (Typeable)
 import Prettyprinter (Pretty (..))
 import Snarkl.Backend.R1CS.R1CS (R1CS)
 import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
-import Snarkl.Constraint.Constraints
+import Snarkl.Constraint
   ( Constraint (CMagic, CMult),
     ConstraintSystem (ConstraintSystem),
+    bind_of_var,
+    bind_var,
     cadd,
     constraint_vars,
+    do_simplify,
     r1cs_of_cs,
+    removeUnreachable,
     renumber_constraints,
+    solve,
   )
-import Snarkl.Constraint.Dataflow (removeUnreachable)
-import Snarkl.Constraint.SimplMonad (bind_of_var, bind_var)
-import Snarkl.Constraint.Simplify (do_simplify)
-import Snarkl.Constraint.Solve (solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
   ( Comp,

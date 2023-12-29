@@ -12,8 +12,7 @@ module Snarkl.Toplevel
 
     -- * Re-exported modules
     module Snarkl.Language,
-    module Snarkl.Constraint.Constraints,
-    module Snarkl.Constraint.Simplify,
+    module Snarkl.Constraint,
     module Snarkl.Backend.R1CS,
     module Snarkl.Compile,
   )
@@ -27,8 +26,7 @@ import Prettyprinter (Pretty (..), line, (<+>))
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn)
 import Snarkl.Compile
-import Snarkl.Constraint.Constraints
-import Snarkl.Constraint.Simplify
+import Snarkl.Constraint
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
 import Snarkl.Language

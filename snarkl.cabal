@@ -38,6 +38,7 @@ library
     Snarkl.Backend.R1CS.Serialize
     Snarkl.Common
     Snarkl.Compile
+    Snarkl.Constraint
     Snarkl.Constraint.Constraints
     Snarkl.Constraint.Dataflow
     Snarkl.Constraint.Simplify
@@ -106,12 +107,12 @@ test-suite spec
     Snarkl.Example.Queue
     Snarkl.Example.Stack
     Snarkl.Example.Tree
+    Test.ArkworksBridge
     Test.Snarkl.DataflowSpec
     Test.Snarkl.LambdaSpec
     Test.Snarkl.Unit.Programs
     Test.Snarkl.UnitSpec
     Test.UnionFindSpec
-    Test.ArkworksBridge
 
   default-extensions:
     DataKinds

@@ -5,7 +5,6 @@ module Test.Snarkl.UnitSpec where
 
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
-import Snarkl.Arkworks (CMD (RunR1CS), runCMD)
 import Snarkl.Compile
 import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
@@ -17,6 +16,7 @@ import Snarkl.Language (Comp)
 import Snarkl.Language.Syntax hiding (negate)
 import Snarkl.Toplevel (Result (result_result), execute)
 import System.Exit (ExitCode (..))
+import Test.ArkworksBridge (CMD (RunR1CS), runCMD)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.Snarkl.Unit.Programs
 import Prelude
