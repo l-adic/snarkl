@@ -225,16 +225,16 @@ input_vals = go ((P.*) num_lanes ln_width)
 --   = Top.texp_interp (keccak1 n) (map fromIntegral input_vals)
 
 -- test_r1cs n
---   = let (nv,in_vars,e) = Top.texp_of_comp (keccak1 n)
---         r1cs           = r1cs_of_texp nv in_vars e
+--   = let (nv,in_vars,e) = Top.compileCompToTexp (keccak1 n)
+--         r1cs           = compileTExpToR1CS nv in_vars e
 --     in putStrLn
 --        $ show
 --        $ last (r1cs_clauses r1cs)
 
 -- -- First compile to R1CS, then generate witness.
 -- test_wit n
---   = let (nv,in_vars,e) = Top.texp_of_comp (keccak1 n)
---         r1cs           = r1cs_of_texp nv in_vars e
+--   = let (nv,in_vars,e) = Top.compileCompToTexp (keccak1 n)
+--         r1cs           = compileTExpToR1CS nv in_vars e
 --         wit            = Top.wit_of_r1cs (map fromIntegral input_vals) r1cs
 --     in case IntMap.lookup 1000000 wit of
 --          Nothing -> putStr $ show $ last (r1cs_clauses r1cs)

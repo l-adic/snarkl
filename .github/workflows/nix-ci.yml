@@ -16,6 +16,11 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Build and install arkworks-bridge binary
+      run: |
+        cd arkworks-bridge
+        cargo install --path .
+
     - uses: cachix/install-nix-action@v22
       with:
         nix_path: nixpkgs=channel:nixos-unstable
@@ -27,19 +32,6 @@ jobs:
 
     - run: nix build
 
-    - run: mkdir -p cppsrc/bin
-
-    - name: Download artifact
-      id: download-artifact
-      uses: dawidd6/action-download-artifact@v3
-      with:
-        workflow: snarky.yml
-        name: snarky
-        path: cppsrc/bin/
-
-    - run: ls -lah cppsrc/bin
-    - run: chmod +x cppsrc/bin/snarky
-    - run: ls -lah cppsrc/bin 
-    - run: ./cppsrc/bin/snarky
-    
-    - run: nix develop --command cabal run tests
+    - run: |
+        mkdir scripts
+        nix develop --command cabal run tests

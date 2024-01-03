@@ -1,0 +1,3 @@
+[submodule "arkworks-bridge"]
+	path = arkworks-bridge
+	url = https://github.com/martyall/arkworks-bridge

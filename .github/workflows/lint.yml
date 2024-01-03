@@ -19,4 +19,5 @@ jobs:
             examples/**/*.hs
             tests/**/*.hs
             benchmarks/**/*.hs
+            app/**/*.hs
           version: 0.5.2.0

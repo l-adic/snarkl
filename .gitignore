@@ -6,9 +6,9 @@ result
 src/main.exe
 .direnv/
 dist-newstyle/
-scripts/hspec.inputs
-scripts/hspec.r1cs
-scripts/hspec.wits
+scripts/hspec*
+scripts/test*
 scripts/run-r1cs.log
 cppsrc/bin/
+snarkl-output
 

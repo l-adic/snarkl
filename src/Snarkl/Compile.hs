@@ -2,14 +2,14 @@
 
 {-# HLINT ignore "Use camelCase" #-}
 module Snarkl.Compile
-  ( CEnv (CEnv),
+  ( TExpPkg (..),
     SimplParam (..),
-    fresh_var,
-    cs_of_exp,
-    get_constraints,
-    constraints_of_texp,
-    r1cs_of_constraints,
-    _Var,
+    compileConstraintsToR1CS,
+    compileTExpToR1CS,
+    compileCompToR1CS,
+    compileCompToTexp,
+    compileTexpToConstraints,
+    compileCompToConstraints,
   )
 where
 
@@ -18,35 +18,41 @@ import Control.Monad.State
   ( State,
     gets,
     modify,
-    runState,
   )
+import qualified Control.Monad.State as State
 import Data.Either (fromRight)
 import Data.Field.Galois (GaloisField)
+import Data.List (sort)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Prettyprinter (Pretty (..))
 import Snarkl.Backend.R1CS.R1CS (R1CS)
 import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
-import Snarkl.Constraint.Constraints
+import Snarkl.Constraint
   ( Constraint (CMagic, CMult),
     ConstraintSystem (ConstraintSystem),
+    bind_of_var,
+    bind_var,
     cadd,
     constraint_vars,
+    do_simplify,
     r1cs_of_cs,
+    removeUnreachable,
     renumber_constraints,
+    solve,
   )
-import Snarkl.Constraint.Dataflow (removeUnreachable)
-import Snarkl.Constraint.SimplMonad (bind_of_var, bind_var)
-import Snarkl.Constraint.Simplify (do_simplify)
-import Snarkl.Constraint.Solve (solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
-  ( Exp (..),
+  ( Comp,
+    Env (Env, input_vars, next_variable),
+    Exp (..),
     TExp,
     Variable (Variable),
     booleanVarsOfTexp,
     do_const_prop,
     expOfTExp,
+    runState,
     var_of_exp,
   )
 
@@ -412,30 +418,20 @@ data SimplParam
   | Simplify
   | SimplifyDataflow
 
-must_simplify :: SimplParam -> Bool
-must_simplify NoSimplify = False
-must_simplify Simplify = True
-must_simplify SimplifyDataflow = True
-
-must_dataflow :: SimplParam -> Bool
-must_dataflow NoSimplify = False
-must_dataflow Simplify = False
-must_dataflow SimplifyDataflow = True
-
 -- | Snarkl.Compile a list of arithmetic constraints to a rank-1 constraint
 -- system.  Takes as input the constraints, the input variables, and
 -- the output variables, and return the corresponding R1CS.
-r1cs_of_constraints ::
+compileConstraintsToR1CS ::
   (GaloisField a) =>
   SimplParam ->
   ConstraintSystem a ->
   R1CS a
-r1cs_of_constraints simpl cs =
+compileConstraintsToR1CS simpl cs =
   let -- Simplify resulting constraints.
-      (_, cs_simpl) =
+      cs_simpl =
         if must_simplify simpl
-          then do_simplify False Map.empty cs
-          else (undefined, cs)
+          then snd $ do_simplify False Map.empty cs
+          else cs
       cs_dataflow = if must_dataflow simpl then removeUnreachable cs_simpl else cs_simpl
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
@@ -449,47 +445,130 @@ r1cs_of_constraints simpl cs =
       -- before applying 'solve cs''.
       f = solve cs'
    in r1cs_of_cs cs' f
-
--- | Snarkl.Compile an expression to a constraint system.  Takes as input the
--- expression, the expression's input variables, and the name of the
--- output variable.
-constraints_of_texp ::
-  ( GaloisField a,
-    Typeable ty
-  ) =>
-  -- | Output variable
-  Var ->
-  -- | Input variables
-  [Var] ->
-  -- | Expression
-  TExp ty a ->
-  ConstraintSystem a
-constraints_of_texp out in_vars te =
-  let cenv_init = CEnv Set.empty (incVar out)
-      (constrs, _) = runState go cenv_init
-   in constrs
   where
-    go = do
-      let boolean_in_vars =
-            Set.toList $
-              Set.fromList in_vars
-                `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
-          e0 = expOfTExp te
-          e = do_const_prop e0
-      -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
-      cs_of_exp out e
-      -- Add boolean constraints
-      mapM_ ensure_boolean boolean_in_vars
-      cs <- get_constraints
-      let constraint_set = Set.fromList cs
-          num_constraint_vars =
-            length $ constraint_vars constraint_set
-      return $
-        ConstraintSystem
-          constraint_set
-          num_constraint_vars
-          in_vars
-          [out]
+    must_simplify :: SimplParam -> Bool
+    must_simplify NoSimplify = False
+    must_simplify Simplify = True
+    must_simplify SimplifyDataflow = True
+
+    must_dataflow :: SimplParam -> Bool
+    must_dataflow NoSimplify = False
+    must_dataflow Simplify = False
+    must_dataflow SimplifyDataflow = True
+
+------------------------------------------------------
+--
+-- 'TExp'
+--
+------------------------------------------------------
+
+-- | The result of desugaring a Snarkl computation.
+data TExpPkg ty k = TExpPkg
+  { -- | The number of free variables in the computation.
+    out_variable :: Variable,
+    -- | The variables marked as inputs.
+    comp_input_variables :: [Variable],
+    -- | The resulting 'TExp'.
+    comp_texp :: TExp ty k
+  }
+  deriving (Show)
+
+instance (Typeable ty, Pretty k) => Pretty (TExpPkg ty k) where
+  pretty (TExpPkg _ _ e) = pretty e
+
+deriving instance (Eq (TExp ty k)) => Eq (TExpPkg ty k)
+
+-- | Desugar a 'Comp'utation to a pair of:
+--   the total number of vars,
+--   the input vars,
+--   the 'TExp'.
+compileCompToTexp ::
+  Comp ty k ->
+  TExpPkg ty k
+compileCompToTexp mf =
+  case run mf of
+    Left err -> failWith err
+    Right (e, rho) ->
+      let out = Variable (next_variable rho)
+          in_vars = sort $ input_vars rho
+       in TExpPkg out in_vars e
+  where
+    run mf0 =
+      runState
+        mf0
+        ( Env
+            (fromInteger 0)
+            (fromInteger 0)
+            []
+            Map.empty
+            Map.empty
+        )
+
+-- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
+compileTexpToConstraints ::
+  (Typeable ty, GaloisField k) =>
+  TExpPkg ty k ->
+  ConstraintSystem k
+compileTexpToConstraints (TExpPkg _out _in_vars te) =
+  let out = _out ^. _Var
+      in_vars = map (view _Var) _in_vars
+      cenv_init = CEnv Set.empty (incVar out)
+      (constrs, _) = State.runState go cenv_init
+      go = do
+        let boolean_in_vars =
+              Set.toList $
+                Set.fromList in_vars
+                  `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
+            e0 = expOfTExp te
+            e = do_const_prop e0
+        -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
+        cs_of_exp out e
+        -- Add boolean constraints
+        mapM_ ensure_boolean boolean_in_vars
+        cs <- get_constraints
+        let constraint_set = Set.fromList cs
+            num_constraint_vars =
+              length $ constraint_vars constraint_set
+        return $
+          ConstraintSystem
+            constraint_set
+            num_constraint_vars
+            in_vars
+            [out]
+   in constrs
+
+-- | Snarkl.Compile Snarkl computations to constraint systems.
+compileCompToConstraints ::
+  (Typeable ty, GaloisField k) =>
+  Comp ty k ->
+  ConstraintSystem k
+compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
+
+------------------------------------------------------
+--
+-- R1CS
+--
+------------------------------------------------------
+
+-- | Snarkl.Compile 'TExp's to 'R1CS'.
+compileTExpToR1CS ::
+  (Typeable ty, GaloisField k) =>
+  SimplParam ->
+  TExpPkg ty k ->
+  R1CS k
+compileTExpToR1CS simpl = compileConstraintsToR1CS simpl . compileTexpToConstraints
+
+-- | Snarkl.Compile Snarkl computations to 'R1CS'.
+compileCompToR1CS ::
+  (Typeable ty, GaloisField k) =>
+  SimplParam ->
+  Comp ty k ->
+  R1CS k
+compileCompToR1CS simpl = compileConstraintsToR1CS simpl . compileCompToConstraints
+
+--------------------------------------------------------------------------------
 
 _Var :: Iso' Variable Var
 _Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
+
+--------------------------------------------------------------------------------

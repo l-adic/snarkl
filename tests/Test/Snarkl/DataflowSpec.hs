@@ -8,14 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import GHC.TypeLits (KnownNat)
 import Snarkl.Common (Var (Var))
-import Snarkl.Constraint.Constraints
-  ( CoeffList (CoeffList),
-    Constraint (..),
-    ConstraintSystem (..),
-  )
-import Snarkl.Constraint.Dataflow
-  ( removeUnreachable,
-  )
+import Snarkl.Constraint
 import Snarkl.Field (F_BN128, P_BN128)
 import Test.Hspec (Spec, describe, it, shouldBe)
 

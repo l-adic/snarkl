@@ -43,7 +43,7 @@ p1 :: (GaloisField k) => Comp 'TField k
 p1 = arr_ex $ fromField 1
 
 desugar1 :: (GaloisField k) => TExpPkg 'TField k
-desugar1 = texp_of_comp p1
+desugar1 = compileCompToTexp p1
 
 interp1 :: (GaloisField k) => k
 interp1 = comp_interp p1 []
@@ -52,7 +52,7 @@ p2 = do
   x <- fresh_input
   return $ x + x
 
-desugar2 = texp_of_comp p2
+desugar2 = compileCompToTexp p2
 
 interp2 :: (GaloisField k) => k
 interp2 = comp_interp p2 []
@@ -61,10 +61,7 @@ interp2' :: (GaloisField k) => k
 interp2' = comp_interp p2 [256]
 
 compile1 :: (GaloisField k) => R1CS k
-compile1 = r1cs_of_comp Simplify p1
-
-run1 :: IO ExitCode
-run1 = snarkify_comp "example" Simplify p1 ([] :: [F_BN128])
+compile1 = compileCompToR1CS Simplify p1
 
 comp1 :: (GaloisField k, Typeable a) => Comp ('TSum 'TBool a) k
 comp1 = inl false
@@ -76,4 +73,4 @@ test1 :: (GaloisField k) => State (Env k) (TExp 'TBool k)
 test1 = do
   b <- fresh_input
   z <- if return b then comp1 else comp2
-  case_sum (\x0 -> return x0) (\_ -> return false) z
+  case_sum return (const $ return false) z
