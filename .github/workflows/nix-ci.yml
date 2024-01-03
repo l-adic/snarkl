@@ -13,13 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-      with:
-        submodules: recursive
 
-    - name: Build and install arkworks-bridge binary
-      run: |
-        cd arkworks-bridge
-        cargo install --path .
+    - name: Install arkworks-bridge
+      uses: jaxxstorm/action-install-gh-release@v1.10.0
+      with:
+        repo: martyall/arkworks-bridge
+        tag: v0.2.0
 
     - uses: cachix/install-nix-action@v22
       with:
