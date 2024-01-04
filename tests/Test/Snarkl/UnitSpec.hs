@@ -88,7 +88,7 @@ spec = do
       it "28-1" $ test_comp @_ @F_BN128 Simplify prog28 [] `shouldReturn` Right 24
       it "29-1" $ test_comp @_ @F_BN128 Simplify prog29 [1] `shouldReturn` Right 24
       it "30-1" $ test_comp @_ @F_BN128 Simplify prog30 [] `shouldReturn` Right 24
-      it "37-1" $ test_comp @_ @F_BN128 Simplify prog37 (30 : (take 100 [0 ..])) `shouldReturn` Right 30
+      it "37-1" $ test_comp @_ @F_BN128 Simplify prog37 (30 : take 100 [0 ..]) `shouldReturn` Right 30
 
     describe "div" $ do
       it "31-1" $ test_comp @_ @F_BN128 Simplify prog31 [4, 2] `shouldReturn` Right 2
@@ -163,7 +163,7 @@ spec = do
       it "28-1" $ test_comp @_ @F_BN128 Simplify prog28 [] `shouldReturn` Right 24
       it "29-1" $ test_comp @_ @F_BN128 Simplify prog29 [1] `shouldReturn` Right 24
       it "30-1" $ test_comp @_ @F_BN128 Simplify prog30 [] `shouldReturn` Right 24
-      it "37-1" $ test_comp @_ @F_BN128 Simplify prog37 (30 : (take 100 [0 ..])) `shouldReturn` Right 30
+      it "37-1" $ test_comp @_ @F_BN128 Simplify prog37 (30 : take 100 [0 ..]) `shouldReturn` Right 30
 
     describe "div" $ do
       it "31-1" $ test_comp @_ @F_BN128 Simplify prog31 [4, 2] `shouldReturn` Right 2
@@ -197,7 +197,7 @@ spec = do
       it "12-4" $ test_comp @_ @F_BN128 Simplify bool_prog12 [1, 1] `shouldReturn` Right 1
 
     describe "bool inputs" $ do
-      it "16-1" $ test_comp @_ @F_BN128 Simplify bool_prog16 (take 100 $ repeat 1) `shouldReturn` Right 0
+      it "16-1" $ test_comp @_ @F_BN128 Simplify bool_prog16 (replicate 100 1) `shouldReturn` Right 0
 
     describe "array" $ do
       it "17-1" $ test_comp @_ @F_BN128 Simplify bool_prog17 [] `shouldReturn` Right 1
@@ -254,7 +254,7 @@ spec = do
       it "12-4" $ test_comp @_ @F_BN128 Simplify bool_prog12 [1, 1] `shouldReturn` Right 1
 
     describe "bool inputs" $ do
-      it "16-1" $ test_comp @_ @F_BN128 Simplify bool_prog16 (take 100 $ repeat 1) `shouldReturn` Right 0
+      it "16-1" $ test_comp @_ @F_BN128 Simplify bool_prog16 (replicate 100 1) `shouldReturn` Right 0
 
     describe "array" $ do
       it "17-1" $ test_comp @_ @F_BN128 Simplify bool_prog17 [] `shouldReturn` Right 1

@@ -56,6 +56,6 @@ solve cs env =
                   ++ show cs
               )
   where
-    all_assigned vars0 assgn = all id $ map (is_mapped assgn) vars0
+    all_assigned vars0 assgn = all (is_mapped assgn) vars0
     is_mapped assgn x = isJust (Map.lookup x assgn)
     unassigned vars0 assgn = [x | x <- vars0, not $ is_mapped assgn x]

@@ -9,6 +9,11 @@ import qualified Data.Set as Set
 import GHC.TypeLits (KnownNat)
 import Snarkl.Common (Var (Var))
 import Snarkl.Constraint
+  ( CoeffList (CoeffList),
+    Constraint (..),
+    ConstraintSystem (..),
+    removeUnreachable,
+  )
 import Snarkl.Field (F_BN128, P_BN128)
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -48,7 +53,7 @@ exampleConstraintSystem =
 
 -- Expected Result after removeUnreachable is applied
 -- (Adjust this based on the expected behavior of removeUnreachable)
-expectedResult :: ConstraintSystem (F_BN128)
+expectedResult :: ConstraintSystem F_BN128
 expectedResult =
   exampleConstraintSystem
     { cs_constraints = Set.fromList [constraint1, constraint2, constraint3, constraint5]

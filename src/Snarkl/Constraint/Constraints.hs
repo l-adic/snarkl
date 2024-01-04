@@ -15,6 +15,7 @@ module Snarkl.Constraint.Constraints
 where
 
 import Control.Monad.State (State)
+import Data.Bifunctor (Bifunctor (first))
 import Data.Field.Galois (GaloisField, Prime)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -58,9 +59,8 @@ remove_zeros (CoeffList l) = CoeffList $ go [] l
     go acc ((_, a) : l')
       | a == 0 =
           go acc l'
-    go acc (scrut@(_, _) : l')
-      | otherwise =
-          go (scrut : acc) l'
+    go acc (scrut@(_, _) : l') =
+      go (scrut : acc) l'
 
 -- | Constraints are either
 --   * 'CAdd a m': A linear combination of the constant 'a' with
@@ -94,27 +94,26 @@ instance (Eq a) => Eq (Constraint a) where
     emz == emz'
       && (cx == cx' && dy == dy' || cx == dy' && dy == cx')
   CMagic nm _ _ == CMagic nm' _ _ = nm == nm'
-  CAdd _ _ == CMult _ _ _ = False
-  CMult _ _ _ == CAdd _ _ = False
-  CMagic _ _ _ == _ = False
-  _ == CMagic _ _ _ = False
+  CAdd _ _ == CMult {} = False
+  CMult {} == CAdd _ _ = False
+  CMagic {} == _ = False
+  _ == CMagic {} = False
 
 compare_add :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_add #-}
-compare_add !(CAdd c m) !(CAdd c' m') =
-  if c == c'
-    then compare (asList m) (asList m')
-    else if c < c' then LT else GT
+compare_add (CAdd c m) (CAdd c' m')
+  | c == c' = compare (asList m) (asList m')
+  | c < c' = LT
+  | otherwise = GT
 compare_add !_ !_ =
   failWith $ ErrMsg "internal error: compare_add"
 
 compare_mult :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_mult #-}
 compare_mult
-  !(CMult (c, x) (d, y) (e, mz))
-  !(CMult (c', x') (d', y') (e', mz')) =
-    if x == x'
-      then
+  (CMult (c, x) (d, y) (e, mz))
+  (CMult (c', x') (d', y') (e', mz'))
+    | x == x' =
         if y == y'
           then case compare mz mz' of
             EQ -> case compare c c' of
@@ -124,21 +123,22 @@ compare_mult
               other -> other
             other -> other
           else if y < y' then LT else GT
-      else if x < x' then LT else GT
+    | x < x' = LT
+    | otherwise = GT
 compare_mult !_ !_ =
   failWith $ ErrMsg "internal error: compare_mult"
 
 compare_constr :: (Ord a) => Constraint a -> Constraint a -> Ordering
 {-# INLINE compare_constr #-}
-compare_constr !(CAdd _ _) !(CMult _ _ _) = LT
-compare_constr !(CMult _ _ _) !(CAdd _ _) = GT
-compare_constr !constr@(CAdd _ _) !constr'@(CAdd _ _) =
+compare_constr (CAdd _ _) (CMult {}) = LT
+compare_constr (CMult {}) (CAdd _ _) = GT
+compare_constr constr@(CAdd _ _) constr'@(CAdd _ _) =
   compare_add constr constr'
-compare_constr !constr@(CMult {}) !constr'@(CMult {}) =
+compare_constr constr@(CMult {}) constr'@(CMult {}) =
   compare_mult constr constr'
-compare_constr !(CMagic nm _ _) !(CMagic nm' _ _) = compare nm nm'
-compare_constr !_ !(CMagic _ _ _) = LT
-compare_constr !(CMagic _ _ _) !_ = GT
+compare_constr (CMagic nm _ _) (CMagic nm' _ _) = compare nm nm'
+compare_constr !_ (CMagic {}) = LT
+compare_constr (CMagic {}) !_ = GT
 
 instance (Ord a) => Ord (Constraint a) where
   {-# SPECIALIZE instance Ord (Constraint (Prime p)) #-}
@@ -191,7 +191,7 @@ r1cs_of_cs cs =
       R1C (var_poly cx, var_poly dy, const_poly e) : go cs'
     go (CMult cx dy (e, Just z) : cs') =
       R1C (var_poly cx, var_poly dy, var_poly (e, z)) : go cs'
-    go (CMagic _ _ _ : cs') =
+    go (CMagic {} : cs') =
       go cs'
 
 -- | Return the list of variables occurring in constraints 'cs'.
@@ -245,7 +245,7 @@ renumber_constraints cs =
     renum_constr c0 =
       case c0 of
         CAdd a m ->
-          cadd a $ map (\(k, v) -> (renum_f k, v)) (asList m)
+          cadd a $ map (first renum_f) (asList m)
         CMult (c, x) (d, y) (e, mz) ->
           CMult (c, renum_f x) (d, renum_f y) (e, fmap renum_f mz)
         CMagic nm xs f ->

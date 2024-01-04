@@ -51,6 +51,7 @@
                       haskellPackages.cabal-fmt
                       haskellPackages.hspec-discover
                       haskellPackages.graphmod
+                      haskellPackages.hlint
                     ];
                   };
                };

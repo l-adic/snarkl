@@ -40,8 +40,6 @@ module Snarkl.Language.SyntaxMonad
     assert_true,
     is_bot,
     assert_bot,
-    -- | Show the current state.
-    debug_state,
     -- | Misc. functions imported by 'Snarkl.Language.Syntax.hs'
     get_addr,
     guard,
@@ -91,7 +89,7 @@ import qualified Prelude as P
 
 type CompResult s a = Either ErrMsg (a, s)
 
-data State s a = State (s -> CompResult s a)
+newtype State s a = State (s -> CompResult s a)
 
 runState :: State s a -> s -> CompResult s a
 runState mf s = case mf of
@@ -431,10 +429,6 @@ snd_pair e = guarded_get_addr e 1
 {-----------------------------------------------
  Auxiliary functions
 ------------------------------------------------}
-
-debug_state :: (GaloisField k) => State (Env k) (TExp 'TUnit a)
-debug_state =
-  State (\s -> Left $ ErrMsg $ show s)
 
 fresh_var :: State (Env k) (TExp ty a)
 fresh_var =

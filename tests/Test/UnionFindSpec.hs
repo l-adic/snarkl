@@ -1,9 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# HLINT ignore "Use uncurry" #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Test.UnionFindSpec where

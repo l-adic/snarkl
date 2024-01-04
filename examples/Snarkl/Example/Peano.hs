@@ -52,7 +52,7 @@ nat_eq level n m
           ( \n'' ->
               case_sum
                 (const $ return false)
-                (\m'' -> nat_eq (dec level) n'' m'')
+                (nat_eq (dec level) n'')
                 m'
           )
           n'

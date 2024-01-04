@@ -73,11 +73,9 @@ sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
     chunk_sz cs0 =
       truncate $ (fromIntegral (length cs0) :: Rational) / num_chunks
     g c =
-      if sat_r1c w c
-        then True
-        else
-          failWith $
-            ErrMsg
+      sat_r1c w c
+        || failWith
+          ( ErrMsg
               ( "witness\n  "
                   ++ show w
                   ++ "\nfailed to satisfy constraint\n  "
@@ -85,6 +83,7 @@ sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
                   ++ "\nin R1CS\n  "
                   ++ show cs
               )
+          )
 
 -- | For a given R1CS and inputs, calculate a satisfying assignment.
 wit_of_r1cs :: [k] -> R1CS k -> Assgn k

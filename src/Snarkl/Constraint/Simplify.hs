@@ -6,7 +6,7 @@ module Snarkl.Constraint.Simplify
   )
 where
 
-import Control.Monad.State (State, runState, when)
+import Control.Monad.State (State, evalState, when)
 import Data.Field.Galois (GaloisField)
 import Data.List (foldl')
 import qualified Data.Set as Set
@@ -76,7 +76,7 @@ subst_constr !constr = case constr of
       -- (1) Terms whose variables resolve to constants, and
       -- (2) Terms with coeff 0.
       let less_consts =
-            filter (\(k, v) -> not (elem k const_keys) && v /= 0) $!
+            filter (\(k, v) -> notElem k const_keys && v /= 0) $!
               asList m
       -- The new linear combination: 'less_consts' with all variables
       -- replaced by their roots.
@@ -141,7 +141,7 @@ is_taut constr =
   case constr of
     CAdd _ (CoeffList []) -> return True
     CAdd _ (CoeffList (_ : _)) -> return False
-    CMult _ _ _ -> return False
+    CMult {} -> return False
     CMagic _ xs mf -> mf xs
 
 -- | Remove tautologous constraints.
@@ -195,7 +195,7 @@ do_simplify in_solve_mode env cs =
   let pinned_vars = cs_in_vars cs ++ cs_out_vars cs ++ magic_vars (cs_constraints cs)
       do_solve = if in_solve_mode then UseMagic else JustSimplify
       new_state = SEnv (UF.empty {UF.extras = env}) do_solve
-   in fst $ runState (go pinned_vars) new_state
+   in evalState (go pinned_vars) new_state
   where
     go pinned_vars =
       do
@@ -292,18 +292,17 @@ simplify_rec sigma =
     go ws us
       | Set.size us == 0 =
           return ws
-    go ws us
-      | otherwise =
-          let (given, us') = choose us
-           in do
-                given' <- subst_constr given
-                given_taut <- is_taut given'
-                if given_taut
-                  then go ws us'
-                  else do
-                    learn given'
-                    let ws' = Set.insert given' ws
-                    go ws' us'
+    go ws us =
+      let (given, us') = choose us
+       in do
+            given' <- subst_constr given
+            given_taut <- is_taut given'
+            if given_taut
+              then go ws us'
+              else do
+                learn given'
+                let ws' = Set.insert given' ws
+                go ws' us'
 
     -- NOTE: Assumes input set is nonempty
     choose s = Set.deleteFindMin s

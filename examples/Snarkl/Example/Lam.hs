@@ -261,7 +261,7 @@ step t =
     t
     (\_ -> return t)
     (\_ -> return t)
-    (\t1 t2 -> beta t1 t2)
+    beta
 
 whnf :: (GaloisField k) => TExp TTerm k -> Comp TTerm k
 whnf t = fix go t
