@@ -53,7 +53,7 @@ case_tree ::
   Comp a1 k
 case_tree t f_leaf f_node = do
   t' <- unroll t
-  case_sum (\_ -> f_leaf) go t'
+  case_sum (const f_leaf) go t'
   where
     go p' = do
       v <- fst_pair p'
@@ -97,8 +97,7 @@ tree1 = do
   l2 <- leaf
   t1' <- if return b then node (fromField 77) l1 l2 else leaf
   l3 <- leaf
-  t2 <- node (fromField 2) t1' l3
-  return t2
+  node (fromField 2) t1' l3
 
 tree_test1 :: (GaloisField k) => Comp 'TField k
 tree_test1 = do

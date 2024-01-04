@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
@@ -38,7 +37,7 @@ the_benchmarks =
     mk_bgroup
       "input-matrix70"
       (Matrix.test2 70)
-      ((Matrix.t2_m0 4900) ++ (Matrix.t2_m1 4900))
+      (Matrix.t2_m0 4900 ++ Matrix.t2_m1 4900)
       (2048215153250 :: F_BN128)
   ]
 

@@ -264,14 +264,11 @@ encode_linear out xs =
 cs_of_exp :: (GaloisField a) => Var -> Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
   EVar x ->
-    do
-      ensure_equal (out, view _Var x)
+    ensure_equal (out, view _Var x)
   EVal c ->
-    do
-      ensure_const (out, c)
+    ensure_const (out, c)
   EUnop op (EVar x) ->
-    do
-      encode_unop op (view _Var x, out)
+    encode_unop op (view _Var x, out)
   EUnop op e1 ->
     do
       e1_out <- fresh_var
@@ -411,7 +408,7 @@ cs_of_exp out e = case e of
           go garbage_var le'
   EUnit ->
     -- NOTE: [[ EUnit ]]_{out} = [[ EVal zero ]]_{out}.
-    do cs_of_exp out (EVal 0)
+    cs_of_exp out (EVal 0)
 
 data SimplParam
   = NoSimplify
@@ -497,8 +494,8 @@ compileCompToTexp mf =
       runState
         mf0
         ( Env
-            (fromInteger 0)
-            (fromInteger 0)
+            0
+            0
             []
             Map.empty
             Map.empty

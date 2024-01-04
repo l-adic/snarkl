@@ -1,4 +1,10 @@
 {-# LANGUAGE RebindableSyntax #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use let" #-}
+{-# HLINT ignore "Redundant if" #-}
+{-# HLINT ignore "Redundant return" #-}
+{-# HLINT ignore "Use <$>" #-}
 
 module Test.Snarkl.Unit.Programs where
 
@@ -78,7 +84,7 @@ prog4 =
 -- | 5. Identical to 4, except with more constraints
 pow :: Int -> TExp TField F_BN128 -> TExp TField F_BN128
 pow 0 _ = fromField 1
-pow n e = e * (pow (dec n) e)
+pow n e = e * pow (dec n) e
 
 prog5 =
   do
@@ -239,8 +245,8 @@ bool_prog22 =
     x <- pair x1 x2
     y <- (inl x :: Comp (TSum (TProd TBool TBool) TBool) F_BN128)
     case_sum
-      (\e1 -> snd_pair e1)
-      (\e2 -> return e2)
+      snd_pair
+      return
       y
 
 -- | 23. sums test 2
@@ -398,7 +404,7 @@ tests =
     (prog35, [], 77),
     (prog36, [0], 10),
     (prog36, [1], 7),
-    (prog37, 30 : (take 100 [0 ..]), 30)
+    (prog37, 30 : take 100 [0 ..], 30)
   ]
 
 bool_tests :: [(Comp 'TBool F_BN128, [Int], F_BN128)]
@@ -415,7 +421,7 @@ bool_tests =
     (bool_prog12, [0, 1], 0),
     (bool_prog12, [1, 0], 0),
     (bool_prog12, [1, 1], 1),
-    (bool_prog16, take 100 $ repeat 1, 0),
+    (bool_prog16, replicate 100 1, 0),
     (bool_prog17, [], 1),
     (bool_prog18, [0, 1, 0, 1, 0, 1, 0, 1], 1),
     (bool_prog19, [1, 1], 1),

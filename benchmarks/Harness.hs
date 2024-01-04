@@ -36,7 +36,7 @@ import Snarkl.Toplevel
     serializeWitnessAsJson,
     wit_of_r1cs,
   )
-import System.IO (hFlush, hPutStrLn, stderr, stdout)
+import System.IO (hFlush, hPrint, stderr, stdout)
 import Test.ArkworksBridge (CMD (CreateProof, CreateTrustedSetup, RunR1CS), runCMD)
 
 -- Just interpret.
@@ -46,18 +46,18 @@ test_interp mf inputs =
 
 -- Just elaborate to TExp.
 test_texp :: (Typeable ty) => Comp ty k -> IO ()
-test_texp mf = (hPutStrLn stderr . show . extract_rat . lastSeq . comp_texp . compileCompToTexp) mf
+test_texp mf = (hPrint stderr . show . extract_rat . lastSeq . comp_texp . compileCompToTexp) mf
   where
     extract_rat :: TExp ty k -> Int
     extract_rat te =
       case te of
-        TEVar _ -> 0
-        TEVal _ -> 1
-        TEUnop _ _ -> 2
-        TEBinop _ _ _ -> 3
-        TEIf _ _ _ -> 4
-        TEAssert _ _ -> 5
-        TESeq _ _ -> 6
+        TEVar {} -> 0
+        TEVal {} -> 1
+        TEUnop {} -> 2
+        TEBinop {} -> 3
+        TEIf {} -> 4
+        TEAssert {} -> 5
+        TESeq {} -> 6
         TEBot -> 7
 
 -- Just compile to constraints (no simplification yet).
@@ -65,7 +65,7 @@ test_constraints :: (Typeable ty, GaloisField k) => Comp ty k -> IO ()
 test_constraints mf =
   let texp_pkg = compileCompToTexp mf
       constrs = compileTexpToConstraints texp_pkg
-   in hPutStrLn stderr $
+   in hPrint stderr $
         show $
           Set.size $
             cs_constraints constrs
@@ -76,7 +76,7 @@ test_simplify mf =
   let texp_pkg = compileCompToTexp mf
       constrs = compileTexpToConstraints texp_pkg
       (_, constrs') = do_simplify False Map.empty constrs
-   in hPutStrLn stderr $
+   in hPrint stderr $
         show $
           Set.size $
             cs_constraints constrs'
@@ -135,7 +135,7 @@ test_numconstrs simpl mf inputs res =
 benchmark_comp :: (Typeable ty, PrimeField k) => (SimplParam, Comp ty k, [k], k) -> IO ()
 benchmark_comp (simpl, prog, inputs, res) =
   let print_ln = print_ln_to_file stdout
-      print_ln_to_file h s = (Control.Monad.>>) (hPutStrLn h s) (hFlush h)
+      print_ln_to_file h s = (Control.Monad.>>) (hPrint h s) (hFlush h)
    in case execute simpl prog inputs of
         r@(Result True _ _ res' _ _) ->
           unless (res == res') $

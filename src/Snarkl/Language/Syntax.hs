@@ -731,11 +731,11 @@ forall as mf = g as mf
 
 forall2 :: ([a], [b]) -> (a -> b -> Comp 'TUnit k) -> Comp 'TUnit k
 forall2 (as1, as2) mf =
-  forall as1 (\a1 -> forall as2 (\a2 -> mf a1 a2))
+  forall as1 (forall as2 . mf)
 
 forall3 :: ([a], [b], [c]) -> (a -> b -> c -> Comp 'TUnit k) -> Comp 'TUnit k
 forall3 (as1, as2, as3) mf =
-  forall2 (as1, as2) (\a1 a2 -> forall as3 (\a3 -> mf a1 a2 a3))
+  forall2 (as1, as2) (\a1 a2 -> forall as3 (mf a1 a2))
 
 times ::
   Int ->

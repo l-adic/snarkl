@@ -52,7 +52,7 @@ case_list ::
 case_list t f_nil f_cons =
   do
     t' <- unroll t
-    case_sum (\_ -> f_nil) go t'
+    case_sum (const f_nil) go t'
   where
     go p =
       do

@@ -104,7 +104,7 @@ matrix_colvec_mult fm n = do
             (dec n)
             ( \j acc -> do
                 a <- get (v, j)
-                return $ (fm i j) * a + acc
+                return $ fm i j * a + acc
             )
             (fromField 0)
         set (v', i) res
@@ -122,7 +122,7 @@ test1 n = matrix_colvec_mult (\_ _ -> fromField 7) n
 
 interp1 n = comp_interp (test1 n) (map fromIntegral [0 .. dec n])
 
-t2_m0 n = (map fromIntegral [0 .. dec n])
+t2_m0 n = map fromIntegral [0 .. dec n]
 
 t2_m1 n = reverse (t2_m0 n)
 
@@ -132,4 +132,4 @@ test2 n = input_matrix_mult n n n
 interp2 n =
   comp_interp
     (test2 n)
-    ((t2_m0 ((P.*) n n)) ++ (t2_m1 ((P.*) n n)))
+    (t2_m0 (n P.* n) ++ t2_m1 (n P.* n))
