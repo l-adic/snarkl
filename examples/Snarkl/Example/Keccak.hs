@@ -1,4 +1,7 @@
 {-# LANGUAGE RebindableSyntax #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use if" #-}
 
 module Snarkl.Example.Keccak where
 
@@ -84,7 +87,7 @@ round1 rc a =
       ( \x y i ->
           do
             q <- get3 (a, x, y, rot_index i (rot_tbl x y))
-            set3 (b, y, ((P.+) ((P.*) 2 x) ((P.*) 3 y)) `mod` 5, i) q
+            set3 (b, y, (P.+) ((P.*) 2 x) ((P.*) 3 y) `mod` 5, i) q
       )
     -- \chi step
     forall3
@@ -138,11 +141,11 @@ rot_index ::
   Int -> -- rotate index 'i'
   Int -> -- by 'n' (mod lane width)
   Int
-rot_index i n = ((P.-) i n) `mod` ln_width
+rot_index i n = (P.-) i n `mod` ln_width
 
 rot_tbl x y =
   let m =
-        Map.fromList $
+        Map.fromList
           [ ((3, 2), 25),
             ((4, 2), 39),
             ((0, 2), 3),
@@ -191,7 +194,7 @@ keccak_f1 num_rounds a =
   forall
     [0 .. dec num_rounds]
     ( \round_i ->
-        round1 (\bit_i -> get_round_bit round_i bit_i) a
+        round1 (get_round_bit round_i) a
     )
 
 -- num_rounds = 12+2l, where 2^l = ln_width
@@ -216,7 +219,7 @@ input_vals = go ((P.*) num_lanes ln_width)
     go :: Int -> [Int]
     go 0 = []
     go n | odd n = 0 : go (dec n)
-    go n | otherwise = 1 : go (dec n)
+    go n = 1 : go (dec n)
 
 -- test_full n
 --   = Top.test (keccak1 n, input_vals, (1::Integer))

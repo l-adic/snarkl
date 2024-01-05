@@ -9,7 +9,7 @@ module Snarkl.Language.Expr
   )
 where
 
-import Control.Monad.State (State, gets, modify, runState)
+import Control.Monad.State (State, evalState, gets, modify)
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Map (Map)
@@ -128,7 +128,7 @@ const_prop e =
         return EUnit
 
 do_const_prop :: (GaloisField a) => Exp a -> Exp a
-do_const_prop e = fst $ runState (const_prop e) Map.empty
+do_const_prop e = evalState (const_prop e) Map.empty
 
 instance (Pretty a) => Pretty (Exp a) where
   pretty (EVar x) = "var_" <> pretty x
