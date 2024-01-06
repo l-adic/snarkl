@@ -58,7 +58,7 @@ import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.Expr (Variable (..))
 import Snarkl.Language.TExpr
   ( Loc,
-    TExp (TEAssert, TEBinop, TEBot, TESeq, TEUnop, TEVal, TEVar),
+    TExp (..),
     TLoc (TLoc),
     TVar (TVar),
     Ty (TArr, TBool, TProd, TUnit),

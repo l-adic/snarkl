@@ -9,11 +9,8 @@ module Snarkl.Language.LambdaExpr
 where
 
 import Control.Monad.Error.Class (throwError)
-import Control.Monad.State (State, gets, modify, runState)
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
-import Data.Map (Map)
-import qualified Data.Map as Map
 import Snarkl.Common (Op, UnOp, isAssoc)
 import Snarkl.Language.Expr (Variable)
 import qualified Snarkl.Language.Expr as Core
@@ -105,4 +102,4 @@ expOfLambdaExp _exp =
       EIf b e1 e2 -> Core.EIf <$> expOfLambdaExp' b <*> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
       EAssert e1 e2 -> Core.EAssert <$> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
       ESeq e1 e2 -> expSeq <$> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
-      e -> throwError ("Impossible after IR simplicifaction: " <> show e)
+      e -> throwError ("Impossible after lambda simplicifaction: " <> show e)

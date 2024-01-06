@@ -25,7 +25,7 @@ source-repository head
 
 library
   ghc-options:
-    -Wall -Wredundant-constraints -funbox-strict-fields
+    -Wall -Werror -Wredundant-constraints -funbox-strict-fields
     -optc-O3
 
   -- -threaded
