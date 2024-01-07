@@ -11,7 +11,7 @@ module Snarkl.Language
     (>>),
     Env (..),
     -- | Return a fresh input variable.
-    InputType (..),
+    fresh_input,
     -- | Classes
     Zippable,
     Derive,

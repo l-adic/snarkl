@@ -15,7 +15,7 @@ module Snarkl.Language.SyntaxMonad
     Env (..),
     State (..),
     -- | Return a fresh input variable.
-    InputType (..),
+    fresh_input,
     -- | Return a fresh variable.
     fresh_var,
     -- | Return a fresh location.
@@ -61,7 +61,7 @@ import Snarkl.Language.TExpr
     TExp (..),
     TLoc (TLoc),
     TVar (TVar),
-    Ty (TArr, TBool, TField, TProd, TUnit),
+    Ty (TArr, TBool, TProd, TUnit),
     Val (VFalse, VLoc, VTrue, VUnit),
     lastSeq,
     locOfTexp,
@@ -443,8 +443,8 @@ fresh_var =
               )
     )
 
-_fresh_input :: State (Env k) (TExp ty a)
-_fresh_input =
+fresh_input :: State (Env k) (TExp ty a)
+fresh_input =
   State
     ( \s ->
         let (v, nextVar) = runSupply (Variable <$> fresh) (next_variable s)
@@ -456,24 +456,6 @@ _fresh_input =
                   }
               )
     )
-
-class (Typeable ty) => InputType (ty :: Ty) where
-  fresh_input :: (GaloisField k) => State (Env k) (TExp ty k)
-
-instance InputType 'TBool where
-  fresh_input = _fresh_input
-
-instance InputType 'TUnit where
-  fresh_input = _fresh_input
-
-instance InputType 'TField where
-  fresh_input = _fresh_input
-
-instance (InputType ty1, InputType ty2) => InputType ('TProd ty1 ty2) where
-  fresh_input = do
-    x1 <- fresh_input
-    x2 <- fresh_input
-    pair x1 x2
 
 fresh_loc :: State (Env k) (TExp ty a)
 fresh_loc =

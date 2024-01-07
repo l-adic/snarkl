@@ -4,7 +4,7 @@
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Snarkl.Example.Games () where
+module Snarkl.Example.Games where
 
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
@@ -42,7 +42,7 @@ data Game :: Ty -> * -> * where
   Single ::
     forall (s :: Ty) (t :: Ty) k.
     ( Typeable s,
-      InputType s
+      Typeable t
     ) =>
     ISO t s k ->
     Game t k
@@ -55,17 +55,15 @@ data Game :: Ty -> * -> * where
       Zippable t2 k,
       Zippable t k,
       Derive t1 k,
-      Derive t2 k,
-      InputType t1,
-      InputType t2
+      Derive t2 k
     ) =>
     ISO t ('TSum t1 t2) k ->
     Game t1 k ->
     Game t2 k ->
     Game t k
 
-decode :: (GaloisField k, InputType t) => Game t k -> Comp t k
-decode (Single (Iso _ bld :: ISO t s k)) =
+decode :: (GaloisField k) => Game t k -> Comp t k
+decode (Single (Iso _ bld)) =
   do
     x <- fresh_input
     bld x
@@ -94,7 +92,7 @@ bool_game =
 unit_game :: (GaloisField k) => Game 'TUnit k
 unit_game = Single (Iso (\_ -> return (fromField 1)) (\(_ :: TExp 'TField k) -> return unit))
 
-fail_game :: (Typeable ty, InputType ty) => Game ty p
+fail_game :: (Typeable ty) => Game ty p
 fail_game =
   Single
     ( Iso
@@ -111,9 +109,7 @@ sum_game ::
     Zippable t2 k,
     Derive t1 k,
     Derive t2 k,
-    GaloisField k,
-    InputType t1,
-    InputType t2
+    GaloisField k
   ) =>
   Game t1 k ->
   Game t2 k ->
@@ -124,11 +120,11 @@ sum_game g1 g2 =
 basic_game :: (GaloisField k) => Game ('TSum 'TField 'TField) k
 basic_game = sum_game field_game field_game
 
-{-
 basic_test :: (GaloisField k) => Comp 'TField k
-basic_test = do
-  s <- decode basic_game
-  case_sum return return s
+basic_test =
+  do
+    s <- decode basic_game
+    case_sum return return s
 
 t1 :: F_BN128
 t1 = comp_interp basic_test [0, 23, 88] -- 23
@@ -136,15 +132,11 @@ t1 = comp_interp basic_test [0, 23, 88] -- 23
 t2 :: F_BN128
 t2 = comp_interp basic_test [1, 23, 88] -- 88
 
--}
-
 (+>) ::
   ( Typeable t,
     Typeable s,
     Zippable t k,
-    Zippable s k,
-    InputType t,
-    InputType s
+    Zippable s k
   ) =>
   Game t k ->
   ISO s t k ->
@@ -187,7 +179,6 @@ seqI (Iso f g) (Iso f' g') = Iso (\a -> f a >>= f') (\c -> g' c >>= g)
 
 prodLInputI ::
   ( Typeable a,
-    InputType a,
     Typeable b,
     GaloisField k
   ) =>
@@ -252,9 +243,7 @@ prod_game ::
     Zippable b k,
     Derive a k,
     Derive b k,
-    GaloisField k,
-    InputType a,
-    InputType b
+    GaloisField k
   ) =>
   Game a k ->
   Game b k ->
@@ -320,9 +309,7 @@ instance
     Derive b k,
     Gameable a k,
     Gameable b k,
-    GaloisField k,
-    InputType a,
-    InputType b
+    GaloisField k
   ) =>
   Gameable ('TProd a b) k
   where
@@ -337,13 +324,11 @@ instance
     Derive b k,
     Gameable a k,
     Gameable b k,
-    GaloisField k,
-    InputType a,
-    InputType b
+    GaloisField k
   ) =>
   Gameable ('TSum a b) k
   where
   mkGame = sum_game mkGame mkGame
 
-gdecode :: (Gameable t k, InputType t, GaloisField k) => Comp t k
+gdecode :: (Gameable t k, GaloisField k) => Comp t k
 gdecode = decode mkGame

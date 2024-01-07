@@ -1,5 +1,4 @@
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Snarkl.Example.Queue where
 
@@ -185,15 +184,15 @@ queue_comp3 =
     sx <- dequeue q1 (fromField 0)
     fst_pair sx
 
-queueN :: forall a k. (Typeable a, Zippable a k, Derive a k, GaloisField k, InputType a) => TExp 'TField k -> Comp (TQueue a) k
-queueN n =
-  let go self n0 = do
-        x <- fresh_input @a
-        tl <- self (n0 - fromField 1)
-        if return (eq n0 (fromField 0))
-          then empty_queue
-          else enqueue x tl
-   in fixN 100 go n
+queueN :: (Typeable a, Zippable a k, Derive a k, GaloisField k) => TExp 'TField k -> Comp (TQueue a) k
+queueN n = fixN 100 go n
+  where
+    go self n0 = do
+      x <- fresh_input
+      tl <- self (n0 - fromField 1)
+      if return (eq n0 (fromField 0))
+        then empty_queue
+        else enqueue x tl
 
 test_queueN :: (GaloisField k) => Comp 'TField k
 test_queueN = do
