@@ -1,4 +1,5 @@
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use let" #-}
@@ -147,7 +148,7 @@ bool_prog10 =
 -- | 11. are unused fresh_input variables treated properly?
 prog11 =
   do
-    _ <- fresh_input :: Comp ('TArr 'TField) F_BN128
+    _ <- fresh_input @'TField
     b <- fresh_input
     return b
 

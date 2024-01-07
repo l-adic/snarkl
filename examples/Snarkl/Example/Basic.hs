@@ -1,4 +1,5 @@
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Snarkl.Example.Basic where
 
@@ -48,10 +49,12 @@ desugar1 = compileCompToTexp p1
 interp1 :: (GaloisField k) => k
 interp1 = comp_interp p1 []
 
+p2 :: (GaloisField k) => Comp 'TField k
 p2 = do
-  x <- fresh_input
+  x <- fresh_input @'TField
   return $ x + x
 
+desugar2 :: (GaloisField k) => TExpPkg 'TField k
 desugar2 = compileCompToTexp p2
 
 interp2 :: (GaloisField k) => k

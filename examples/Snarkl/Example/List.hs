@@ -1,4 +1,6 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Snarkl.Example.List where
 
@@ -216,11 +218,11 @@ list_comp4 =
     l <- list2
     last_list (fromField 0) l
 
-listN :: (Typeable a, Zippable a k, Derive a k, GaloisField k) => TExp 'TField k -> Comp (TList a) k
+listN :: (Typeable 'TField, Zippable 'TField k, Derive 'TField k, GaloisField k) => TExp 'TField k -> Comp (TList 'TField) k
 listN n = fixN 100 go n
   where
     go self n0 = do
-      x <- fresh_input
+      x <- fresh_input @TField
       tl <- self (n0 - fromField 1)
       if return (eq n0 (fromField 0)) then nil else cons x tl
 
