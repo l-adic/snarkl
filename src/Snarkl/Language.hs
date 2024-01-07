@@ -2,7 +2,7 @@ module Snarkl.Language
   ( expOfTExp,
     booleanVarsOfTexp,
     TExp,
-    module Snarkl.Language.Expr,
+    module Snarkl.Language.Core,
     -- | SyntaxMonad
     Comp,
     runState,
@@ -80,6 +80,9 @@ where
 
 import Data.Data (Typeable)
 import Data.Field.Galois (GaloisField)
+import Debug.Trace (trace)
+import Prettyprinter (Pretty (pretty))
+import Snarkl.Language.Core
 import Snarkl.Language.Expr
 import Snarkl.Language.LambdaExpr (expOfLambdaExp)
 import Snarkl.Language.Syntax
@@ -87,5 +90,10 @@ import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import qualified Prelude
 
-expOfTExp :: (GaloisField a, Typeable ty) => TExp ty a -> Exp a
-expOfTExp = expOfLambdaExp Prelude.. lambdaExpOfTExp
+expOfTExp :: (Prelude.Show a, GaloisField a, Typeable ty, Pretty a) => TExp ty a -> Program a
+expOfTExp te =
+  trace (Prelude.show te) Prelude.$
+    let e = do_const_prop Prelude.. expOfLambdaExp Prelude.. lambdaExpOfTExp Prelude.$ te
+     in case mkProgram e of
+          Prelude.Right p -> p
+          Prelude.Left err -> Prelude.error Prelude.$ "expOfTExp: failed to convert TExp to Program: " Prelude.<> err

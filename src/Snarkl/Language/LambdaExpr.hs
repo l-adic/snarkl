@@ -12,8 +12,9 @@ import Control.Monad.Error.Class (throwError)
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Snarkl.Common (Op, UnOp, isAssoc)
-import Snarkl.Language.Expr (Variable)
-import qualified Snarkl.Language.Expr as Core
+import Snarkl.Language.Core (Variable)
+import Snarkl.Language.Expr (expSeq)
+import qualified Snarkl.Language.Expr as E
 
 data Exp :: Type -> Type where
   EVar :: Variable -> Exp a
@@ -57,7 +58,7 @@ betaNormalize = \case
       EBinop op es -> EBinop op (substitute (var, e1) <$> es)
       EIf b e2 e3 -> EIf (substitute (var, e1) b) (substitute (var, e1) e2) (substitute (var, e1) e3)
       EAssert e2 e3 -> EAssert (substitute (var, e1) e2) (substitute (var, e1) e3)
-      ESeq e2 e3 -> ESeq (substitute (var, e1) e2) (substitute (var, e1) e3)
+      ESeq l r -> ESeq (substitute (var, e1) l) (substitute (var, e1) r)
       EAbs var' e -> EAbs var' (substitute (var, e1) e)
       EApp e2 e3 -> EApp (substitute (var, e1) e2) (substitute (var, e1) e3)
 
@@ -75,31 +76,21 @@ expBinop op e1 e2 =
           EBinop op (e1 : l2)
     (_, _) -> EBinop op [e1, e2]
 
--- | Smart constructor for sequence, ensuring all expressions are
---  flattened to top level.
-expSeq :: Core.Exp a -> Core.Exp a -> Core.Exp a
-expSeq e1 e2 =
-  case (e1, e2) of
-    (Core.ESeq l1, Core.ESeq l2) -> Core.ESeq (l1 ++ l2)
-    (Core.ESeq l1, _) -> Core.ESeq (l1 ++ [e2])
-    (_, Core.ESeq l2) -> Core.ESeq (e1 : l2)
-    (_, _) -> Core.ESeq [e1, e2]
-
-expOfLambdaExp :: (Show a) => Exp a -> Core.Exp a
+expOfLambdaExp :: (Show a) => Exp a -> E.Exp a
 expOfLambdaExp _exp =
   let coreExp = betaNormalize _exp
    in case expOfLambdaExp' coreExp of
         Left err -> error err
         Right e -> e
   where
-    expOfLambdaExp' :: (Show a) => Exp a -> Either String (Core.Exp a)
+    expOfLambdaExp' :: (Show a) => Exp a -> Either String (E.Exp a)
     expOfLambdaExp' = \case
-      EVar var -> pure $ Core.EVar var
-      EVal v -> pure $ Core.EVal v
-      EUnit -> pure Core.EUnit
-      EUnop op e -> Core.EUnop op <$> expOfLambdaExp' e
-      EBinop op es -> Core.EBinop op <$> mapM expOfLambdaExp' es
-      EIf b e1 e2 -> Core.EIf <$> expOfLambdaExp' b <*> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
-      EAssert e1 e2 -> Core.EAssert <$> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
+      EVar var -> pure $ E.EVar var
+      EVal v -> pure $ E.EVal v
+      EUnit -> pure E.EUnit
+      EUnop op e -> E.EUnop op <$> expOfLambdaExp' e
+      EBinop op es -> E.EBinop op <$> mapM expOfLambdaExp' es
+      EIf b e1 e2 -> E.EIf <$> expOfLambdaExp' b <*> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
+      EAssert e1 e2 -> E.EAssert <$> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
       ESeq e1 e2 -> expSeq <$> expOfLambdaExp' e1 <*> expOfLambdaExp' e2
       e -> throwError ("Impossible after lambda simplicifaction: " <> show e)

@@ -22,6 +22,9 @@ import Control.Monad.State
 import qualified Control.Monad.State as State
 import Data.Either (fromRight)
 import Data.Field.Galois (GaloisField)
+-- do_const_prop,
+
+import Data.Foldable (traverse_)
 import Data.List (sort)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -46,15 +49,13 @@ import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
   ( Comp,
     Env (Env, input_vars, next_variable),
-    Exp (..),
     TExp,
     Variable (Variable),
     booleanVarsOfTexp,
-    do_const_prop,
     expOfTExp,
     runState,
-    var_of_exp,
   )
+import qualified Snarkl.Language.Core as Core
 
 ----------------------------------------------------------------
 --
@@ -110,13 +111,13 @@ encode_or :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_or (x, y, z) =
   do
     x_mult_y <- fresh_var
-    cs_of_exp x_mult_y (EBinop Mult [EVar (_Var # x), EVar (_Var # y)])
+    cs_of_exp x_mult_y (Core.EBinop Mult [Core.EVar (_Var # x), Core.EVar (_Var # y)])
     cs_of_exp
       x_mult_y
-      ( EBinop
+      ( Core.EBinop
           Sub
-          [ EBinop Add [EVar (_Var # x), EVar (_Var # y)],
-            EVar (_Var # z)
+          [ Core.EBinop Add [Core.EVar (_Var # x), Core.EVar (_Var # y)],
+            Core.EVar (_Var # z)
           ]
       )
 
@@ -153,25 +154,24 @@ encode_boolean_eq :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
 encode_boolean_eq (x, y, z) = cs_of_exp z e
   where
     e =
-      EBinop
+      Core.EBinop
         Add
-        [ EBinop Mult [EVar (_Var # x), EVar (_Var # y)],
-          EBinop
+        [ Core.EBinop Mult [Core.EVar (_Var # x), Core.EVar (_Var # y)],
+          Core.EBinop
             Mult
-            [ EBinop Sub [EVal 1, EVar (_Var # x)],
-              EBinop Sub [EVal 1, EVar (_Var # y)]
+            [ Core.EBinop Sub [Core.EVal 1, Core.EVar (_Var # x)],
+              Core.EBinop Sub [Core.EVal 1, Core.EVar (_Var # y)]
             ]
         ]
 
 -- | Constraint 'x == y = z'.
 -- The encoding is: z = (x-y == 0).
 encode_eq :: (GaloisField a) => (Var, Var, Var) -> State (CEnv a) ()
-encode_eq (x, y, z) = cs_of_exp z e
-  where
-    e =
-      EAssert
-        (EVar (_Var # z))
-        (EUnop ZEq (EBinop Sub [EVar (_Var # x), EVar (_Var # y)]))
+encode_eq (x, y, z) =
+  cs_of_assignment $
+    Core.Assignment
+      (_Var # z)
+      (Core.EUnop ZEq (Core.EBinop Sub [Core.EVar (_Var # x), Core.EVar (_Var # y)]))
 
 -- | Constraint 'y = x!=0 ? 1 : 0'.
 -- The encoding is:
@@ -191,8 +191,8 @@ encode_zneq (x, y) =
     nm <- fresh_var
     add_constraint (CMagic nm [x, m] mf)
     -- END magic.
-    cs_of_exp y (EBinop Mult [EVar (_Var # x), EVar (_Var # m)])
-    cs_of_exp neg_y (EBinop Sub [EVal 1, EVar (_Var # y)])
+    cs_of_exp y (Core.EBinop Mult [Core.EVar (_Var # x), Core.EVar (_Var # m)])
+    cs_of_exp neg_y (Core.EBinop Sub [Core.EVal 1, Core.EVar (_Var # y)])
     add_constraint
       (CMult (1, neg_y) (1, x) (0, Nothing))
   where
@@ -219,7 +219,7 @@ encode_zeq (x, y) =
   do
     neg_y <- fresh_var
     encode_zneq (x, neg_y)
-    cs_of_exp y (EBinop Sub [EVal 1, EVar (_Var # neg_y)])
+    cs_of_exp y (Core.EBinop Sub [Core.EVal 1, Core.EVar (_Var # neg_y)])
 
 -- | Encode the constraint 'un_op x = y'
 encode_unop :: (GaloisField a) => UnOp -> (Var, Var) -> State (CEnv a) ()
@@ -261,20 +261,20 @@ encode_linear out xs =
     remove_consts (Left p : l) = p : remove_consts l
     remove_consts (Right _ : l) = remove_consts l
 
-cs_of_exp :: (GaloisField a) => Var -> Exp a -> State (CEnv a) ()
+cs_of_exp :: (GaloisField a) => Var -> Core.Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
-  EVar x ->
+  Core.EVar x ->
     ensure_equal (out, view _Var x)
-  EVal c ->
+  Core.EVal c ->
     ensure_const (out, c)
-  EUnop op (EVar x) ->
+  Core.EUnop op (Core.EVar x) ->
     encode_unop op (view _Var x, out)
-  EUnop op e1 ->
+  Core.EUnop op e1 ->
     do
       e1_out <- fresh_var
       cs_of_exp e1_out e1
       encode_unop op (e1_out, out)
-  EBinop op es ->
+  Core.EBinop op es ->
     -- [NOTE linear combination optimization:] cf. also
     -- 'encode_linear' above. 'go_linear' returns a list of
     -- (label*coeff + constant) pairs.
@@ -287,33 +287,33 @@ cs_of_exp out e = case e of
     -- We special-case linear combinations in this way to avoid having
     -- to introduce new multiplication gates for multiplication by
     -- constant scalars.
-    let go_linear :: (GaloisField a) => [Exp a] -> State (CEnv a) [Either (Var, a) a]
+    let go_linear :: (GaloisField a) => [Core.Exp a] -> State (CEnv a) [Either (Var, a) a]
         go_linear [] = return []
-        go_linear (EBinop Mult [EVar x, EVal coeff] : es') =
+        go_linear (Core.EBinop Mult [Core.EVar x, Core.EVal coeff] : es') =
           do
             labels <- go_linear es'
             return $ Left (x ^. _Var, coeff) : labels
-        go_linear (EBinop Mult [EVal coeff, EVar y] : es') =
+        go_linear (Core.EBinop Mult [Core.EVal coeff, Core.EVar y] : es') =
           do
             labels <- go_linear es'
             return $ Left (y ^. _Var, coeff) : labels
-        go_linear (EBinop Mult [e_left, EVal coeff] : es') =
+        go_linear (Core.EBinop Mult [e_left, Core.EVal coeff] : es') =
           do
             e_left_out <- fresh_var
             cs_of_exp e_left_out e_left
             labels <- go_linear es'
             return $ Left (e_left_out, coeff) : labels
-        go_linear (EBinop Mult [EVal coeff, e_right] : es') =
+        go_linear (Core.EBinop Mult [Core.EVal coeff, e_right] : es') =
           do
             e_right_out <- fresh_var
             cs_of_exp e_right_out e_right
             labels <- go_linear es'
             return $ Left (e_right_out, coeff) : labels
-        go_linear (EVal c : es') =
+        go_linear (Core.EVal c : es') =
           do
             labels <- go_linear es'
             return $ Right c : labels
-        go_linear (EVar x : es') =
+        go_linear (Core.EVar x : es') =
           do
             labels <- go_linear es'
             return $ Left (x ^. _Var, 1) : labels
@@ -338,9 +338,9 @@ cs_of_exp out e = case e of
         rev_pol (Left (x, c) : ls) = Left (x, -c) : rev_pol ls
         rev_pol (Right c : ls) = Right (-c) : rev_pol ls
 
-        go_other :: (GaloisField a) => [Exp a] -> State (CEnv a) [Var]
+        go_other :: (GaloisField a) => [Core.Exp a] -> State (CEnv a) [Var]
         go_other [] = return []
-        go_other (EVar x : es') =
+        go_other (Core.EVar x : es') =
           do
             labels <- go_other es'
             return $ (x ^. _Var) : labels
@@ -378,37 +378,40 @@ cs_of_exp out e = case e of
                 encode_labels labels
 
   -- Encoding: out = b*e1 + (1-b)e2
-  EIf b e1 e2 -> cs_of_exp out e0
+  Core.EIf b e1 e2 -> cs_of_exp out e0
     where
       e0 =
-        EBinop
+        Core.EBinop
           Add
-          [ EBinop Mult [b, e1],
-            EBinop Mult [EBinop Sub [EVal 1, b], e2]
+          [ Core.EBinop Mult [b, e1],
+            Core.EBinop Mult [Core.EBinop Sub [Core.EVal 1, b], e2]
           ]
 
-  -- NOTE: when compiling assignments, the naive thing to do is
-  -- to introduce a new var, e2_out, bound to result of e2 and
-  -- then ensure that e2_out == x. We optimize by passing x to
-  -- compilation of e2 directly.
-  EAssert e1 e2 ->
-    do
-      let x = var_of_exp e1
-      cs_of_exp (x ^. _Var) e2
-  ESeq le ->
-    do
-      x <- fresh_var -- x is garbage
-      go x le
-    where
-      go _ [] = failWith $ ErrMsg "internal error: empty ESeq"
-      go _ [e1] = cs_of_exp out e1
-      go garbage_var (e1 : le') =
-        do
-          cs_of_exp garbage_var e1
-          go garbage_var le'
-  EUnit ->
+  ---- NOTE: when compiling assignments, the naive thing to do is
+  ---- to introduce a new var, e2_out, bound to result of e2 and
+  ---- then ensure that e2_out == x. We optimize by passing x to
+  ---- compilation of e2 directly.
+  -- EAssert e1 e2 ->
+  --  do
+  --    let x = var_of_exp e1
+  --    cs_of_exp (x ^. _Var) e2
+  -- ESeq le ->
+  --  do
+  --    x <- fresh_var -- x is garbage
+  --    go x le
+  --  where
+  --    go _ [] = failWith $ ErrMsg "internal error: empty ESeq"
+  --    go _ [e1] = cs_of_exp out e1
+  --    go garbage_var (e1 : le') =
+  --      do
+  --        cs_of_exp garbage_var e1
+  --        go garbage_var le'
+  Core.EUnit ->
     -- NOTE: [[ EUnit ]]_{out} = [[ EVal zero ]]_{out}.
-    cs_of_exp out (EVal 0)
+    cs_of_exp out (Core.EVal 0)
+
+cs_of_assignment :: (GaloisField a) => Core.Assignment a -> State (CEnv a) ()
+cs_of_assignment (Core.Assignment x e) = cs_of_exp (view _Var x) e
 
 data SimplParam
   = NoSimplify
@@ -503,7 +506,7 @@ compileCompToTexp mf =
 
 -- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
 compileTexpToConstraints ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty, GaloisField k, Pretty k) =>
   TExpPkg ty k ->
   ConstraintSystem k
 compileTexpToConstraints (TExpPkg _out _in_vars te) =
@@ -516,10 +519,11 @@ compileTexpToConstraints (TExpPkg _out _in_vars te) =
               Set.toList $
                 Set.fromList in_vars
                   `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
-            e0 = expOfTExp te
-            e = do_const_prop e0
+            Core.Program assignments e = expOfTExp te
+        traverse_ cs_of_assignment assignments
+        -- e = do_const_prop e0
         -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
-        cs_of_exp out e
+        cs_of_assignment $ Core.Assignment (_Var # out) e
         -- Add boolean constraints
         mapM_ ensure_boolean boolean_in_vars
         cs <- get_constraints
@@ -536,7 +540,7 @@ compileTexpToConstraints (TExpPkg _out _in_vars te) =
 
 -- | Snarkl.Compile Snarkl computations to constraint systems.
 compileCompToConstraints ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty, GaloisField k, Pretty k) =>
   Comp ty k ->
   ConstraintSystem k
 compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
@@ -549,7 +553,7 @@ compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
 
 -- | Snarkl.Compile 'TExp's to 'R1CS'.
 compileTExpToR1CS ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty, GaloisField k, Pretty k) =>
   SimplParam ->
   TExpPkg ty k ->
   R1CS k
@@ -557,7 +561,7 @@ compileTExpToR1CS simpl = compileConstraintsToR1CS simpl . compileTexpToConstrai
 
 -- | Snarkl.Compile Snarkl computations to 'R1CS'.
 compileCompToR1CS ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty, GaloisField k, Pretty k) =>
   SimplParam ->
   Comp ty k ->
   R1CS k

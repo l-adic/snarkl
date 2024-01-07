@@ -3,6 +3,7 @@ module Test.ArkworksBridge where
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
 import Data.Typeable (Typeable)
+import Prettyprinter (Pretty)
 import Snarkl.Backend.R1CS
 import Snarkl.Compile (SimplParam, compileCompToR1CS)
 import Snarkl.Language (Comp)
@@ -14,7 +15,7 @@ data CMD k where
   CreateProof :: (Typeable ty, GaloisField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> CMD k
   RunR1CS :: (Typeable ty, GaloisField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> CMD k
 
-runCMD :: (PrimeField k) => CMD k -> IO GHC.ExitCode
+runCMD :: (PrimeField k, Pretty k) => CMD k -> IO GHC.ExitCode
 runCMD (CreateTrustedSetup rootDir name simpl c) = do
   let r1cs = compileCompToR1CS simpl c
       r1csFilePath = mkR1CSFilePath rootDir name

@@ -25,7 +25,7 @@ source-repository head
 
 library
   ghc-options:
-    -Wall -Werror -Wredundant-constraints -funbox-strict-fields
+    -Wall -Wredundant-constraints -funbox-strict-fields
     -optc-O3
 
   -- -threaded
@@ -52,6 +52,7 @@ library
     Snarkl.Language.Expr
     Snarkl.Language.LambdaExpr
     Snarkl.Language.Syntax
+    Snarkl.Language.Core
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
     Snarkl.Toplevel
@@ -80,6 +81,7 @@ library
     , bytestring
     , Cabal          >=1.22
     , containers     >=0.5   && <0.7
+    , errors
     , galois-field   >=1.0.4
     , hspec          >=2.0
     , jsonl          >=0.1.4
@@ -88,6 +90,7 @@ library
     , parallel       >=3.2   && <3.3
     , prettyprinter
     , process        >=1.2
+    , transformers
 
   hs-source-dirs:     src
   default-language:   Haskell2010
@@ -133,6 +136,7 @@ test-suite spec
     , mtl           >=2.2     && <2.3
     , parallel      >=3.2     && <3.3
     , process       >=1.2
+    , prettyprinter
     , QuickCheck
     , snarkl        >=0.1.0.0
 

@@ -104,6 +104,7 @@ import Snarkl.Language.TExpr
     TUnop (TUnop),
     Ty (TArr, TBool, TField, TFun, TMu, TProd, TSum, TUnit),
     Val (VFalse, VField, VTrue, VUnit),
+    teSeq,
   )
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
@@ -761,6 +762,23 @@ lambda f = do
               Right (res, s') -> Right (TEAbs x res, s')
         )
     _ -> error "impossible: lambda"
+
+-- lambda ::
+--  (Typeable a) =>
+--  (Typeable b) =>
+--  (TExp a k -> Comp b k) ->
+--  Comp ('TFun a b) k
+-- lambda f =
+--
+--  State
+--    ( \s ->
+--        case runState fresh_var s of
+--          Left err -> Left err
+--          Right (e, s') ->
+--            case runState (f e) s' of
+--            Left err -> Left err
+--            Right (e', s'') -> Right (e `teSeq` (Abs )', s'')
+--    )
 
 curry ::
   (Typeable a) =>

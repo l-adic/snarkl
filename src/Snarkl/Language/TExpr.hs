@@ -28,7 +28,7 @@ import Data.Typeable (Proxy (..), Typeable, eqT, typeOf, typeRep, type (:~:) (Re
 import Prettyprinter (Pretty (pretty), line, parens, (<+>))
 import Snarkl.Common (Op, UnOp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language.Expr (Variable)
+import Snarkl.Language.Core (Variable)
 import qualified Snarkl.Language.LambdaExpr as LE
 
 data TFunct where

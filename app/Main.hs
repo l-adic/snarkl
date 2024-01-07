@@ -4,6 +4,7 @@ import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
+import Prettyprinter
 import Snarkl.Compile (SimplParam (NoSimplify))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Field
@@ -14,7 +15,7 @@ main :: IO ()
 main = do
   executeAndWriteArtifacts "./snarkl-output" "prog2" NoSimplify (Programs.prog2 10) [1 :: F_BN128]
 
-executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> IO ()
+executeAndWriteArtifacts :: (Typeable ty, Pretty k, PrimeField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> IO ()
 executeAndWriteArtifacts fp name simpl mf inputs = do
   let Result {result_sat = isSatisfied, result_r1cs = r1cs, result_witness = wit} = execute simpl mf inputs
   unless isSatisfied $ failWith $ ErrMsg "R1CS is not satisfied"

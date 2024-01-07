@@ -55,7 +55,7 @@ import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
 import Data.Typeable (Typeable)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language.Expr (Variable (..))
+import Snarkl.Language.Core (Variable (..))
 import Snarkl.Language.TExpr
   ( Loc,
     TExp (..),

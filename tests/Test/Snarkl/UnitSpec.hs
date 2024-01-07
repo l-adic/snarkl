@@ -5,6 +5,7 @@ module Test.Snarkl.UnitSpec where
 
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
+import Prettyprinter (Pretty)
 import Snarkl.Compile
 import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
@@ -21,7 +22,7 @@ import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.Snarkl.Unit.Programs
 import Prelude
 
-test_comp :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> IO (Either ExitCode k)
+test_comp :: (Typeable ty, Pretty k, PrimeField k) => SimplParam -> Comp ty k -> [k] -> IO (Either ExitCode k)
 test_comp simpl mf args =
   do
     exit_code <- runCMD $ RunR1CS "./scripts" "hspec" simpl mf args
