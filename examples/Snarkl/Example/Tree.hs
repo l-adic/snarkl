@@ -27,12 +27,12 @@ type Rat k = TExp 'TField k
 
 type Tree a k = TExp (TTree a) k
 
-leaf :: (Typeable a, GaloisField k) => Comp (TTree a) k
+leaf :: (Typeable a) => Comp (TTree a) k
 leaf = do
   t <- inl unit
   roll t
 
-node :: (Typeable a, GaloisField k) => TExp a k -> Tree a k -> Tree a k -> Comp (TTree a) k
+node :: (Typeable a) => TExp a k -> Tree a k -> Tree a k -> Comp (TTree a) k
 node v t1 t2 = do
   p <- pair t1 t2
   p' <- pair v p
@@ -41,8 +41,6 @@ node v t1 t2 = do
 
 case_tree ::
   ( Typeable a,
-    GaloisField k,
-    Typeable a1,
     Zippable a1 k
   ) =>
   Tree a k ->
@@ -64,8 +62,7 @@ map_tree ::
   ( Typeable a,
     Typeable a1,
     Zippable a1 k,
-    Derive a1 k,
-    GaloisField k
+    Derive a1 k
   ) =>
   (TExp a k -> Comp a1 k) ->
   TExp (TTree a) k ->

@@ -28,19 +28,19 @@ type TStack a = TList a
 
 type Stack a k = TExp (TStack a) k
 
-empty_stack :: (Typeable a, GaloisField k) => Comp (TStack a) k
+empty_stack :: (Typeable a) => Comp (TStack a) k
 empty_stack = nil
 
-push_stack :: (Typeable a, GaloisField k) => TExp a k -> Stack a k -> Comp (TStack a) k
+push_stack :: (Typeable a) => TExp a k -> Stack a k -> Comp (TStack a) k
 push_stack p q = cons p q
 
-pop_stack :: (Derive a k, Zippable a k, Typeable a, GaloisField k) => Stack a k -> Comp (TStack a) k
+pop_stack :: (Derive a k, Zippable a k, Typeable a) => Stack a k -> Comp (TStack a) k
 pop_stack f = tail_list f
 
-top_stack :: (Derive a k, Zippable a k, Typeable a, GaloisField k) => TExp a k -> Stack a k -> Comp a k
+top_stack :: (Zippable a k, Typeable a) => TExp a k -> Stack a k -> Comp a k
 top_stack def e = head_list def e
 
-is_empty_stack :: (Typeable a, GaloisField k) => Stack a k -> Comp 'TBool k
+is_empty_stack :: (Typeable a) => Stack a k -> Comp 'TBool k
 is_empty_stack s =
   case_list s (return true) (\_ _ -> return false)
 

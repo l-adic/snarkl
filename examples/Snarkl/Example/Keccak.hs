@@ -35,7 +35,6 @@ ln_width :: Int
 ln_width = 32
 
 round1 ::
-  (GaloisField k) =>
   (Int -> TExp 'TBool k) ->
   -- | 'i'th bit of round constant
   TExp ('TArr ('TArr ('TArr 'TBool))) k ->
@@ -198,7 +197,7 @@ keccak_f1 num_rounds a =
     )
 
 -- num_rounds = 12+2l, where 2^l = ln_width
-keccak1 :: (GaloisField k) => Int -> Comp 'TBool k
+keccak1 :: Int -> Comp 'TBool k
 keccak1 num_rounds =
   do
     a <- input_arr3 5 5 ln_width

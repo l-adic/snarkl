@@ -27,14 +27,14 @@ type TQueue a = 'TProd (TStack a) (TStack a)
 
 type Queue a k = TExp (TQueue a) k
 
-empty_queue :: (Typeable a, GaloisField k) => Comp (TQueue a) k
+empty_queue :: (Typeable a) => Comp (TQueue a) k
 empty_queue = do
   l <- empty_stack
   r <- empty_stack
   pair l r
 
 enqueue ::
-  (Typeable a, GaloisField k) =>
+  (Typeable a) =>
   TExp a k ->
   Queue a k ->
   Comp (TQueue a) k
@@ -45,7 +45,7 @@ enqueue v q = do
   pair l' r
 
 dequeue ::
-  (Zippable a k, Derive a k, Typeable a, GaloisField k) =>
+  (Zippable a k, Derive a k, Typeable a) =>
   Queue a k ->
   TExp a k ->
   Comp ('TProd a (TQueue a)) k
@@ -73,7 +73,7 @@ dequeue q def = do
       pair h p
 
 dequeue_rec ::
-  (Zippable a k, Derive a k, Typeable a, GaloisField k) =>
+  (Zippable a k, Derive a k, Typeable a) =>
   Queue a k ->
   TExp a k ->
   Comp ('TProd a (TQueue a)) k
@@ -113,7 +113,7 @@ is_empty q = do
     (\_ _ -> return false)
 
 last_queue ::
-  (Zippable a k, Derive a k, Typeable a, GaloisField k) =>
+  (Zippable a k, Derive a k, Typeable a) =>
   Queue a k ->
   TExp a k ->
   Comp a k

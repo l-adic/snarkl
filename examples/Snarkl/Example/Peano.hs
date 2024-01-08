@@ -22,13 +22,13 @@ type TF = 'TFSum ('TFConst 'TUnit) 'TFId
 
 type TNat = 'TMu TF
 
-nat_zero :: (GaloisField k) => Comp TNat k
+nat_zero :: Comp TNat k
 nat_zero =
   do
     x <- inl unit
     roll x
 
-nat_succ :: (GaloisField k) => TExp TNat k -> Comp TNat k
+nat_succ :: TExp TNat k -> Comp TNat k
 nat_succ n =
   do
     x <- inr n

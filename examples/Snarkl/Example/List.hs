@@ -27,12 +27,12 @@ type TList a = 'TMu (TF a)
 
 type List a k = TExp (TList a) k
 
-nil :: (Typeable a, GaloisField k) => Comp (TList a) k
+nil :: (Typeable a) => Comp (TList a) k
 nil = do
   t <- inl unit
   roll t
 
-cons :: (Typeable a, GaloisField k) => TExp a k -> List a k -> Comp (TList a) k
+cons :: (Typeable a) => TExp a k -> List a k -> Comp (TList a) k
 cons f t =
   do
     p <- pair f t
@@ -41,9 +41,7 @@ cons f t =
 
 case_list ::
   ( Typeable a,
-    Typeable ty,
-    Zippable ty k,
-    GaloisField k
+    Zippable ty k
   ) =>
   List a k ->
   Comp ty k ->
@@ -62,9 +60,7 @@ case_list t f_nil f_cons =
 
 head_list ::
   ( Typeable a,
-    Zippable a k,
-    Derive a k,
-    GaloisField k
+    Zippable a k
   ) =>
   TExp a k ->
   List a k ->
@@ -78,8 +74,7 @@ head_list def l =
 tail_list ::
   ( Typeable a,
     Zippable a k,
-    Derive a k,
-    GaloisField k
+    Derive a k
   ) =>
   List a k ->
   Comp (TList a) k
@@ -96,8 +91,7 @@ tail_list l =
 app_list ::
   ( Typeable a,
     Zippable a k,
-    Derive a k,
-    GaloisField k
+    Derive a k
   ) =>
   List a k ->
   List a k ->
@@ -116,8 +110,7 @@ app_list l1 l2 = fix go l1
 rev_list ::
   ( Typeable a,
     Zippable a k,
-    Derive a k,
-    GaloisField k
+    Derive a k
   ) =>
   List a k ->
   Comp (TList a) k
@@ -136,12 +129,9 @@ rev_list l = fix go l
 
 map_list ::
   ( Typeable a,
-    Zippable a k,
-    Derive a k,
     Typeable b,
     Zippable b k,
-    Derive b k,
-    GaloisField k
+    Derive b k
   ) =>
   (TExp a k -> Comp b k) ->
   List a k ->
@@ -161,7 +151,7 @@ map_list f l =
         )
 
 last_list ::
-  (Typeable a, Zippable a k, Derive a k, GaloisField k) =>
+  (Typeable a, Zippable a k) =>
   TExp a k ->
   List a k ->
   Comp a k

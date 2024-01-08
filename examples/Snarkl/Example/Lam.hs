@@ -33,7 +33,7 @@ type TFSubst = 'TFSum ('TFConst 'TField) ('TFProd ('TFConst TTerm) 'TFId)
 
 type TSubst = 'TMu TFSubst
 
-subst_nil :: (GaloisField k) => TExp 'TField k -> Comp TSubst k
+subst_nil :: TExp 'TField k -> Comp TSubst k
 subst_nil n =
   do
     n' <- inl n
@@ -66,7 +66,6 @@ type TF = 'TFSum ('TFConst 'TField) ('TFSum 'TFId ('TFProd 'TFId 'TFId))
 type TTerm = 'TMu TF
 
 varN ::
-  (GaloisField k) =>
   TExp 'TField k ->
   Comp TTerm k
 varN e =
@@ -84,7 +83,6 @@ varN' i =
     roll v
 
 lam ::
-  (GaloisField k) =>
   TExp TTerm k ->
   Comp TTerm k
 lam t =
@@ -94,7 +92,6 @@ lam t =
     roll v
 
 app ::
-  (GaloisField k) =>
   TExp TTerm k ->
   TExp TTerm k ->
   Comp TTerm k
@@ -106,9 +103,7 @@ app t1 t2 =
     roll v
 
 case_term ::
-  ( Typeable ty,
-    Zippable ty k,
-    GaloisField k
+  ( Zippable ty k
   ) =>
   TExp TTerm k ->
   (TExp 'TField k -> Comp ty k) ->
@@ -126,7 +121,7 @@ case_term t f_var f_lam f_app =
         e2 <- fst_pair p
         f_app e1 e2
 
-is_lam :: (GaloisField k) => TExp TTerm k -> Comp 'TBool k
+is_lam :: TExp TTerm k -> Comp 'TBool k
 is_lam t =
   case_term
     t

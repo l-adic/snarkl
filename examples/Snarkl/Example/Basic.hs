@@ -31,7 +31,7 @@ mult_ex ::
   Comp 'TField k
 mult_ex x y = return $ x * y
 
-arr_ex :: (GaloisField k) => TExp 'TField k -> Comp 'TField k
+arr_ex :: TExp 'TField k -> Comp 'TField k
 arr_ex x = do
   a <- arr 2
   forall [0 .. 1] (\i -> set (a, i) x)
@@ -63,13 +63,13 @@ interp2' = comp_interp p2 [256]
 compile1 :: (GaloisField k) => R1CS k
 compile1 = compileCompToR1CS Simplify p1
 
-comp1 :: (GaloisField k, Typeable a) => Comp ('TSum 'TBool a) k
+comp1 :: (Typeable a) => Comp ('TSum 'TBool a) k
 comp1 = inl false
 
 comp2 :: (GaloisField k, Typeable a) => Comp ('TSum a 'TField) k
 comp2 = inr (fromField 0)
 
-test1 :: (GaloisField k) => State (Env k) (TExp 'TBool k)
+test1 :: (GaloisField k) => Comp 'TBool k
 test1 = do
   b <- fresh_input
   z <- if return b then comp1 else comp2
