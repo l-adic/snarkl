@@ -22,8 +22,6 @@ import Control.Monad.State
 import qualified Control.Monad.State as State
 import Data.Either (fromRight)
 import Data.Field.Galois (GaloisField)
--- do_const_prop,
-
 import Data.Foldable (traverse_)
 import Data.List (sort)
 import qualified Data.Map as Map

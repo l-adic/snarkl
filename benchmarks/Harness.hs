@@ -31,7 +31,6 @@ import Snarkl.Toplevel
     compileTexpToConstraints,
     do_simplify,
     execute,
-    lastSeq,
     serializeR1CSAsJson,
     serializeWitnessAsJson,
     wit_of_r1cs,

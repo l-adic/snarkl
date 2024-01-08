@@ -1,5 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
-
 module Snarkl.Backend.R1CS.Poly where
 
 import qualified Data.Aeson as A

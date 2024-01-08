@@ -86,6 +86,7 @@ module Snarkl.Language
 where
 
 import Data.Field.Galois (GaloisField)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.Core
   ( Assignment (..),
     Exp (..),
@@ -170,4 +171,4 @@ compileTExpToProgram te =
   let eprog = mkProgram . expOfLambdaExp . tExpToLambdaExp $ te
    in case eprog of
         Right p -> p
-        Left err -> error $ "compileTExpToProgram: failed to convert TExp to Program: " <> err
+        Left err -> failWith $ ErrMsg $ "compileTExpToProgram: failed to convert TExp to Program: " <> err
