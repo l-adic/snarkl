@@ -5,12 +5,7 @@
 {-# HLINT ignore "Redundant uncurry" #-}
 module Test.Snarkl.LambdaSpec where
 
-import Data.Field.Galois (GaloisField, Prime)
-import qualified Data.Map as Map
-import GHC.TypeLits (KnownNat)
-import Snarkl.Field
-import Snarkl.Interp (interp)
-import Snarkl.Language (TExp, Ty (TField, TFun, TProd))
+import Snarkl.Field (F_BN128)
 import Snarkl.Language.Syntax
   ( apply,
     curry,
@@ -21,27 +16,29 @@ import Snarkl.Language.Syntax
     (+),
   )
 import qualified Snarkl.Language.SyntaxMonad as SM
+import Snarkl.Language.TExpr (TExp)
+import Snarkl.Language.Type (Ty (TField, TFun, TProd))
 import Snarkl.Toplevel (comp_interp)
-import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.Hspec (Spec, describe, it)
 import Test.QuickCheck (Testable (property))
-import Prelude hiding (apply, curry, return, uncurry, (*), (+))
+import Prelude hiding (curry, return, uncurry, (*), (+))
 
 spec :: Spec
 spec = do
   describe "Snarkl.Lambda" $ do
     describe "curry/uncurry identities for simply operations" $ do
       it "curry . uncurry == id" $ do
-        let f :: (GaloisField k) => TExp 'TField k -> SM.Comp ('TFun 'TField 'TField) k
+        let f :: TExp 'TField k -> SM.Comp ('TFun 'TField 'TField) k
             f x = lambda $ \y -> SM.return (x + y)
-            g :: (GaloisField k) => TExp 'TField k -> SM.Comp ('TFun 'TField 'TField) k
+            g :: TExp 'TField k -> SM.Comp ('TFun 'TField 'TField) k
             g = curry (uncurry f)
-            prog1 :: (GaloisField k) => SM.Comp 'TField k
+            prog1 :: SM.Comp 'TField k
             prog1 =
               SM.fresh_input SM.>>= \a ->
                 SM.fresh_input SM.>>= \b ->
                   f a SM.>>= \k ->
                     apply k b
-            prog2 :: (GaloisField k) => SM.Comp 'TField k
+            prog2 :: SM.Comp 'TField k
             prog2 =
               SM.fresh_input SM.>>= \a ->
                 SM.fresh_input SM.>>= \b ->
@@ -51,21 +48,21 @@ spec = do
           comp_interp @_ @F_BN128 prog1 [a, b] == comp_interp prog2 [a, b]
 
       it "uncurry . curry == id" $ do
-        let f :: (GaloisField k) => TExp ('TProd 'TField 'TField) k -> SM.Comp 'TField k
+        let f :: TExp ('TProd 'TField 'TField) k -> SM.Comp 'TField k
             f p =
               SM.fst_pair p SM.>>= \x ->
                 SM.snd_pair p SM.>>= \y ->
                   SM.return (x * y)
-            g :: (GaloisField k) => TExp ('TProd 'TField 'TField) k -> SM.Comp 'TField k
+            g :: TExp ('TProd 'TField 'TField) k -> SM.Comp 'TField k
             g = uncurry (curry f)
 
-            prog1 :: (GaloisField k) => SM.Comp 'TField k
+            prog1 :: SM.Comp 'TField k
             prog1 =
               SM.fresh_input SM.>>= \a ->
                 SM.fresh_input SM.>>= \b ->
                   pair a b SM.>>= \p ->
                     f p
-            prog2 :: (GaloisField k) => SM.Comp 'TField k
+            prog2 :: SM.Comp 'TField k
             prog2 =
               SM.fresh_input SM.>>= \a ->
                 SM.fresh_input SM.>>= \b ->

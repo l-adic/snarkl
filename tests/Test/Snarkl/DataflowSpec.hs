@@ -2,9 +2,7 @@
 
 module Test.Snarkl.DataflowSpec where
 
-import Data.Field.Galois (GaloisField, Prime, PrimeField, toP)
-import qualified Data.IntMap as IntMap
-import qualified Data.Map as Map
+import Data.Field.Galois (Prime, toP)
 import qualified Data.Set as Set
 import GHC.TypeLits (KnownNat)
 import Snarkl.Common (Var (Var))
@@ -30,8 +28,8 @@ constraint2 :: (KnownNat p) => Constraint (Prime p)
 constraint2 = CMult (toP 2, Var 1) (toP 3, Var 2) (toP 4, Just $ Var 3)
 
 -- NOTE: notice 4 doesn't count as a variable here, WHY?
-constraint3 :: (GaloisField k) => Constraint k
-constraint3 = CMagic (Var 4) [Var 2, Var 3] $ \vars -> return True
+constraint3 :: Constraint k
+constraint3 = CMagic (Var 4) [Var 2, Var 3] $ \_ -> return True
 
 -- 4 is independent from 1,2,3
 constraint4 :: (KnownNat p) => Constraint (Prime p)

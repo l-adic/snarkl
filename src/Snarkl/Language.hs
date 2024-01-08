@@ -85,7 +85,6 @@ module Snarkl.Language
   )
 where
 
-import Data.Data (Typeable)
 import Data.Field.Galois (GaloisField)
 import Snarkl.Language.Core
   ( Assignment (..),
@@ -166,7 +165,7 @@ import Snarkl.Language.TExpr (TExp, booleanVarsOfTexp, tExpToLambdaExp)
 import Snarkl.Language.Type
 import Prelude (Either (..), error, ($), (.), (<>))
 
-compileTExpToProgram :: (GaloisField a, Typeable ty) => TExp ty a -> Program a
+compileTExpToProgram :: (GaloisField k) => TExp ty k -> Program k
 compileTExpToProgram te =
   let eprog = mkProgram . expOfLambdaExp . tExpToLambdaExp $ te
    in case eprog of

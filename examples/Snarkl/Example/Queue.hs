@@ -2,10 +2,8 @@
 
 module Snarkl.Example.Queue where
 
-import Data.Field.Galois (GaloisField, Prime)
+import Data.Field.Galois (GaloisField)
 import Data.Typeable
-import GHC.TypeLits (KnownNat)
-import Snarkl.Compile
 import Snarkl.Example.List
 import Snarkl.Example.Stack
 import Snarkl.Language.Syntax
@@ -36,7 +34,7 @@ empty_queue = do
   pair l r
 
 enqueue ::
-  (Zippable a k, Derive a k, Typeable a, GaloisField k) =>
+  (Typeable a, GaloisField k) =>
   TExp a k ->
   Queue a k ->
   Comp (TQueue a) k

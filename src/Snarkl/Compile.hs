@@ -249,19 +249,19 @@ encode_binop op (x, y, z) = go op
       add_constraint $
         CMult (1, y) (1, z) (1, Just x)
 
-encode_linear :: (GaloisField a) => Var -> [Either (Var, a) a] -> State (CEnv a) ()
+encode_linear :: (GaloisField k) => Var -> [Either (Var, k) k] -> State (CEnv k) ()
 encode_linear out xs =
   let c = foldl (flip (+)) 0 $ map (fromRight 0) xs
    in add_constraint $
         cadd c $
           (out, -1) : remove_consts xs
   where
-    remove_consts :: [Either (Var, a) a] -> [(Var, a)]
+    remove_consts :: [Either (Var, k) k] -> [(Var, k)]
     remove_consts [] = []
     remove_consts (Left p : l) = p : remove_consts l
     remove_consts (Right _ : l) = remove_consts l
 
-cs_of_exp :: (GaloisField a) => Var -> Core.Exp a -> State (CEnv a) ()
+cs_of_exp :: (GaloisField k) => Var -> Core.Exp k -> State (CEnv k) ()
 cs_of_exp out e = case e of
   Core.EVar x ->
     ensure_equal (out, view _Var x)
@@ -287,7 +287,7 @@ cs_of_exp out e = case e of
     -- We special-case linear combinations in this way to avoid having
     -- to introduce new multiplication gates for multiplication by
     -- constant scalars.
-    let go_linear :: (GaloisField a) => [Core.Exp a] -> State (CEnv a) [Either (Var, a) a]
+    let go_linear :: (GaloisField k) => [Core.Exp k] -> State (CEnv k) [Either (Var, k) k]
         go_linear [] = return []
         go_linear (Core.EBinop Mult [Core.EVar x, Core.EVal coeff] : es') =
           do
@@ -338,7 +338,7 @@ cs_of_exp out e = case e of
         rev_pol (Left (x, c) : ls) = Left (x, -c) : rev_pol ls
         rev_pol (Right c : ls) = Right (-c) : rev_pol ls
 
-        go_other :: (GaloisField a) => [Core.Exp a] -> State (CEnv a) [Var]
+        go_other :: (GaloisField k) => [Core.Exp k] -> State (CEnv k) [Var]
         go_other [] = return []
         go_other (Core.EVar x : es') =
           do
@@ -457,10 +457,10 @@ data TExpPkg ty k = TExpPkg
   }
   deriving (Show)
 
-instance (Typeable ty) => Pretty (TExpPkg ty k) where
+instance Pretty (TExpPkg ty k) where
   pretty (TExpPkg _ _ e) = pretty e
 
-deriving instance (Eq (TExp ty k)) => Eq (TExpPkg ty k)
+deriving instance Eq (TExpPkg ty k)
 
 -- | Desugar a 'Comp'utation to a pair of:
 --   the total number of vars,

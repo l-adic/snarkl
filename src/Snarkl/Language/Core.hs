@@ -13,8 +13,12 @@ data Exp :: Type -> Type where
   EVal :: (GaloisField k) => k -> Exp k
   EUnop :: UnOp -> Exp k -> Exp k
   EBinop :: Op -> [Exp k] -> Exp k
-  EIf :: Exp k -> Exp a -> Exp k -> Exp k
+  EIf :: Exp k -> Exp k -> Exp k -> Exp k
   EUnit :: Exp k
+
+deriving instance Eq (Exp k)
+
+deriving instance Show (Exp k)
 
 data Assignment a = Assignment Variable (Exp a)
 

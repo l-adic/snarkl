@@ -7,22 +7,16 @@ import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
 import Snarkl.Compile
 import Snarkl.Example.Keccak
-import Snarkl.Example.Lam
-import Snarkl.Example.List
-import Snarkl.Example.Peano
-import Snarkl.Example.Tree
 import Snarkl.Field
-import Snarkl.Language (Comp)
-import Snarkl.Language.Syntax hiding (negate)
+import Snarkl.Language (Comp, Ty (..))
 import Snarkl.Toplevel (Result (result_result), execute)
 import System.Exit (ExitCode (..))
 import Test.ArkworksBridge (CMD (RunR1CS), runCMD)
-import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
+import Test.Hspec (Spec, describe, it, shouldReturn)
 import Test.Snarkl.Unit.Programs
-import Text.PrettyPrint.Leijen.Text (Pretty)
 import Prelude
 
-test_comp :: (Typeable ty, Pretty k, PrimeField k) => SimplParam -> Comp ty k -> [k] -> IO (Either ExitCode k)
+test_comp :: forall ty k. (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> IO (Either ExitCode k)
 test_comp simpl mf args =
   do
     exit_code <- runCMD $ RunR1CS "./scripts" "hspec" simpl mf args
@@ -72,7 +66,7 @@ spec = do
       it "8-1" $ test_comp @_ @F_BN128 Simplify prog8 [] `shouldReturn` Right 29
 
     describe "unused inputs" $ do
-      it "11-1" $ test_comp @_ @F_BN128 Simplify prog11 [1, 1] `shouldReturn` Right 1
+      it "11-1" $ test_comp @'TField @F_BN128 Simplify prog11 [1, 1] `shouldReturn` Right 1
 
     describe "multiplicative identity" $ do
       it "13-1" $ test_comp @_ @F_BN128 Simplify prog13 [1] `shouldReturn` Right 1
@@ -147,7 +141,7 @@ spec = do
       it "8-1" $ test_comp @_ @F_BN128 Simplify prog8 [] `shouldReturn` Right 29
 
     describe "unused inputs" $ do
-      it "11-1" $ test_comp @_ @F_BN128 Simplify prog11 [1, 1] `shouldReturn` Right 1
+      it "11-1" $ test_comp @'TField @F_BN128 Simplify prog11 [1, 1] `shouldReturn` Right 1
 
     describe "multiplicative identity" $ do
       it "13-1" $ test_comp @_ @F_BN128 Simplify prog13 [1] `shouldReturn` Right 1

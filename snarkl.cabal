@@ -141,6 +141,8 @@ test-suite spec
     , process        >=1.2
     , QuickCheck
     , snarkl         >=0.1.0.0
+  ghc-options:
+    -Wredundant-constraints
 
 benchmark criterion
   type:               exitcode-stdio-1.0

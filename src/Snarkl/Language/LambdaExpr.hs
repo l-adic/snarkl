@@ -38,7 +38,7 @@ deriving instance Show (Exp k)
 
 deriving instance Eq (Exp k)
 
-betaNormalize :: Exp a -> Exp a
+betaNormalize :: Exp k -> Exp k
 betaNormalize = \case
   EVar x -> EVar x
   EVal v -> EVal v
@@ -55,7 +55,7 @@ betaNormalize = \case
   EUnit -> EUnit
   where
     -- substitute x e1 e2 = e2 [x := e1 ]
-    substitute :: (Variable, Exp a) -> Exp a -> Exp a
+    substitute :: (Variable, Exp k) -> Exp k -> Exp k
     substitute (var, e1) = \case
       e@(EVar var') -> if var == var' then e1 else e
       e@(EVal _) -> e

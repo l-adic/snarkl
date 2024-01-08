@@ -6,9 +6,9 @@
 
 module Snarkl.Example.Games where
 
-import Data.Field.Galois (GaloisField, Prime)
+import Data.Field.Galois (GaloisField)
+import Data.Kind (Type)
 import Data.Typeable
-import GHC.TypeLits (KnownNat, Nat)
 import Snarkl.Errors
 import Snarkl.Field (F_BN128)
 import Snarkl.Language.Syntax
@@ -38,7 +38,7 @@ data ISO (t :: Ty) (s :: Ty) k = Iso
     from :: TExp s k -> Comp t k
   }
 
-data Game :: Ty -> * -> * where
+data Game :: Ty -> Type -> Type where
   Single ::
     forall (s :: Ty) (t :: Ty) k.
     ( Typeable s,
@@ -108,8 +108,7 @@ sum_game ::
     Zippable t1 k,
     Zippable t2 k,
     Derive t1 k,
-    Derive t2 k,
-    GaloisField k
+    Derive t2 k
   ) =>
   Game t1 k ->
   Game t2 k ->
@@ -133,9 +132,7 @@ t2 :: F_BN128
 t2 = comp_interp basic_test [1, 23, 88] -- 88
 
 (+>) ::
-  ( Typeable t,
-    Typeable s,
-    Zippable t k,
+  ( Typeable s,
     Zippable s k
   ) =>
   Game t k ->
@@ -151,8 +148,7 @@ prodI ::
   ( Typeable a,
     Typeable b,
     Typeable c,
-    Typeable d,
-    GaloisField k
+    Typeable d
   ) =>
   ISO a b k ->
   ISO c d k ->
@@ -174,13 +170,12 @@ prodI (Iso f g) (Iso f' g') =
         pair y1 y2
     )
 
-seqI :: (Typeable b) => ISO a b p -> ISO b c p -> ISO a c p
+seqI :: ISO a b p -> ISO b c p -> ISO a c p
 seqI (Iso f g) (Iso f' g') = Iso (\a -> f a >>= f') (\c -> g' c >>= g)
 
 prodLInputI ::
   ( Typeable a,
-    Typeable b,
-    GaloisField k
+    Typeable b
   ) =>
   ISO ('TProd a b) b k
 prodLInputI =
@@ -200,8 +195,7 @@ prodLSumI ::
     Zippable c k,
     Derive a k,
     Derive b k,
-    Derive c k,
-    GaloisField k
+    Derive c k
   ) =>
   ISO ('TProd ('TSum b c) a) ('TSum ('TProd b a) ('TProd c a)) k
 prodLSumI =
@@ -301,8 +295,7 @@ instance (GaloisField k) => Gameable 'TUnit k where
   mkGame = unit_game
 
 instance
-  ( Typeable a,
-    Typeable b,
+  ( Typeable b,
     Zippable a k,
     Zippable b k,
     Derive a k,
@@ -323,8 +316,7 @@ instance
     Derive a k,
     Derive b k,
     Gameable a k,
-    Gameable b k,
-    GaloisField k
+    Gameable b k
   ) =>
   Gameable ('TSum a b) k
   where

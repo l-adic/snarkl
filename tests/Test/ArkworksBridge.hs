@@ -4,8 +4,16 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
+  ( mkInputsFilePath,
+    mkR1CSFilePath,
+    mkWitnessFilePath,
+    serializeInputsAsJson,
+    serializeR1CSAsJson,
+    serializeWitnessAsJson,
+    wit_of_r1cs,
+  )
 import Snarkl.Compile (SimplParam, compileCompToR1CS)
-import Snarkl.Language (Comp)
+import Snarkl.Language.SyntaxMonad (Comp)
 import qualified System.Exit as GHC
 import System.Process (createProcess, shell, waitForProcess)
 

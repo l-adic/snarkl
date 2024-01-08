@@ -41,7 +41,8 @@ import Prelude
 -- | Using the executable semantics for the 'TExp' language, execute
 -- the computation on the provided inputs, returning the 'k' result.
 comp_interp ::
-  (Typeable ty, GaloisField k) =>
+  forall ty k.
+  (GaloisField k) =>
   Comp ty k ->
   [k] ->
   k
@@ -64,7 +65,7 @@ data Result k = Result
   }
   deriving (Show)
 
-instance Pretty (Result k) where
+instance (Pretty k) => Pretty (Result k) where
   pretty (Result sat vars constraints result _ _) =
     mconcat $
       intercalate

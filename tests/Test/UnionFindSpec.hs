@@ -6,11 +6,21 @@
 
 module Test.UnionFindSpec where
 
-import Snarkl.Common
+import Snarkl.Common (Var (..))
 import Snarkl.Constraint.UnionFind
-import Snarkl.Errors
-import Test.Hspec
+  ( UnionFind,
+    empty,
+    insert,
+    root,
+    unite,
+  )
+import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck
+  ( Arbitrary (arbitrary),
+    Testable (property),
+    forAll,
+    suchThat,
+  )
 
 spec :: Spec
 spec = do

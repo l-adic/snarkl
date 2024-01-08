@@ -4,7 +4,6 @@ module Snarkl.Interp
 where
 
 import Control.Monad (ap, foldM)
-import Data.Data (Typeable)
 import Data.Field.Galois (GaloisField)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
@@ -77,20 +76,19 @@ boolOfField v =
     )
 
 interpTExp ::
-  ( GaloisField a,
-    Typeable ty
+  ( GaloisField k
   ) =>
-  TExp ty a ->
-  InterpM a (Maybe a)
+  TExp ty k ->
+  InterpM k (Maybe k)
 interpTExp e = do
   let _exp = compileTExpToProgram e
   interpProg _exp
 
 interp ::
-  (GaloisField a, Typeable ty) =>
-  Map Variable a ->
-  TExp ty a ->
-  Either ErrMsg (Env a, Maybe a)
+  (GaloisField k) =>
+  Map Variable k ->
+  TExp ty k ->
+  Either ErrMsg (Env k, Maybe k)
 interp rho e = runInterpM (interpTExp e) $ Map.map Just rho
 
 interpProg ::

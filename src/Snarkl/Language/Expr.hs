@@ -152,7 +152,7 @@ mkProgram _exp = do
       let (eexpr, assignments) = runState (runExceptT $ go es) mempty
       Core.Program assignments <$> eexpr
       where
-        go :: (Show k) => Seq (Exp k) -> ExceptT String (State (Seq (Core.Assignment k))) (Core.Exp k)
+        go :: Seq (Exp k) -> ExceptT String (State (Seq (Core.Assignment k))) (Core.Exp k)
         go = \case
           Empty -> throwError "mkProgram: empty sequence"
           e :<| Empty -> hoistEither $ mkExpression e
