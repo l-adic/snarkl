@@ -4,21 +4,17 @@
 module Snarkl.Language.TExpr
   ( Val (..),
     TExp (..),
-    TFunct (..),
-    Ty (..),
-    Rep,
     TUnop (..),
     TOp (..),
     TVar (..),
     Loc,
     TLoc (..),
+    tExpToLambdaExp,
     booleanVarsOfTexp,
-    lambdaExpOfTExp,
     varOfTExp,
     locOfTexp,
     teSeq,
     lastSeq,
-    -- expOfTExp,
   )
 where
 
@@ -30,72 +26,7 @@ import Snarkl.Common (Op, UnOp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.Core (Variable)
 import qualified Snarkl.Language.LambdaExpr as LE
-
-data TFunct where
-  TFConst :: Ty -> TFunct
-  TFId :: TFunct
-  TFProd :: TFunct -> TFunct -> TFunct
-  TFSum :: TFunct -> TFunct -> TFunct
-  TFComp :: TFunct -> TFunct -> TFunct
-  deriving (Typeable)
-
-instance Pretty TFunct where
-  pretty f = case f of
-    TFConst ty -> "Const" <+> pretty ty
-    TFId -> "Id"
-    TFProd f1 f2 -> parens (pretty f1 <+> "⊗" <+> pretty f2)
-    TFSum f1 f2 -> parens (pretty f1 <+> "⊕" <+> pretty f2)
-    TFComp f1 f2 -> parens (pretty f1 <+> "∘" <+> pretty f2)
-
-data Ty where
-  TField :: Ty
-  TBool :: Ty
-  TArr :: Ty -> Ty
-  TProd :: Ty -> Ty -> Ty
-  TSum :: Ty -> Ty -> Ty
-  TMu :: TFunct -> Ty
-  TUnit :: Ty
-  TFun :: Ty -> Ty -> Ty
-  deriving (Typeable)
-
-deriving instance Typeable 'TField
-
-deriving instance Typeable 'TBool
-
-deriving instance Typeable 'TArr
-
-deriving instance Typeable 'TProd
-
-deriving instance Typeable 'TSum
-
-deriving instance Typeable 'TMu
-
-deriving instance Typeable 'TUnit
-
-deriving instance Typeable 'TFun
-
-instance Pretty Ty where
-  pretty ty = case ty of
-    TField -> "Field"
-    TBool -> "Bool"
-    TArr _ty -> "Array" <+> pretty _ty
-    TProd ty1 ty2 -> parens (pretty ty1 <+> "⨉" <+> pretty ty2)
-    TSum ty1 ty2 -> parens (pretty ty1 <+> "+" <+> pretty ty2)
-    TMu f -> "μ" <> parens (pretty f)
-    TUnit -> "()"
-    TFun ty1 ty2 -> parens (pretty ty1 <+> "->" <+> pretty ty2)
-
-type family Rep (f :: TFunct) (x :: Ty) :: Ty
-
-type instance Rep ('TFConst ty) x = ty
-
-type instance Rep 'TFId x = x
-
-type instance Rep ('TFProd f g) x = 'TProd (Rep f x) (Rep g x)
-
-type instance Rep ('TFSum f g) x = 'TSum (Rep f x) (Rep g x)
-
-type instance Rep ('TFComp f g) x = Rep f (Rep g x)
+import Snarkl.Language.Type (Ty (TBool, TField, TFun, TUnit))
 
 newtype TVar (ty :: Ty) = TVar Variable deriving (Eq, Show)
 
@@ -194,22 +125,38 @@ instance (Eq a) => Eq (TExp (b :: Ty) a) where
   TEBot == TEBot = True
   _ == _ = False
 
-lambdaExpOfTExp :: (GaloisField a, Typeable ty) => TExp ty a -> LE.Exp a
-lambdaExpOfTExp te = case te of
+instance (Pretty a, Typeable ty) => Pretty (TExp ty a) where
+  pretty (TEVar var) = pretty var
+  pretty (TEVal val) = pretty val
+  pretty (TEUnop unop _exp) = pretty unop <+> pretty _exp
+  pretty (TEBinop binop exp1 exp2) = pretty exp1 <+> pretty binop <+> pretty exp2
+  pretty (TEIf condExp thenExp elseExp) = "if" <+> pretty condExp <+> "then" <+> pretty thenExp <+> "else" <+> pretty elseExp
+  pretty (TEAssert exp1 exp2) = pretty exp1 <+> ":=" <+> pretty exp2
+  pretty (TESeq exp1 exp2) = parens (pretty exp1 <+> ";" <> line <> pretty exp2)
+  pretty TEBot = "⊥"
+  pretty (TEAbs var _exp) = parens ("\\" <> pretty var <+> "->" <+> pretty _exp)
+  pretty (TEApp exp1 exp2) = parens (pretty exp1 <+> pretty exp2)
+
+tExpToLambdaExp ::
+  (GaloisField a) =>
+  (Typeable ty) =>
+  TExp ty a ->
+  LE.Exp a
+tExpToLambdaExp te = case te of
   TEVar (TVar x) -> LE.EVar x
   TEVal v -> lambdaExpOfVal v
   TEUnop (TUnop op) te1 ->
-    LE.EUnop op (lambdaExpOfTExp te1)
+    LE.EUnop op (tExpToLambdaExp te1)
   TEBinop (TOp op) te1 te2 ->
-    LE.expBinop op (lambdaExpOfTExp te1) (lambdaExpOfTExp te2)
+    LE.EBinop op (tExpToLambdaExp te1) (tExpToLambdaExp te2)
   TEIf te1 te2 te3 ->
-    LE.EIf (lambdaExpOfTExp te1) (lambdaExpOfTExp te2) (lambdaExpOfTExp te3)
+    LE.EIf (tExpToLambdaExp te1) (tExpToLambdaExp te2) (tExpToLambdaExp te3)
   TEAssert te1 te2 ->
-    LE.EAssert (lambdaExpOfTExp te1) (lambdaExpOfTExp te2)
-  TESeq te1 te2 -> LE.ESeq (lambdaExpOfTExp te1) (lambdaExpOfTExp te2)
+    LE.EAssert (tExpToLambdaExp te1) (tExpToLambdaExp te2)
+  TESeq te1 te2 -> LE.ESeq (tExpToLambdaExp te1) (tExpToLambdaExp te2)
   TEBot -> LE.EUnit
-  TEAbs (TVar v) e -> LE.EAbs v (lambdaExpOfTExp e)
-  TEApp e1 e2 -> LE.EApp (lambdaExpOfTExp e1) (lambdaExpOfTExp e2)
+  TEAbs (TVar v) e -> LE.EAbs v (tExpToLambdaExp e)
+  TEApp e1 e2 -> LE.EApp (tExpToLambdaExp e1) (tExpToLambdaExp e2)
   where
     lambdaExpOfVal :: (GaloisField a) => Val ty a -> LE.Exp a
     lambdaExpOfVal v = case v of
@@ -222,13 +169,20 @@ lambdaExpOfTExp te = case te of
 -- | Smart constructor for 'TESeq'.  Simplify 'TESeq te1 te2' to 'te2'
 -- whenever the normal form of 'te1' (with seq's reassociated right)
 -- is *not* equal 'TEAssert _ _'.
-teSeq :: (Typeable ty1) => TExp ty1 a -> TExp ty2 a -> TExp ty2 a
+teSeq ::
+  (Typeable ty1) =>
+  TExp ty1 a ->
+  TExp ty2 a ->
+  TExp ty2 a
 teSeq te1 te2 = case (te1, te2) of
   (TEAssert _ _, _) -> TESeq te1 te2
   (TESeq tx ty, _) -> teSeq tx (teSeq ty te2)
   (_, _) -> te2
 
-booleanVarsOfTexp :: (Typeable ty) => TExp ty a -> [Variable]
+booleanVarsOfTexp ::
+  (Typeable ty) =>
+  TExp ty a ->
+  [Variable]
 booleanVarsOfTexp = go []
   where
     go :: (Typeable ty) => [Variable] -> TExp ty a -> [Variable]
@@ -247,29 +201,25 @@ booleanVarsOfTexp = go []
     go vars (TEAbs _ e) = go vars e
     go vars (TEApp e1 e2) = go (go vars e1) e2
 
-varOfTExp :: (Show (TExp ty a)) => TExp ty a -> Variable
+varOfTExp ::
+  (Show a) =>
+  TExp ty a ->
+  Variable
 varOfTExp te = case lastSeq te of
   TEVar (TVar x) -> x
   _ -> failWith $ ErrMsg ("varOfTExp: expected var: " ++ show te)
 
-locOfTexp :: (Show (TExp ty a)) => TExp ty a -> Loc
+locOfTexp ::
+  (Show a) =>
+  TExp ty a ->
+  Loc
 locOfTexp te = case lastSeq te of
   TEVal (VLoc (TLoc l)) -> l
   _ -> failWith $ ErrMsg ("locOfTexp: expected loc: " ++ show te)
 
-lastSeq :: TExp ty a -> TExp ty a
+lastSeq ::
+  TExp ty a ->
+  TExp ty a
 lastSeq te = case te of
   TESeq _ te2 -> lastSeq te2
   _ -> te
-
-instance (Pretty a, Typeable ty) => Pretty (TExp ty a) where
-  pretty (TEVar var) = pretty var
-  pretty (TEVal val) = pretty val
-  pretty (TEUnop unop _exp) = pretty unop <+> pretty _exp
-  pretty (TEBinop binop exp1 exp2) = pretty exp1 <+> pretty binop <+> pretty exp2
-  pretty (TEIf condExp thenExp elseExp) = "if" <+> pretty condExp <+> "then" <+> pretty thenExp <+> "else" <+> pretty elseExp
-  pretty (TEAssert exp1 exp2) = pretty exp1 <+> ":=" <+> pretty exp2
-  pretty (TESeq exp1 exp2) = parens (pretty exp1 <+> ";" <> line <> pretty exp2)
-  pretty TEBot = "⊥"
-  pretty (TEAbs var _exp) = parens ("\\" <> pretty var <+> "->" <+> pretty _exp)
-  pretty (TEApp exp1 exp2) = parens (pretty exp1 <+> pretty exp2)

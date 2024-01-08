@@ -55,6 +55,7 @@ library
     Snarkl.Language.Core
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
+    Snarkl.Language.Type
     Snarkl.Toplevel
 
   default-extensions:

@@ -52,7 +52,7 @@ import Snarkl.Language
     TExp,
     Variable (Variable),
     booleanVarsOfTexp,
-    expOfTExp,
+    compileTExpToProgram,
     runState,
   )
 import qualified Snarkl.Language.Core as Core
@@ -386,30 +386,14 @@ cs_of_exp out e = case e of
           [ Core.EBinop Mult [b, e1],
             Core.EBinop Mult [Core.EBinop Sub [Core.EVal 1, b], e2]
           ]
-
-  ---- NOTE: when compiling assignments, the naive thing to do is
-  ---- to introduce a new var, e2_out, bound to result of e2 and
-  ---- then ensure that e2_out == x. We optimize by passing x to
-  ---- compilation of e2 directly.
-  -- EAssert e1 e2 ->
-  --  do
-  --    let x = var_of_exp e1
-  --    cs_of_exp (x ^. _Var) e2
-  -- ESeq le ->
-  --  do
-  --    x <- fresh_var -- x is garbage
-  --    go x le
-  --  where
-  --    go _ [] = failWith $ ErrMsg "internal error: empty ESeq"
-  --    go _ [e1] = cs_of_exp out e1
-  --    go garbage_var (e1 : le') =
-  --      do
-  --        cs_of_exp garbage_var e1
-  --        go garbage_var le'
   Core.EUnit ->
     -- NOTE: [[ EUnit ]]_{out} = [[ EVal zero ]]_{out}.
     cs_of_exp out (Core.EVal 0)
 
+---- NOTE: when compiling assignments, the naive thing to do is
+---- to introduce a new var, e2_out, bound to result of e2 and
+---- then ensure that e2_out == x. We optimize by passing x to
+---- compilation of e2 directly.
 cs_of_assignment :: (GaloisField a) => Core.Assignment a -> State (CEnv a) ()
 cs_of_assignment (Core.Assignment x e) = cs_of_exp (view _Var x) e
 
@@ -506,7 +490,7 @@ compileCompToTexp mf =
 
 -- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
 compileTexpToConstraints ::
-  (Typeable ty, GaloisField k, Pretty k) =>
+  (Typeable ty, GaloisField k) =>
   TExpPkg ty k ->
   ConstraintSystem k
 compileTexpToConstraints (TExpPkg _out _in_vars te) =
@@ -519,7 +503,7 @@ compileTexpToConstraints (TExpPkg _out _in_vars te) =
               Set.toList $
                 Set.fromList in_vars
                   `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
-            Core.Program assignments e = expOfTExp te
+            Core.Program assignments e = compileTExpToProgram te
         traverse_ cs_of_assignment assignments
         -- e = do_const_prop e0
         -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
@@ -540,7 +524,7 @@ compileTexpToConstraints (TExpPkg _out _in_vars te) =
 
 -- | Snarkl.Compile Snarkl computations to constraint systems.
 compileCompToConstraints ::
-  (Typeable ty, GaloisField k, Pretty k) =>
+  (Typeable ty, GaloisField k) =>
   Comp ty k ->
   ConstraintSystem k
 compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
@@ -553,7 +537,7 @@ compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
 
 -- | Snarkl.Compile 'TExp's to 'R1CS'.
 compileTExpToR1CS ::
-  (Typeable ty, GaloisField k, Pretty k) =>
+  (Typeable ty, GaloisField k) =>
   SimplParam ->
   TExpPkg ty k ->
   R1CS k
@@ -561,7 +545,7 @@ compileTExpToR1CS simpl = compileConstraintsToR1CS simpl . compileTexpToConstrai
 
 -- | Snarkl.Compile Snarkl computations to 'R1CS'.
 compileCompToR1CS ::
-  (Typeable ty, GaloisField k, Pretty k) =>
+  (Typeable ty, GaloisField k) =>
   SimplParam ->
   Comp ty k ->
   R1CS k

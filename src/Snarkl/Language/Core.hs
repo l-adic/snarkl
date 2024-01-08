@@ -4,6 +4,7 @@ module Snarkl.Language.Core where
 
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
+import Data.Sequence (Seq)
 import Prettyprinter (Pretty)
 import Snarkl.Common
 
@@ -24,4 +25,4 @@ deriving instance (Show a) => Show (Exp a)
 data Assignment a = Assignment Variable (Exp a)
 
 data Program :: Type -> Type where
-  Program :: [Assignment a] -> Exp a -> Program a
+  Program :: Seq (Assignment a) -> Exp a -> Program a

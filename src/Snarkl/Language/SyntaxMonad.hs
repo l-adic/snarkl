@@ -61,13 +61,13 @@ import Snarkl.Language.TExpr
     TExp (..),
     TLoc (TLoc),
     TVar (TVar),
-    Ty (TArr, TBool, TProd, TUnit),
     Val (VFalse, VLoc, VTrue, VUnit),
     lastSeq,
     locOfTexp,
     teSeq,
     varOfTExp,
   )
+import Snarkl.Language.Type (Ty (..))
 import Prelude hiding
   ( fromRational,
     negate,

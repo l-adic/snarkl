@@ -41,7 +41,7 @@ import Prelude
 -- | Using the executable semantics for the 'TExp' language, execute
 -- the computation on the provided inputs, returning the 'k' result.
 comp_interp ::
-  (Typeable ty, Pretty k, GaloisField k) =>
+  (Typeable ty, GaloisField k) =>
   Comp ty k ->
   [k] ->
   k
@@ -86,7 +86,7 @@ instance (Pretty k) => Pretty (Result k) where
 --   (3) Check whether 'w' satisfies the constraint system produced in (1).
 --   (4) Check whether the R1CS result matches the interpreter result.
 --   (5) Return the 'Result'.
-execute :: (Typeable ty, PrimeField k, Pretty k) => SimplParam -> Comp ty k -> [k] -> Result k
+execute :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> Result k
 execute simpl mf inputs =
   let TExpPkg nv in_vars e = compileCompToTexp mf
       r1cs = compileTExpToR1CS simpl (TExpPkg nv in_vars e)

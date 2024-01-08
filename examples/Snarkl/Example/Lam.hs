@@ -10,9 +10,7 @@ import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
 import Snarkl.Errors
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
+import Snarkl.Language
 import Prelude hiding
   ( fromRational,
     negate,
@@ -35,7 +33,7 @@ type TFSubst = 'TFSum ('TFConst 'TField) ('TFProd ('TFConst TTerm) 'TFId)
 
 type TSubst = 'TMu TFSubst
 
-subst_nil :: (GaloisField k) => TExp 'TField k -> State (Env k) (TExp TSubst k)
+subst_nil :: (GaloisField k) => TExp 'TField k -> Comp TSubst k
 subst_nil n =
   do
     n' <- inl n
@@ -159,7 +157,7 @@ shift n t = fix go t
               app t1' t2'
         )
 
-compose :: (GaloisField k) => TExp TSubst k -> TExp ('TMu TFSubst) k -> State (Env k) (TExp ('TMu TFSubst) k)
+compose :: (GaloisField k) => TExp TSubst k -> TExp ('TMu TFSubst) k -> Comp ('TMu TFSubst) k
 compose sigma1 sigma2 =
   do
     p <- pair sigma1 sigma2
@@ -192,7 +190,7 @@ compose sigma1 sigma2 =
                     subst_cons t'' s2''
               )
 
-subst_term :: (GaloisField k) => TExp ('TMu TFSubst) k -> TExp TTerm k -> State (Env k) (TExp ('TMu TF) k)
+subst_term :: (GaloisField k) => TExp ('TMu TFSubst) k -> TExp TTerm k -> Comp ('TMu TF) k
 subst_term sigma t =
   do
     p <- pair sigma t

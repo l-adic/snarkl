@@ -1,11 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Snarkl.Language.Expr
   ( Exp (..),
-    var_of_exp,
-    do_const_prop,
     mkProgram,
     expSeq,
+    expBinop,
   )
 where
 
@@ -13,7 +13,6 @@ import Control.Error (hoistEither, runExceptT)
 import Control.Monad.Except
   ( ExceptT,
     MonadError (throwError),
-    MonadPlus (mzero),
   )
 import Control.Monad.State (State, evalState, gets, modify, runState)
 import Data.Field.Galois (GaloisField)
@@ -21,8 +20,7 @@ import Data.Foldable (toList)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Sequence (Seq, (|>))
-import Debug.Trace (trace)
+import Data.Sequence (Seq, fromList, (<|), (><), (|>), pattern Empty, pattern (:<|))
 import Prettyprinter
   ( Pretty (pretty),
     hsep,
@@ -30,8 +28,7 @@ import Prettyprinter
     punctuate,
     (<+>),
   )
-import Snarkl.Common (Op, UnOp)
-import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Common (Op, UnOp, isAssoc)
 import qualified Snarkl.Language.Core as Core
 
 data Exp :: Type -> Type where
@@ -41,17 +38,12 @@ data Exp :: Type -> Type where
   EBinop :: Op -> [Exp a] -> Exp a
   EIf :: Exp a -> Exp a -> Exp a -> Exp a
   EAssert :: Exp a -> Exp a -> Exp a
-  ESeq :: [Exp a] -> Exp a
+  ESeq :: Seq (Exp a) -> Exp a
   EUnit :: Exp a
 
 deriving instance (Eq a) => Eq (Exp a)
 
 deriving instance (Show a) => Show (Exp a)
-
-var_of_exp :: (Show a) => Exp a -> Core.Variable
-var_of_exp e = case e of
-  EVar x -> x
-  _ -> failWith $ ErrMsg ("var_of_exp: expected variable: " ++ show e)
 
 const_prop :: (GaloisField a) => Exp a -> State (Map Core.Variable a) (Exp a)
 const_prop e =
@@ -109,7 +101,7 @@ instance (Pretty a) => Pretty (Exp a) where
   pretty (EIf b e1 e2) =
     "if" <+> pretty b <+> "then" <+> pretty e1 <+> "else" <+> pretty e2
   pretty (EAssert e1 e2) = pretty e1 <+> ":=" <+> pretty e2
-  pretty (ESeq es) = parens $ hsep $ punctuate ";" $ map pretty es
+  pretty (ESeq es) = parens $ hsep $ punctuate ";" $ map pretty (toList es)
   pretty EUnit = "()"
 
 mkExpression :: (Show a) => Exp a -> Either String (Core.Exp a)
@@ -127,31 +119,49 @@ mkExpression = \case
 expSeq :: Exp a -> Exp a -> Exp a
 expSeq e1 e2 =
   case (e1, e2) of
-    (ESeq l1, ESeq l2) -> ESeq (l1 ++ l2)
-    (ESeq l1, _) -> ESeq (l1 ++ [e2])
-    (_, ESeq l2) -> ESeq (e1 : l2)
-    (_, _) -> ESeq [e1, e2]
+    (ESeq l1, ESeq l2) -> ESeq (l1 >< l2)
+    (ESeq l1, _) -> ESeq (l1 |> e2)
+    (_, ESeq l2) -> ESeq (e1 <| l2)
+    (_, _) -> ESeq (fromList [e1, e2])
+
+expBinop :: Op -> Exp a -> Exp a -> Exp a
+expBinop op e1 e2 =
+  case (e1, e2) of
+    (EBinop op1 l1, EBinop op2 l2)
+      | op1 == op2 && op2 == op && isAssoc op ->
+          EBinop op (l1 ++ l2)
+    (EBinop op1 l1, _)
+      | op1 == op && isAssoc op ->
+          EBinop op (l1 ++ [e2])
+    (_, EBinop op2 l2)
+      | op2 == op && isAssoc op ->
+          EBinop op (e1 : l2)
+    (_, _) -> EBinop op [e1, e2]
 
 mkAssignment :: (Show a) => Exp a -> Either String (Core.Assignment a)
 mkAssignment (EAssert (EVar v) e) = Core.Assignment v <$> mkExpression e
 mkAssignment e = throwError $ "mkAssignment: expected EAssert, got " <> show e
 
-mkProgram :: (Show a) => Exp a -> Either String (Core.Program a)
-mkProgram e@(ESeq es) = trace ("mkProgram ESeq: " <> show e) $ do
-  let (eexpr, assignments) = runState (runExceptT $ go es) mempty
-  Core.Program (toList assignments) <$> eexpr
-  where
-    go :: (Show a) => [Exp a] -> ExceptT String (State (Seq (Core.Assignment a))) (Core.Exp a)
-    go = \case
-      [] -> mzero
-      [e] -> hoistEither $ mkExpression e
-      e : rest -> do
-        case e of
-          EUnit -> go rest
-          _ -> do
-            assignment <- hoistEither $ mkAssignment e
-            modify (|> assignment)
-            go rest
-mkProgram e = trace ("mkProgram " <> show e) $ do
-  e' <- mkExpression e
-  pure $ Core.Program [] e'
+-- At this point the expression should be either:
+-- 1. A sequence of assignments, followed by an expression
+-- 2. An expression
+mkProgram :: (GaloisField a) => Exp a -> Either String (Core.Program a)
+mkProgram _exp = do
+  let e' = do_const_prop _exp
+  case e' of
+    ESeq es -> do
+      let (eexpr, assignments) = runState (runExceptT $ go es) mempty
+      Core.Program assignments <$> eexpr
+      where
+        go :: (Show a) => Seq (Exp a) -> ExceptT String (State (Seq (Core.Assignment a))) (Core.Exp a)
+        go = \case
+          Empty -> throwError "mkProgram: empty sequence"
+          e :<| Empty -> hoistEither $ mkExpression e
+          e :<| rest -> do
+            case e of
+              EUnit -> go rest
+              _ -> do
+                assignment <- hoistEither $ mkAssignment e
+                modify (|> assignment)
+                go rest
+    _ -> Core.Program Empty <$> mkExpression e'
