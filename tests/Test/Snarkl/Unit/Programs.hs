@@ -20,7 +20,6 @@ import Snarkl.Language.Syntax
 import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
 import Snarkl.Toplevel
-import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Prelude hiding
   ( fromRational,
     negate,

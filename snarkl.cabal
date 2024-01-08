@@ -249,6 +249,4 @@ executable compile
     , bytestring
     , containers
     , galois-field   >=1.0.4
-    , hspec          >=2.0
-    , prettyprinter
     , snarkl         >=0.1.0.0

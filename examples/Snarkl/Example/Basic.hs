@@ -5,7 +5,6 @@ module Snarkl.Example.Basic where
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable (Typeable)
 import GHC.TypeLits (KnownNat)
-import Prettyprinter (Pretty (pretty))
 import Snarkl.Compile
 import Snarkl.Field (F_BN128)
 import Snarkl.Language.Syntax
@@ -43,10 +42,10 @@ arr_ex x = do
 p1 :: (GaloisField k) => Comp 'TField k
 p1 = arr_ex $ fromField 1
 
-desugar1 :: (GaloisField k, Pretty k) => TExpPkg 'TField k
+desugar1 :: (GaloisField k) => TExpPkg 'TField k
 desugar1 = compileCompToTexp p1
 
-interp1 :: (GaloisField k, Pretty k) => k
+interp1 :: (GaloisField k) => k
 interp1 = comp_interp p1 []
 
 p2 = do
@@ -55,13 +54,13 @@ p2 = do
 
 desugar2 = compileCompToTexp p2
 
-interp2 :: (GaloisField k, Pretty k) => k
+interp2 :: (GaloisField k) => k
 interp2 = comp_interp p2 []
 
-interp2' :: (GaloisField k, Pretty k) => k
+interp2' :: (GaloisField k) => k
 interp2' = comp_interp p2 [256]
 
-compile1 :: (GaloisField k, Pretty k) => R1CS k
+compile1 :: (GaloisField k) => R1CS k
 compile1 = compileCompToR1CS Simplify p1
 
 comp1 :: (GaloisField k, Typeable a) => Comp ('TSum 'TBool a) k
