@@ -1,12 +1,10 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Snarkl.Language.Core where
 
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import Prettyprinter (Pretty)
-import Snarkl.Common
+import Snarkl.Common (Op, UnOp)
 
 newtype Variable = Variable Int deriving (Eq, Ord, Show, Pretty)
 

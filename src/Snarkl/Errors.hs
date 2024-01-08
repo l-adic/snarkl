@@ -1,8 +1,8 @@
 module Snarkl.Errors where
 
-import Control.Exception
+import Control.Exception (Exception, throw)
 import Data.String (IsString)
-import Data.Typeable
+import Data.Typeable (Typeable)
 
 newtype ErrMsg = ErrMsg {errMsg :: String}
   deriving (Typeable, IsString)

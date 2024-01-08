@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Snarkl.Language.TExpr
