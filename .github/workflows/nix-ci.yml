@@ -20,11 +20,11 @@ jobs:
         repo: torsion-labs/arkworks-bridge
         tag: v0.2.0
 
-    - uses: cachix/install-nix-action@v22
+    - uses: cachix/install-nix-action@v24
       with:
         nix_path: nixpkgs=channel:nixos-unstable
 
-    - uses: cachix/cachix-action@v12
+    - uses: cachix/cachix-action@v13
       with:
         name: martyall
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
