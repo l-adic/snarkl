@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RebindableSyntax #-}
 
 module Snarkl.Language.Syntax
@@ -136,7 +135,7 @@ dec n = (P.-) n 1
 
 -- | 2-d arrays. 'width' is the size, in "bits" (#field elements), of
 -- each array element.
-arr2 :: (Typeable ty, GaloisField k) => Int -> Int -> Comp ('TArr ('TArr ty)) k
+arr2 :: (Typeable ty) => Int -> Int -> Comp ('TArr ('TArr ty)) k
 arr2 len width =
   do
     a <- arr len
@@ -151,7 +150,7 @@ arr2 len width =
     return a
 
 -- | 3-d arrays.
-arr3 :: (Typeable ty, GaloisField k) => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty))) k
+arr3 :: (Typeable ty) => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty))) k
 arr3 len width height =
   do
     a <- arr2 len width
@@ -165,7 +164,7 @@ arr3 len width height =
         )
     return a
 
-input_arr2 :: (Typeable ty, GaloisField k) => Int -> Int -> Comp ('TArr ('TArr ty)) k
+input_arr2 :: (Typeable ty) => Int -> Int -> Comp ('TArr ('TArr ty)) k
 input_arr2 0 _ = raise_err $ ErrMsg "array must have size > 0"
 input_arr2 len width =
   do
@@ -180,7 +179,7 @@ input_arr2 len width =
         )
     return a
 
-input_arr3 :: (Typeable ty, GaloisField k) => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty))) k
+input_arr3 :: (Typeable ty) => Int -> Int -> Int -> Comp ('TArr ('TArr ('TArr ty))) k
 input_arr3 len width height =
   do
     a <- arr2 len width
@@ -194,13 +193,13 @@ input_arr3 len width height =
         )
     return a
 
-set2 :: (Typeable ty2, GaloisField k) => (TExp ('TArr ('TArr ty2)) k, Int, Int) -> TExp ty2 k -> Comp 'TUnit k
+set2 :: (Typeable ty2) => (TExp ('TArr ('TArr ty2)) k, Int, Int) -> TExp ty2 k -> Comp 'TUnit k
 set2 (a, i, j) e = do
   a' <- get (a, i)
   set (a', j) e
 
 set3 ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty) =>
   ( TExp ('TArr ('TArr ('TArr ty))) k,
     Int,
     Int,
@@ -213,7 +212,7 @@ set3 (a, i, j, k) e = do
   set (a', k) e
 
 set4 ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty) =>
   ( TExp ('TArr ('TArr ('TArr ('TArr ty)))) k,
     Int,
     Int,
@@ -226,13 +225,13 @@ set4 (a, i, j, k, l) e = do
   a' <- get3 (a, i, j, k)
   set (a', l) e
 
-get2 :: (Typeable ty2, GaloisField k) => (TExp ('TArr ('TArr ty2)) k, Int, Int) -> State (Env k) (TExp ty2 k)
+get2 :: (Typeable ty2) => (TExp ('TArr ('TArr ty2)) k, Int, Int) -> State (Env k) (TExp ty2 k)
 get2 (a, i, j) = do
   a' <- get (a, i)
   get (a', j)
 
 get3 ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty) =>
   ( TExp ('TArr ('TArr ('TArr ty))) k,
     Int,
     Int,
@@ -244,7 +243,7 @@ get3 (a, i, j, k) = do
   get (a', k)
 
 get4 ::
-  (Typeable ty, GaloisField k) =>
+  (Typeable ty) =>
   ( TExp ('TArr ('TArr ('TArr ('TArr ty)))) k,
     Int,
     Int,
@@ -273,8 +272,7 @@ unrep_sum ::
 unrep_sum = unsafe_cast
 
 inl ::
-  (GaloisField k) =>
-  forall ty1 ty2.
+  forall ty1 ty2 k.
   ( Typeable ty1,
     Typeable ty2
   ) =>
@@ -294,8 +292,7 @@ inl te1 =
 inr ::
   forall ty1 ty2 k.
   ( Typeable ty1,
-    Typeable ty2,
-    GaloisField k
+    Typeable ty2
   ) =>
   TExp ty2 k ->
   Comp ('TSum ty1 ty2) k
@@ -314,9 +311,7 @@ case_sum ::
   forall ty1 ty2 ty k.
   ( Typeable ty1,
     Typeable ty2,
-    Typeable ty,
-    Zippable ty k,
-    GaloisField k
+    Zippable ty k
   ) =>
   (TExp ty1 k -> Comp ty k) ->
   (TExp ty2 k -> Comp ty k) ->
@@ -356,7 +351,7 @@ instance Derive 'TBool k where
 instance (GaloisField k) => Derive 'TField k where
   derive _ = return $ TEVal (VField 0)
 
-instance (Typeable ty, Derive ty k, GaloisField k) => Derive ('TArr ty) k where
+instance (Typeable ty, Derive ty k) => Derive ('TArr ty) k where
   derive n =
     do
       a <- arr 1
@@ -368,8 +363,7 @@ instance
   ( Typeable ty1,
     Derive ty1 k,
     Typeable ty2,
-    Derive ty2 k,
-    GaloisField k
+    Derive ty2 k
   ) =>
   Derive ('TProd ty1 ty2) k
   where
@@ -382,8 +376,7 @@ instance
 instance
   ( Typeable ty1,
     Derive ty1 k,
-    Typeable ty2,
-    GaloisField k
+    Typeable ty2
   ) =>
   Derive ('TSum ty1 ty2) k
   where
@@ -393,10 +386,7 @@ instance
       inl v1
 
 instance
-  ( Typeable f,
-    Typeable (Rep f ('TMu f)),
-    Derive (Rep f ('TMu f)) k,
-    GaloisField k
+  ( Derive (Rep f ('TMu f)) k
   ) =>
   Derive ('TMu f) k
   where
@@ -426,7 +416,7 @@ class Zippable ty k where
 instance Zippable 'TUnit k where
   zip_vals _ _ _ = return unit
 
-zip_base :: (Typeable ty, GaloisField k) => TExp 'TBool k -> TExp ty k -> TExp ty k -> Comp ty k
+zip_base :: (Typeable ty) => TExp 'TBool k -> TExp ty k -> TExp ty k -> Comp ty k
 zip_base TEBot _ _ = return TEBot
 zip_base _ TEBot e2 = return e2
 zip_base _ e1 TEBot = return e1
@@ -450,18 +440,17 @@ zip_base b e1 e2 =
           )
           b
 
-instance (GaloisField k) => Zippable 'TBool k where
+instance Zippable 'TBool k where
   zip_vals b b1 b2 = zip_base b b1 b2
 
-instance (GaloisField k) => Zippable 'TField k where
+instance Zippable 'TField k where
   zip_vals b e1 e2 = zip_base b e1 e2
 
 fuel :: Int
 fuel = 1
 
 check_bots ::
-  ( Derive ty k,
-    GaloisField k
+  ( Derive ty k
   ) =>
   Comp ty k ->
   TExp 'TBool k ->
@@ -491,8 +480,7 @@ instance
     Derive ty1 k,
     Zippable ty2 k,
     Typeable ty2,
-    Derive ty2 k,
-    GaloisField k
+    Derive ty2 k
   ) =>
   Zippable ('TProd ty1 ty2) k
   where
@@ -513,8 +501,7 @@ instance
     Derive ty1 k,
     Zippable ty2 k,
     Typeable ty2,
-    Derive ty2 k,
-    GaloisField k
+    Derive ty2 k
   ) =>
   Zippable ('TSum ty1 ty2) k
   where
@@ -527,11 +514,8 @@ instance
         return $ unrep_sum p'
 
 instance
-  ( Typeable f,
-    Typeable (Rep f ('TMu f)),
-    Zippable (Rep f ('TMu f)) k,
-    Derive (Rep f ('TMu f)) k,
-    GaloisField k
+  ( Zippable (Rep f ('TMu f)) k,
+    Derive (Rep f ('TMu f)) k
   ) =>
   Zippable ('TMu f) k
   where
@@ -631,7 +615,7 @@ fix = fixN 100
 zeq :: TExp 'TField k -> TExp 'TBool k
 zeq e = TEUnop (TUnop ZEq) e
 
-not :: (Eq k) => TExp 'TBool k -> TExp 'TBool k
+not :: TExp 'TBool k -> TExp 'TBool k
 not e = ifThenElse_aux e false true
 
 xor :: TExp 'TBool k -> TExp 'TBool k -> TExp 'TBool k
@@ -650,7 +634,6 @@ exp_of_int :: (GaloisField k) => Int -> TExp 'TField k
 exp_of_int i = TEVal (VField $ fromIntegral i)
 
 ifThenElse_aux ::
-  (Eq a) =>
   TExp 'TBool a ->
   TExp ty a ->
   TExp ty a ->
@@ -664,8 +647,7 @@ ifThenElse_aux b e1 e2
         _ -> TEIf b e1 e2
 
 ifThenElse ::
-  ( Zippable ty k,
-    Typeable ty
+  ( Zippable ty k
   ) =>
   Comp 'TBool k ->
   Comp ty k ->
@@ -698,7 +680,6 @@ iter n f e = g n f e
     g m f' e' = f' m $ g (dec m) f' e'
 
 iterM ::
-  (Typeable ty) =>
   Int ->
   (Int -> TExp ty k -> Comp ty k) ->
   TExp ty k ->
@@ -765,7 +746,6 @@ curry ::
   (Typeable a) =>
   (Typeable b) =>
   (Typeable c) =>
-  (GaloisField k) =>
   (TExp ('TProd a b) k -> Comp c k) ->
   TExp a k ->
   Comp ('TFun b c) k
@@ -778,7 +758,6 @@ uncurry ::
   (Typeable a) =>
   (Typeable b) =>
   (Typeable c) =>
-  (GaloisField k) =>
   (TExp a k -> Comp ('TFun b c) k) ->
   TExp ('TProd a b) k ->
   Comp c k

@@ -20,12 +20,12 @@ where
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Typeable (Proxy (..), Typeable, eqT, typeOf, typeRep, type (:~:) (Refl))
-import Prettyprinter (Pretty (pretty), line, parens, (<+>))
 import Snarkl.Common (Op, UnOp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.Core (Variable)
 import qualified Snarkl.Language.LambdaExpr as LE
 import Snarkl.Language.Type (Ty (TBool, TField, TFun, TUnit))
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty), line, parens, (<+>))
 
 newtype TVar (ty :: Ty) = TVar Variable deriving (Eq, Show)
 
@@ -58,17 +58,17 @@ instance Pretty (TOp ty1 ty2 ty3) where
   pretty (TOp op) = pretty op
 
 data Val :: Ty -> Type -> Type where
-  VField :: (GaloisField a) => a -> Val 'TField a
-  VTrue :: Val 'TBool a
-  VFalse :: Val 'TBool a
-  VUnit :: Val 'TUnit a
-  VLoc :: TLoc ty -> Val ty a
+  VField :: (GaloisField k) => k -> Val 'TField k
+  VTrue :: Val 'TBool k
+  VFalse :: Val 'TBool k
+  VUnit :: Val 'TUnit k
+  VLoc :: TLoc ty -> Val ty k
 
-deriving instance (Eq a) => Eq (Val (b :: Ty) a)
+deriving instance Eq (Val (b :: Ty) k)
 
-deriving instance (Show a) => Show (Val (b :: Ty) a)
+deriving instance Show (Val (b :: Ty) k)
 
-instance (Pretty a) => Pretty (Val ty a) where
+instance Pretty (Val ty k) where
   pretty v = case v of
     VField a -> pretty a
     VTrue -> "true"
@@ -100,22 +100,22 @@ data TExp :: Ty -> Type -> Type where
   TEAbs :: (Typeable ty, Typeable ty1) => TVar ty -> TExp ty1 a -> TExp ('TFun ty ty1) a
   TEApp :: (Typeable ty, Typeable ty1) => TExp ('TFun ty ty1) a -> TExp ty a -> TExp ty1 a
 
-deriving instance (Show a) => Show (TExp (b :: Ty) a)
+deriving instance Show (TExp (b :: Ty) k)
 
-instance (Eq a) => Eq (TExp (b :: Ty) a) where
+instance Eq (TExp (b :: Ty) k) where
   TEVar x == TEVar y = x == y
   TEVal a == TEVal b = a == b
   TEUnop (op :: TUnop ty1 ty) e1 == TEUnop (op' :: TUnop ty2 ty) e1' =
     case eqT @ty1 @ty2 of
       Just Refl -> op == op' && e1 == e1'
       Nothing -> False
-  TEBinop (op :: TOp ty1 ty2 ty) (e1 :: TExp ty1 a) (e2 :: TExp ty2 a) == TEBinop (op' :: TOp ty3 ty4 ty) e1' e2' =
+  TEBinop (op :: TOp ty1 ty2 ty) (e1 :: TExp ty1 k) (e2 :: TExp ty2 k) == TEBinop (op' :: TOp ty3 ty4 ty) e1' e2' =
     case (eqT @ty1 @ty3, eqT @ty2 @ty4) of
       (Just Refl, Just Refl) -> op == op' && e1 == e1' && e2 == e2'
       _ -> False
   TEIf e e1 e2 == TEIf e' e1' e2' =
     e == e' && e1 == e1' && e2 == e2'
-  TEAssert (e1 :: TExp ty1 a) (e2 :: TExp ty1 a) == TEAssert (e1' :: TExp ty2 a) (e2' :: TExp ty2 a) =
+  TEAssert (e1 :: TExp ty1 k) (e2 :: TExp ty1 a) == TEAssert (e1' :: TExp ty2 k) (e2' :: TExp ty2 k) =
     case eqT @ty1 @ty2 of
       Just Refl -> e1 == e1' && e2 == e2'
       Nothing -> False
@@ -124,7 +124,7 @@ instance (Eq a) => Eq (TExp (b :: Ty) a) where
   TEBot == TEBot = True
   _ == _ = False
 
-instance (Pretty a, Typeable ty) => Pretty (TExp ty a) where
+instance Pretty (TExp ty a) where
   pretty (TEVar var) = pretty var
   pretty (TEVal val) = pretty val
   pretty (TEUnop unop _exp) = pretty unop <+> pretty _exp
@@ -137,10 +137,9 @@ instance (Pretty a, Typeable ty) => Pretty (TExp ty a) where
   pretty (TEApp exp1 exp2) = parens (pretty exp1 <+> pretty exp2)
 
 tExpToLambdaExp ::
-  (GaloisField a) =>
-  (Typeable ty) =>
-  TExp ty a ->
-  LE.Exp a
+  (GaloisField k) =>
+  TExp ty k ->
+  LE.Exp k
 tExpToLambdaExp te = case te of
   TEVar (TVar x) -> LE.EVar x
   TEVal v -> lambdaExpOfVal v
@@ -157,7 +156,7 @@ tExpToLambdaExp te = case te of
   TEAbs (TVar v) e -> LE.EAbs v (tExpToLambdaExp e)
   TEApp e1 e2 -> LE.EApp (tExpToLambdaExp e1) (tExpToLambdaExp e2)
   where
-    lambdaExpOfVal :: (GaloisField a) => Val ty a -> LE.Exp a
+    lambdaExpOfVal :: (GaloisField k) => Val ty k -> LE.Exp k
     lambdaExpOfVal v = case v of
       VField c -> LE.EVal c
       VTrue -> LE.EVal 1
@@ -169,7 +168,6 @@ tExpToLambdaExp te = case te of
 -- whenever the normal form of 'te1' (with seq's reassociated right)
 -- is *not* equal 'TEAssert _ _'.
 teSeq ::
-  (Typeable ty1) =>
   TExp ty1 a ->
   TExp ty2 a ->
   TExp ty2 a
@@ -201,7 +199,6 @@ booleanVarsOfTexp = go []
     go vars (TEApp e1 e2) = go (go vars e1) e2
 
 varOfTExp ::
-  (Show a) =>
   TExp ty a ->
   Variable
 varOfTExp te = case lastSeq te of
@@ -209,7 +206,6 @@ varOfTExp te = case lastSeq te of
   _ -> failWith $ ErrMsg ("varOfTExp: expected var: " ++ show te)
 
 locOfTexp ::
-  (Show a) =>
   TExp ty a ->
   Loc
 locOfTexp te = case lastSeq te of

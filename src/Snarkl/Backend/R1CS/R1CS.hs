@@ -11,19 +11,19 @@ import Control.Parallel.Strategies
 import qualified Data.Aeson as A
 import Data.Field.Galois (GaloisField, PrimeField)
 import qualified Data.Map as Map
-import Prettyprinter (Pretty (..), (<+>))
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
 import Snarkl.Errors
+import Text.PrettyPrint.Leijen.Text (Pretty (..), (<+>))
 
 ----------------------------------------------------------------
 --                Rank-1 Constraint Systems                   --
 ----------------------------------------------------------------
 
-data R1C a where
-  R1C :: (GaloisField a) => (Poly a, Poly a, Poly a) -> R1C a
+data R1C k where
+  R1C :: (GaloisField k) => (Poly k, Poly k, Poly k) -> R1C k
 
-deriving instance (Show a) => Show (R1C a)
+deriving instance (Show k) => Show (R1C k)
 
 instance (PrimeField k) => A.ToJSON (R1C k) where
   toJSON (R1C (a, b, c)) =
@@ -33,7 +33,7 @@ instance (PrimeField k) => A.ToJSON (R1C k) where
         "C" A..= c
       ]
 
-instance (Pretty a) => Pretty (R1C a) where
+instance Pretty (R1C k) where
   pretty (R1C (aV, bV, cV)) = pretty aV <+> "*" <+> pretty bV <+> "==" <+> pretty cV
 
 data R1CS a = R1CS
@@ -44,19 +44,19 @@ data R1CS a = R1CS
     r1cs_gen_witness :: Assgn a -> Assgn a
   }
 
-instance (Show a) => Show (R1CS a) where
+instance (Show k) => Show (R1CS k) where
   show (R1CS cs nvs ivs ovs _) = show (cs, nvs, ivs, ovs)
 
-num_constraints :: R1CS a -> Int
+num_constraints :: R1CS k -> Int
 num_constraints = length . r1cs_clauses
 
 -- sat_r1c: Does witness 'w' satisfy constraint 'c'?
-sat_r1c :: (GaloisField a) => Assgn a -> R1C a -> Bool
+sat_r1c :: (GaloisField k) => Assgn k -> R1C k -> Bool
 sat_r1c w c
   | R1C (aV, bV, cV) <- c =
       inner aV w * inner bV w == inner cV w
   where
-    inner :: (GaloisField a) => Poly a -> Assgn a -> a
+    inner :: (GaloisField k) => Poly k -> Assgn k -> k
     inner (Poly v) w' =
       let c0 = Map.findWithDefault 0 (Var (-1)) v
        in Map.foldlWithKey (f w') c0 v
@@ -65,7 +65,7 @@ sat_r1c w c
       (v_val * Map.findWithDefault 0 v_key w') + acc
 
 -- sat_r1cs: Does witness 'w' satisfy constraint set 'cs'?
-sat_r1cs :: (GaloisField a) => Assgn a -> R1CS a -> Bool
+sat_r1cs :: (GaloisField k) => Assgn k -> R1CS k -> Bool
 sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
   where
     is_sat cs0 = map g cs0 `using` parListChunk (chunk_sz cs0) rseq

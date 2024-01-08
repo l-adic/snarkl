@@ -23,20 +23,20 @@ import qualified Snarkl.Language.Expr as E
 -- to the right and then flatten them. Similarly nested Binops of the same
 -- operator are flattened into a single list if that operator is associative.
 data Exp :: Type -> Type where
-  EVar :: Variable -> Exp a
-  EVal :: (GaloisField a) => a -> Exp a
-  EUnop :: UnOp -> Exp a -> Exp a
-  EBinop :: Op -> Exp a -> Exp a -> Exp a
-  EIf :: Exp a -> Exp a -> Exp a -> Exp a
-  EAssert :: Exp a -> Exp a -> Exp a
-  ESeq :: Exp a -> Exp a -> Exp a
-  EUnit :: Exp a
-  EAbs :: Variable -> Exp a -> Exp a
-  EApp :: Exp a -> Exp a -> Exp a
+  EVar :: Variable -> Exp k
+  EVal :: (GaloisField k) => k -> Exp k
+  EUnop :: UnOp -> Exp k -> Exp k
+  EBinop :: Op -> Exp k -> Exp k -> Exp k
+  EIf :: Exp k -> Exp k -> Exp k -> Exp k
+  EAssert :: Exp k -> Exp k -> Exp k
+  ESeq :: Exp k -> Exp k -> Exp k
+  EUnit :: Exp k
+  EAbs :: Variable -> Exp k -> Exp k
+  EApp :: Exp k -> Exp k -> Exp k
 
-deriving instance (Show a) => Show (Exp a)
+deriving instance Show (Exp k)
 
-deriving instance (Eq a) => Eq (Exp a)
+deriving instance Eq (Exp k)
 
 betaNormalize :: Exp a -> Exp a
 betaNormalize = \case
@@ -68,14 +68,14 @@ betaNormalize = \case
       EAbs var' e -> EAbs var' (substitute (var, e1) e)
       EApp e2 e3 -> EApp (substitute (var, e1) e2) (substitute (var, e1) e3)
 
-expOfLambdaExp :: (Show a) => Exp a -> E.Exp a
+expOfLambdaExp :: Exp k -> E.Exp k
 expOfLambdaExp _exp =
   let coreExp = betaNormalize _exp
    in case expOfLambdaExp' coreExp of
         Left err -> failWith $ ErrMsg err
         Right e -> e
   where
-    expOfLambdaExp' :: (Show a) => Exp a -> Either String (E.Exp a)
+    expOfLambdaExp' :: Exp k -> Either String (E.Exp k)
     expOfLambdaExp' = \case
       EVar var -> pure $ E.EVar var
       EVal v -> pure $ E.EVal v

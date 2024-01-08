@@ -3,11 +3,11 @@
 module Main where
 
 import Data.Foldable (traverse_)
-import Prettyprinter
-import Prettyprinter.Render.String (renderString)
 import Snarkl.Field ()
 import Snarkl.Toplevel (compileCompToTexp)
 import Test.Snarkl.Unit.Programs
+import Text.PrettyPrint.Leijen.Text
+import Text.PrettyPrint.Leijen.Text.Render.String (renderString)
 
 main :: IO ()
 main = do

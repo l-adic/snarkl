@@ -29,7 +29,6 @@ import Data.List (sort)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Prettyprinter (Pretty (..))
 import Snarkl.Backend.R1CS.R1CS (R1CS)
 import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint
@@ -56,6 +55,7 @@ import Snarkl.Language
     runState,
   )
 import qualified Snarkl.Language.Core as Core
+import Text.PrettyPrint.Leijen.Text (Pretty (..))
 
 ----------------------------------------------------------------
 --
@@ -457,7 +457,7 @@ data TExpPkg ty k = TExpPkg
   }
   deriving (Show)
 
-instance (Typeable ty, Pretty k) => Pretty (TExpPkg ty k) where
+instance (Typeable ty) => Pretty (TExpPkg ty k) where
   pretty (TExpPkg _ _ e) = pretty e
 
 deriving instance (Eq (TExp ty k)) => Eq (TExpPkg ty k)

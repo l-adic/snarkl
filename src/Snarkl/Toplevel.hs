@@ -22,7 +22,6 @@ import Data.Field.Galois (GaloisField, PrimeField)
 import Data.List (intercalate)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
-import Prettyprinter (Pretty (..), line, (<+>))
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn)
 import Snarkl.Compile
@@ -30,6 +29,7 @@ import Snarkl.Constraint
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
 import Snarkl.Language
+import Text.PrettyPrint.Leijen.Text (Pretty (..), line, (<+>))
 import Prelude
 
 ----------------------------------------------------
@@ -64,7 +64,7 @@ data Result k = Result
   }
   deriving (Show)
 
-instance (Pretty k) => Pretty (Result k) where
+instance Pretty (Result k) where
   pretty (Result sat vars constraints result _ _) =
     mconcat $
       intercalate

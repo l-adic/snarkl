@@ -5,7 +5,6 @@ module Test.Snarkl.UnitSpec where
 
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
-import Prettyprinter (Pretty)
 import Snarkl.Compile
 import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
@@ -20,6 +19,7 @@ import System.Exit (ExitCode (..))
 import Test.ArkworksBridge (CMD (RunR1CS), runCMD)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.Snarkl.Unit.Programs
+import Text.PrettyPrint.Leijen.Text (Pretty)
 import Prelude
 
 test_comp :: (Typeable ty, Pretty k, PrimeField k) => SimplParam -> Comp ty k -> [k] -> IO (Either ExitCode k)

@@ -8,7 +8,7 @@ module Snarkl.Language.Type
 where
 
 import Data.Typeable (Typeable)
-import Prettyprinter (Pretty (pretty), parens, (<+>))
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty), parens, (<+>))
 
 data TFunct where
   TFConst :: Ty -> TFunct

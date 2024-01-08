@@ -3,22 +3,18 @@ module Snarkl.Language.Core where
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Sequence (Seq)
-import Prettyprinter (Pretty)
 import Snarkl.Common (Op, UnOp)
+import Text.PrettyPrint.Leijen.Text (Pretty)
 
 newtype Variable = Variable Int deriving (Eq, Ord, Show, Pretty)
 
 data Exp :: Type -> Type where
-  EVar :: Variable -> Exp a
-  EVal :: (GaloisField a) => a -> Exp a
-  EUnop :: UnOp -> Exp a -> Exp a
-  EBinop :: Op -> [Exp a] -> Exp a
-  EIf :: Exp a -> Exp a -> Exp a -> Exp a
-  EUnit :: Exp a
-
-deriving instance (Eq a) => Eq (Exp a)
-
-deriving instance (Show a) => Show (Exp a)
+  EVar :: Variable -> Exp k
+  EVal :: (GaloisField k) => k -> Exp k
+  EUnop :: UnOp -> Exp k -> Exp k
+  EBinop :: Op -> [Exp k] -> Exp k
+  EIf :: Exp k -> Exp a -> Exp k -> Exp k
+  EUnit :: Exp k
 
 data Assignment a = Assignment Variable (Exp a)
 

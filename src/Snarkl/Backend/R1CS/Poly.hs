@@ -5,15 +5,15 @@ module Snarkl.Backend.R1CS.Poly where
 import qualified Data.Aeson as A
 import Data.Field.Galois (GaloisField, PrimeField, fromP)
 import qualified Data.Map as Map
-import Prettyprinter (Pretty (..))
 import Snarkl.Common
+import Text.PrettyPrint.Leijen.Text (Pretty (..))
 
-data Poly a where
-  Poly :: (GaloisField a) => Assgn a -> Poly a
+data Poly k where
+  Poly :: (GaloisField k) => Assgn k -> Poly k
 
-deriving instance (Show a) => Show (Poly a)
+deriving instance Show (Poly k)
 
-instance (Pretty a) => Pretty (Poly a) where
+instance Pretty (Poly k) where
   pretty (Poly m) = pretty $ Map.toList m
 
 -- The reason we use incVar is that we want to use -1 internally as the constant
@@ -21,22 +21,21 @@ instance (Pretty a) => Pretty (Poly a) where
 -- harder to work with downstream where e.g. arkworks expects positive indices).
 -- The reason we use show is because it's hard to deserialize large integers
 -- in certain langauges (e.g. javascript, even rust).
-instance (PrimeField a) => A.ToJSON (Poly a) where
-  toJSON :: Poly a -> A.Value
+instance (PrimeField k) => A.ToJSON (Poly k) where
   toJSON (Poly m) =
     let kvs = map (\(var, coeff) -> (show $ fromP coeff, incVar var)) $ Map.toList m
      in A.toJSON kvs
 
 -- | The constant polynomial equal 'c'
-const_poly :: (GaloisField a) => a -> Poly a
+const_poly :: (GaloisField k) => k -> Poly k
 const_poly c = Poly $ Map.insert (Var (-1)) c Map.empty
 
 -- | The polynomial equal variable 'x'
 var_poly ::
-  (GaloisField a) =>
+  (GaloisField k) =>
   -- | Variable, with coeff
-  (a, Var) ->
+  (k, Var) ->
   -- | Resulting polynomial
-  Poly a
+  Poly k
 var_poly (coeff, x) =
   Poly $ Map.insert x coeff Map.empty

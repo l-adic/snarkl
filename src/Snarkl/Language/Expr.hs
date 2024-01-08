@@ -20,31 +20,31 @@ import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Sequence (Seq, fromList, (<|), (><), (|>), pattern Empty, pattern (:<|))
-import Prettyprinter
+import Snarkl.Common (Op, UnOp, isAssoc)
+import qualified Snarkl.Language.Core as Core
+import Text.PrettyPrint.Leijen.Text
   ( Pretty (pretty),
     hsep,
     parens,
     punctuate,
     (<+>),
   )
-import Snarkl.Common (Op, UnOp, isAssoc)
-import qualified Snarkl.Language.Core as Core
 
 data Exp :: Type -> Type where
-  EVar :: Core.Variable -> Exp a
-  EVal :: (GaloisField a) => a -> Exp a
-  EUnop :: UnOp -> Exp a -> Exp a
-  EBinop :: Op -> [Exp a] -> Exp a
-  EIf :: Exp a -> Exp a -> Exp a -> Exp a
-  EAssert :: Exp a -> Exp a -> Exp a
-  ESeq :: Seq (Exp a) -> Exp a
-  EUnit :: Exp a
+  EVar :: Core.Variable -> Exp k
+  EVal :: (GaloisField k) => k -> Exp k
+  EUnop :: UnOp -> Exp k -> Exp k
+  EBinop :: Op -> [Exp k] -> Exp k
+  EIf :: Exp k -> Exp k -> Exp k -> Exp k
+  EAssert :: Exp k -> Exp k -> Exp k
+  ESeq :: Seq (Exp k) -> Exp k
+  EUnit :: Exp k
 
-deriving instance (Eq a) => Eq (Exp a)
+deriving instance Eq (Exp k)
 
-deriving instance (Show a) => Show (Exp a)
+deriving instance Show (Exp k)
 
-const_prop :: (GaloisField a) => Exp a -> State (Map Core.Variable a) (Exp a)
+const_prop :: (GaloisField k) => Exp k -> State (Map Core.Variable k) (Exp k)
 const_prop e =
   case e of
     EVar x -> lookup_var x
@@ -75,23 +75,23 @@ const_prop e =
         return $ ESeq es'
     EUnit -> return EUnit
   where
-    lookup_var :: (GaloisField a) => Core.Variable -> State (Map Core.Variable a) (Exp a)
+    lookup_var :: (GaloisField k) => Core.Variable -> State (Map Core.Variable k) (Exp k)
     lookup_var x0 =
       gets
         ( \m -> case Map.lookup x0 m of
             Nothing -> EVar x0
             Just c -> EVal c
         )
-    add_bind :: (Core.Variable, a) -> State (Map Core.Variable a) (Exp a)
+    add_bind :: (Core.Variable, k) -> State (Map Core.Variable k) (Exp k)
     add_bind (x0, c0) =
       do
         modify (Map.insert x0 c0)
         return EUnit
 
-do_const_prop :: (GaloisField a) => Exp a -> Exp a
+do_const_prop :: (GaloisField k) => Exp k -> Exp k
 do_const_prop e = evalState (const_prop e) Map.empty
 
-instance (Pretty a) => Pretty (Exp a) where
+instance Pretty (Exp k) where
   pretty (EVar x) = "var_" <> pretty x
   pretty (EVal c) = pretty c
   pretty (EUnop op e1) = pretty op <> parens (pretty e1)
@@ -103,7 +103,7 @@ instance (Pretty a) => Pretty (Exp a) where
   pretty (ESeq es) = parens $ hsep $ punctuate ";" $ map pretty (toList es)
   pretty EUnit = "()"
 
-mkExpression :: (Show a) => Exp a -> Either String (Core.Exp a)
+mkExpression :: Exp k -> Either String (Core.Exp k)
 mkExpression = \case
   EVar x -> pure $ Core.EVar x
   EVal v -> pure $ Core.EVal v
@@ -115,7 +115,7 @@ mkExpression = \case
 
 -- | Smart constructor for sequence, ensuring all expressions are
 --  flattened to top level.
-expSeq :: Exp a -> Exp a -> Exp a
+expSeq :: Exp k -> Exp k -> Exp k
 expSeq e1 e2 =
   case (e1, e2) of
     (ESeq l1, ESeq l2) -> ESeq (l1 >< l2)
@@ -123,7 +123,7 @@ expSeq e1 e2 =
     (_, ESeq l2) -> ESeq (e1 <| l2)
     (_, _) -> ESeq (fromList [e1, e2])
 
-expBinop :: Op -> Exp a -> Exp a -> Exp a
+expBinop :: Op -> Exp k -> Exp k -> Exp k
 expBinop op e1 e2 =
   case (e1, e2) of
     (EBinop op1 l1, EBinop op2 l2)
@@ -137,14 +137,14 @@ expBinop op e1 e2 =
           EBinop op (e1 : l2)
     (_, _) -> EBinop op [e1, e2]
 
-mkAssignment :: (Show a) => Exp a -> Either String (Core.Assignment a)
+mkAssignment :: Exp k -> Either String (Core.Assignment k)
 mkAssignment (EAssert (EVar v) e) = Core.Assignment v <$> mkExpression e
 mkAssignment e = throwError $ "mkAssignment: expected EAssert, got " <> show e
 
 -- At this point the expression should be either:
 -- 1. A sequence of assignments, followed by an expression
 -- 2. An expression
-mkProgram :: (GaloisField a) => Exp a -> Either String (Core.Program a)
+mkProgram :: (GaloisField k) => Exp k -> Either String (Core.Program k)
 mkProgram _exp = do
   let e' = do_const_prop _exp
   case e' of
@@ -152,7 +152,7 @@ mkProgram _exp = do
       let (eexpr, assignments) = runState (runExceptT $ go es) mempty
       Core.Program assignments <$> eexpr
       where
-        go :: (Show a) => Seq (Exp a) -> ExceptT String (State (Seq (Core.Assignment a))) (Core.Exp a)
+        go :: (Show k) => Seq (Exp k) -> ExceptT String (State (Seq (Core.Assignment k))) (Core.Exp k)
         go = \case
           Empty -> throwError "mkProgram: empty sequence"
           e :<| Empty -> hoistEither $ mkExpression e
