@@ -1,22 +1,15 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Snarkl.Language
-  ( compileTExpToProgram,
-    -- | Snarkl.Language.TExpr,
-    booleanVarsOfTexp,
+  ( -- | Snarkl.Language.TExpr,
     TExp,
-    -- | Snarkl.Language.Core,
-    Variable (..),
-    Program (..),
-    Assignment (..),
-    Exp (..),
-    -- types
     module Snarkl.Language.Type,
     -- | SyntaxMonad and Syntax
     Comp,
-    runState,
+    runComp,
     return,
     (>>=),
     (>>),
-    Env (..),
     -- | Return a fresh input variable.
     fresh_input,
     -- | Classes
@@ -85,16 +78,6 @@ module Snarkl.Language
   )
 where
 
-import Data.Field.Galois (GaloisField)
-import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language.Core
-  ( Assignment (..),
-    Exp (..),
-    Program (..),
-    Variable (..),
-  )
-import Snarkl.Language.Expr (mkProgram)
-import Snarkl.Language.LambdaExpr (expOfLambdaExp)
 import Snarkl.Language.Syntax
   ( Derive,
     Zippable,
@@ -152,23 +135,14 @@ import Snarkl.Language.Syntax
   )
 import Snarkl.Language.SyntaxMonad
   ( Comp,
-    Env (..),
     false,
     fresh_input,
     return,
-    runState,
+    runComp,
     true,
     unit,
     (>>),
     (>>=),
   )
-import Snarkl.Language.TExpr (TExp, booleanVarsOfTexp, tExpToLambdaExp)
+import Snarkl.Language.TExpr (TExp)
 import Snarkl.Language.Type
-import Prelude (Either (..), error, ($), (.), (<>))
-
-compileTExpToProgram :: (GaloisField k) => TExp ty k -> Program k
-compileTExpToProgram te =
-  let eprog = mkProgram . expOfLambdaExp . tExpToLambdaExp $ te
-   in case eprog of
-        Right p -> p
-        Left err -> failWith $ ErrMsg $ "compileTExpToProgram: failed to convert TExp to Program: " <> err

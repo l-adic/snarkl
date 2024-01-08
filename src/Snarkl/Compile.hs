@@ -10,6 +10,7 @@ module Snarkl.Compile
     compileCompToTexp,
     compileTexpToConstraints,
     compileCompToConstraints,
+    compileTExpToProgram,
   )
 where
 
@@ -43,16 +44,11 @@ import Snarkl.Constraint
     solve,
   )
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language
-  ( Comp,
-    Env (Env, input_vars, next_variable),
-    TExp,
-    Variable (Variable),
-    booleanVarsOfTexp,
-    compileTExpToProgram,
-    runState,
-  )
 import qualified Snarkl.Language.Core as Core
+import Snarkl.Language.Expr (mkProgram)
+import Snarkl.Language.LambdaExpr (expOfLambdaExp)
+import Snarkl.Language.SyntaxMonad (Comp, Env (..), runComp)
+import Snarkl.Language.TExpr (TExp, booleanVarsOfTexp, tExpToLambdaExp)
 import Text.PrettyPrint.Leijen.Text (Pretty (..))
 
 ----------------------------------------------------------------
@@ -447,9 +443,9 @@ compileConstraintsToR1CS simpl cs =
 -- | The result of desugaring a Snarkl computation.
 data TExpPkg ty k = TExpPkg
   { -- | The number of free variables in the computation.
-    out_variable :: Variable,
+    out_variable :: Core.Variable,
     -- | The variables marked as inputs.
-    comp_input_variables :: [Variable],
+    comp_input_variables :: [Core.Variable],
     -- | The resulting 'TExp'.
     comp_texp :: TExp ty k
   }
@@ -468,23 +464,16 @@ compileCompToTexp ::
   Comp ty k ->
   TExpPkg ty k
 compileCompToTexp mf =
-  case run mf of
+  case runComp mf of
     Left err -> failWith err
     Right (e, rho) ->
-      let out = Variable (next_variable rho)
+      let out = Core.Variable (next_variable rho)
           in_vars = sort $ input_vars rho
        in TExpPkg out in_vars e
-  where
-    run mf0 =
-      runState
-        mf0
-        ( Env
-            0
-            0
-            []
-            Map.empty
-            Map.empty
-        )
+
+compileTExpToProgram :: (GaloisField k) => TExp ty k -> Core.Program k
+compileTExpToProgram te =
+  mkProgram . expOfLambdaExp . tExpToLambdaExp $ te
 
 -- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
 compileTexpToConstraints ::
@@ -551,7 +540,7 @@ compileCompToR1CS simpl = compileConstraintsToR1CS simpl . compileCompToConstrai
 
 --------------------------------------------------------------------------------
 
-_Var :: Iso' Variable Var
-_Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
+_Var :: Iso' Core.Variable Var
+_Var = iso (\(Core.Variable v) -> Var v) (\(Var v) -> Core.Variable v)
 
 --------------------------------------------------------------------------------

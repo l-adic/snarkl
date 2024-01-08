@@ -5,10 +5,7 @@ module Snarkl.Example.List where
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
-import Snarkl.Toplevel
+import Snarkl.Language
 import Prelude hiding
   ( negate,
     return,

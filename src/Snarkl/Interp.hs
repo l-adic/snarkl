@@ -9,11 +9,12 @@ import Data.Foldable (traverse_)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Snarkl.Common (Op (..), UnOp (ZEq))
+import Snarkl.Compile (compileTExpToProgram)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language (TExp, Variable, compileTExpToProgram)
 import qualified Snarkl.Language.Core as Core
+import Snarkl.Language.TExpr (TExp)
 
-type Env a = Map Variable (Maybe a)
+type Env a = Map Core.Variable (Maybe a)
 
 newtype InterpM a b = InterpM {runInterpM :: Env a -> Either ErrMsg (Env a, b)}
 
@@ -38,11 +39,11 @@ raiseErr :: ErrMsg -> InterpM a b
 raiseErr err =
   InterpM (\_ -> Left err)
 
-addBinds :: [(Variable, Maybe a)] -> InterpM a (Maybe b)
+addBinds :: [(Core.Variable, Maybe a)] -> InterpM a (Maybe b)
 addBinds binds =
   InterpM (\rho -> Right (Map.union (Map.fromList binds) rho, Nothing))
 
-lookupVar :: (Show a) => Variable -> InterpM a (Maybe a)
+lookupVar :: (Show a) => Core.Variable -> InterpM a (Maybe a)
 lookupVar x =
   InterpM
     ( \rho -> case Map.lookup x rho of
@@ -86,7 +87,7 @@ interpTExp e = do
 
 interp ::
   (GaloisField k) =>
-  Map Variable k ->
+  Map Core.Variable k ->
   TExp ty k ->
   Either ErrMsg (Env k, Maybe k)
 interp rho e = runInterpM (interpTExp e) $ Map.map Just rho

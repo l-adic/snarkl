@@ -7,10 +7,7 @@ import Data.Typeable
 import GHC.TypeLits (KnownNat)
 import Snarkl.Compile
 import Snarkl.Example.List
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
-import Snarkl.Toplevel
+import Snarkl.Language
 import Prelude hiding
   ( fromRational,
     negate,

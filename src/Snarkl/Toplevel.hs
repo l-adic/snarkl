@@ -32,12 +32,6 @@ import Snarkl.Language
 import Text.PrettyPrint.Leijen.Text (Pretty (..), line, (<+>))
 import Prelude
 
-----------------------------------------------------
---
--- Snarkl.Toplevel Stuff
---
-----------------------------------------------------
-
 -- | Using the executable semantics for the 'TExp' language, execute
 -- the computation on the provided inputs, returning the 'k' result.
 comp_interp ::

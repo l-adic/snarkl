@@ -13,10 +13,7 @@ import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
 import Snarkl.Field (F_BN128)
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
-import Snarkl.Toplevel
+import Snarkl.Language
 import Prelude hiding
   ( fromRational,
     negate,

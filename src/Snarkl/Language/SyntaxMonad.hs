@@ -6,13 +6,14 @@
 module Snarkl.Language.SyntaxMonad
   ( -- | Computation monad
     Comp,
-    CompResult,
     runState,
+    runComp,
     return,
     (>>=),
     (>>),
     raise_err,
     Env (..),
+    defaultEnv,
     State (..),
     -- | Return a fresh input variable.
     fresh_input,
@@ -169,7 +170,20 @@ data Env k = Env
   }
   deriving (Show)
 
+defaultEnv :: Env k
+defaultEnv =
+  Env
+    { next_variable = 0,
+      next_loc = 0,
+      input_vars = [],
+      obj_map = Map.empty,
+      anal_map = Map.empty
+    }
+
 type Comp ty k = State (Env k) (TExp ty k)
+
+runComp :: Comp ty k -> Either ErrMsg (TExp ty k, Env k)
+runComp f = runState f defaultEnv
 
 {-----------------------------------------------
  Units, Booleans (used below)

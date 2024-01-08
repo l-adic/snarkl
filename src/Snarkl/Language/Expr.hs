@@ -21,6 +21,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Sequence (Seq, fromList, (<|), (><), (|>), pattern Empty, pattern (:<|))
 import Snarkl.Common (Op, UnOp, isAssoc)
+import Snarkl.Errors (ErrMsg (..), failWith)
 import qualified Snarkl.Language.Core as Core
 import Text.PrettyPrint.Leijen.Text
   ( Pretty (pretty),
@@ -144,8 +145,8 @@ mkAssignment e = throwError $ "mkAssignment: expected EAssert, got " <> show e
 -- At this point the expression should be either:
 -- 1. A sequence of assignments, followed by an expression
 -- 2. An expression
-mkProgram :: (GaloisField k) => Exp k -> Either String (Core.Program k)
-mkProgram _exp = do
+mkProgram :: (GaloisField k) => Exp k -> Core.Program k
+mkProgram _exp = either (failWith . ErrMsg) id $ do
   let e' = do_const_prop _exp
   case e' of
     ESeq es -> do
