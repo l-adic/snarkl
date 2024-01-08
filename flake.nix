@@ -30,12 +30,10 @@
               packages =  
                 { 
                   lib = flake.packages."snarkl:lib:snarkl";
-                  print = flake.packages."snarkl:exe:print-examples";
                   all = pkgs.symlinkJoin {
                     name = "all";
                     paths = with packages;
                       [ lib
-                        print
                       ];
                   };
                   default = packages.all;
