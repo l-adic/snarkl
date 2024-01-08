@@ -25,7 +25,8 @@ source-repository head
 
 library
   ghc-options:
-    -Wall -Werror -Wredundant-constraints -funbox-strict-fields -optc-O3
+    -Wall -Werror -Wredundant-constraints -funbox-strict-fields
+    -optc-O3
 
   -- -threaded
   exposed-modules:
@@ -51,10 +52,10 @@ library
     Snarkl.Language.Core
     Snarkl.Language.Expr
     Snarkl.Language.LambdaExpr
-    Snarkl.Language.Syntax
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
     Snarkl.Language.Type
+    Snarkl.Syntax
     Snarkl.Toplevel
 
   default-extensions:

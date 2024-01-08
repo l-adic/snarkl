@@ -6,7 +6,10 @@
 module Test.Snarkl.LambdaSpec where
 
 import Snarkl.Field (F_BN128)
-import Snarkl.Language.Syntax
+import qualified Snarkl.Language.SyntaxMonad as SM
+import Snarkl.Language.TExpr (TExp)
+import Snarkl.Language.Type (Ty (TField, TFun, TProd))
+import Snarkl.Syntax
   ( apply,
     curry,
     lambda,
@@ -15,9 +18,6 @@ import Snarkl.Language.Syntax
     (*),
     (+),
   )
-import qualified Snarkl.Language.SyntaxMonad as SM
-import Snarkl.Language.TExpr (TExp)
-import Snarkl.Language.Type (Ty (TField, TFun, TProd))
 import Snarkl.Toplevel (comp_interp)
 import Test.Hspec (Spec, describe, it)
 import Test.QuickCheck (Testable (property))

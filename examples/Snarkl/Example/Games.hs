@@ -11,7 +11,7 @@ import Data.Kind (Type)
 import Data.Typeable
 import Snarkl.Errors
 import Snarkl.Field (F_BN128)
-import Snarkl.Language
+import Snarkl.Syntax
 import Snarkl.Toplevel (comp_interp)
 import Prelude hiding
   ( fromRational,

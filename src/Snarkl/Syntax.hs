@@ -1,8 +1,27 @@
 {-# LANGUAGE RebindableSyntax #-}
 
-module Snarkl.Language.Syntax
-  ( Zippable,
+module Snarkl.Syntax
+  ( -- | Snarkl.Language.TExpr,
+    TExp,
+    Ty (..),
+    TFunct (..),
+    Rep,
+    -- | SyntaxMonad and Syntax
+    Comp,
+    runComp,
+    return,
+    (>>=),
+    (>>),
+    -- | Return a fresh input variable.
+    fresh_input,
+    -- | Classes
+    Zippable,
     Derive,
+    -- | Basic values
+    unit,
+    false,
+    true,
+    fromField,
     -- | Sums, products, recursive types
     inl,
     inr,
@@ -28,7 +47,6 @@ module Snarkl.Language.Syntax
     exp_of_int,
     inc,
     dec,
-    fromField,
     ifThenElse,
     negate,
     -- | Arrays
@@ -54,10 +72,22 @@ module Snarkl.Language.Syntax
     forall,
     forall2,
     forall3,
+    -- | Function combinators
     lambda,
     curry,
     uncurry,
     apply,
+    assert_bot,
+    assert_false,
+    assert_true,
+    defaultEnv,
+    fresh_var,
+    guard,
+    is_bot,
+    is_false,
+    is_true,
+    raise_err,
+    runState,
   )
 where
 
@@ -65,8 +95,8 @@ import Data.Field.Galois (GaloisField)
 import Data.String (IsString (..))
 import Data.Typeable (Typeable)
 import Snarkl.Common
-  ( Op (Add, And, BEq, Div, Eq, Mult, Sub, XOr),
-    UnOp (ZEq),
+  ( Op (..),
+    UnOp (..),
   )
 import Snarkl.Errors (ErrMsg (ErrMsg))
 import Snarkl.Language.SyntaxMonad
@@ -77,7 +107,9 @@ import Snarkl.Language.SyntaxMonad
     assert_bot,
     assert_false,
     assert_true,
+    defaultEnv,
     false,
+    fresh_input,
     fresh_var,
     fst_pair,
     get,
@@ -89,11 +121,13 @@ import Snarkl.Language.SyntaxMonad
     pair,
     raise_err,
     return,
+    runComp,
     runState,
     set,
     snd_pair,
     true,
     unit,
+    (>>),
     (>>=),
   )
 import Snarkl.Language.TExpr
@@ -102,7 +136,7 @@ import Snarkl.Language.TExpr
     TUnop (TUnop),
     Val (VFalse, VField, VTrue, VUnit),
   )
-import Snarkl.Language.Type (Rep, Ty (..))
+import Snarkl.Language.Type (Rep, TFunct (..), Ty (..))
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
   ( curry,

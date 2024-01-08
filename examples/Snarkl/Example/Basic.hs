@@ -7,7 +7,7 @@ import Data.Typeable (Typeable)
 import GHC.TypeLits (KnownNat)
 import Snarkl.Compile
 import Snarkl.Field (F_BN128)
-import Snarkl.Language
+import Snarkl.Syntax
 import Snarkl.Toplevel (R1CS, comp_interp)
 import System.Exit (ExitCode)
 import Prelude hiding

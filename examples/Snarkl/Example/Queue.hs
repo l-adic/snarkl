@@ -6,7 +6,7 @@ import Data.Field.Galois (GaloisField)
 import Data.Typeable
 import Snarkl.Example.List
 import Snarkl.Example.Stack
-import Snarkl.Language
+import Snarkl.Syntax
 import Prelude hiding
   ( fromRational,
     negate,

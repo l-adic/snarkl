@@ -10,7 +10,7 @@ import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
 import Snarkl.Errors
-import Snarkl.Language
+import Snarkl.Syntax
 import Prelude hiding
   ( fromRational,
     negate,
