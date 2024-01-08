@@ -6,9 +6,9 @@ import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Field (F_BN128)
+import Snarkl.Language (Comp)
 import Snarkl.Toplevel
-  ( Comp,
-    Result (..),
+  ( Result (..),
     SimplParam (..),
     execute,
     mkInputsFilePath,

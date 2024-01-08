@@ -11,8 +11,6 @@ module Snarkl.Toplevel
     execute,
 
     -- * Re-exported modules
-    module Snarkl.Language,
-    module Snarkl.Constraint,
     module Snarkl.Backend.R1CS,
     module Snarkl.Compile,
   )
@@ -25,7 +23,6 @@ import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn)
 import Snarkl.Compile
-import Snarkl.Constraint
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
 import Snarkl.Language

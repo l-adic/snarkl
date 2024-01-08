@@ -10,26 +10,24 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, Prime, PrimeField)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.Typeable
-import GHC.IO.Exception
+import Data.Typeable (Typeable)
+import GHC.IO.Exception (ExitCode (..))
 import GHC.TypeLits (KnownNat)
 import Snarkl.Compile (SimplParam)
+import Snarkl.Constraint (ConstraintSystem (..), do_simplify)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Language (Comp)
 import Snarkl.Language.TExpr
   ( TExp (..),
     lastSeq,
   )
 import Snarkl.Toplevel
-  ( Comp,
-    ConstraintSystem (..),
-    Result (..),
-    TExp (..),
+  ( Result (..),
     TExpPkg (..),
     comp_interp,
     compileCompToR1CS,
     compileCompToTexp,
     compileTexpToConstraints,
-    do_simplify,
     execute,
     serializeR1CSAsJson,
     serializeWitnessAsJson,

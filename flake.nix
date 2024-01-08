@@ -30,10 +30,12 @@
               packages =  
                 { 
                   lib = flake.packages."snarkl:lib:snarkl";
+                  benchmark = flake.packages."snarkl:bench:criterion";
                   all = pkgs.symlinkJoin {
                     name = "all";
                     paths = with packages;
                       [ lib
+                        benchmark
                       ];
                   };
                   default = packages.all;
