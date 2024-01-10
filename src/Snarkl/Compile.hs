@@ -504,9 +504,7 @@ compileTexpToConstraints (TExpPkg _out _in_vars te) =
                 Set.fromList in_vars
                   `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
             (Program assignments e) = compileTExpToProgram te
-        -- traceM $ "compileTexpToConstraints: prog = \n" ++ show (pretty prog)
         traverse_ cs_of_assignment assignments
-        -- e = do_const_prop e0
         -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.
         cs_of_assignment $ Assignment (_Var # out) e
         -- Add boolean constraints

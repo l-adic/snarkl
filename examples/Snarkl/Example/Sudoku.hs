@@ -8,7 +8,6 @@ import Data.Field.Galois (GaloisField, Prime, PrimeField)
 import Data.Fin (Fin, universe, weakenLeft, weakenRight)
 import Data.Type.Nat (FromGHC, Nat3, Nat6, Nat9, SNatI)
 import Data.Typeable (Proxy (Proxy), Typeable)
-import Debug.Trace (trace)
 import GHC.TypeLits (KnownNat)
 import Snarkl.Language.SyntaxMonad (arrLen, foldl)
 import Snarkl.Syntax
@@ -52,18 +51,12 @@ validPuzzle = do
     validateBoxes set bs
   return $ rowsValid && colsValid && boxesValid
   where
+    sudokuSet :: (GaloisField k) => Comp ('TVec Nat9 'TField) k
     sudokuSet = do
       as <- vec (Proxy @Nat9)
       _ <- forall [0 .. 8] $ \i ->
         setV (as, i) (fromField $ fromIntegral i)
       return as
-
-sudokuSet :: (GaloisField k) => Comp ('TVec Nat9 'TField) k
-sudokuSet = do
-  as <- vec (Proxy @Nat9)
-  _ <- forall [0 .. 8] $ \i ->
-    setV (as, i) (fromField $ fromIntegral i)
-  return as
 
 frequency ::
   (GaloisField k) =>
@@ -109,103 +102,3 @@ validateBoxes ss as = do
         idx = 3 P.* weakenLeft (Proxy @Nat6) i P.+ weakenRight (Proxy @Nat6) j
     setV (bs, idx) validBox
   allV bs
-
-{-
-
-[2, 1, 5, 3, 7, 6, 9, 8, 4,
- 3, 6, 4, 9, 8, 1, 2, 5, 7,
- 7, 8, 9, 2, 4, 5, 1, 6, 3,
- 4, 5, 3, 1, 2, 9, 6, 7, 8,
- 6, 2, 7, 5, 3, 8, 4, 1, 9,
- 1, 9, 8, 7, 6, 4, 5, 3, 2,
- 5, 7, 2, 4, 1, 3, 8, 9, 6,
- 8, 3, 1, 6, 9, 2, 7, 4, 5,
- 9, 4, 6, 8, 5, 7, 3, 2, 1]
-
--}
-
-exampleValidPuzzle :: [Int]
-exampleValidPuzzle =
-  (\a -> a P.- 1)
-    <$> [ 2,
-          1,
-          5,
-          3,
-          7,
-          6,
-          9,
-          8,
-          4,
-          3,
-          6,
-          4,
-          9,
-          8,
-          1,
-          2,
-          5,
-          7,
-          7,
-          8,
-          9,
-          2,
-          4,
-          5,
-          1,
-          6,
-          3,
-          4,
-          5,
-          3,
-          1,
-          2,
-          9,
-          6,
-          7,
-          8,
-          6,
-          2,
-          7,
-          5,
-          3,
-          8,
-          4,
-          1,
-          9,
-          1,
-          9,
-          8,
-          7,
-          6,
-          4,
-          5,
-          3,
-          2,
-          5,
-          7,
-          2,
-          4,
-          1,
-          3,
-          8,
-          9,
-          6,
-          8,
-          3,
-          1,
-          6,
-          9,
-          2,
-          7,
-          4,
-          5,
-          9,
-          4,
-          6,
-          8,
-          5,
-          7,
-          3,
-          2,
-          1
-        ]

@@ -28,8 +28,8 @@ main :: IO ()
 main = do
   executeAndWriteArtifacts
     "./snarkl-output"
-    "prog2"
-    NoSimplify
+    "sudoku"
+    Simplify
     validPuzzle
     (map (fromIntegral @_ @F_BN128) exampleValidPuzzle)
 
@@ -46,3 +46,103 @@ executeAndWriteArtifacts fp name simpl mf inputs = do
   let inputsFP = mkInputsFilePath fp name
   LBS.writeFile inputsFP (serializeInputsAsJson r1cs inputs)
   putStrLn $ "Wrote inputs to file " <> inputsFP
+
+{-
+
+[2, 1, 5, 3, 7, 6, 9, 8, 4,
+ 3, 6, 4, 9, 8, 1, 2, 5, 7,
+ 7, 8, 9, 2, 4, 5, 1, 6, 3,
+ 4, 5, 3, 1, 2, 9, 6, 7, 8,
+ 6, 2, 7, 5, 3, 8, 4, 1, 9,
+ 1, 9, 8, 7, 6, 4, 5, 3, 2,
+ 5, 7, 2, 4, 1, 3, 8, 9, 6,
+ 8, 3, 1, 6, 9, 2, 7, 4, 5,
+ 9, 4, 6, 8, 5, 7, 3, 2, 1]
+
+-}
+
+exampleValidPuzzle :: [Int]
+exampleValidPuzzle =
+  (\a -> a Prelude.- 1)
+    <$> [ 2,
+          1,
+          5,
+          3,
+          7,
+          6,
+          9,
+          8,
+          4,
+          3,
+          6,
+          4,
+          9,
+          8,
+          1,
+          2,
+          5,
+          7,
+          7,
+          8,
+          9,
+          2,
+          4,
+          5,
+          1,
+          6,
+          3,
+          4,
+          5,
+          3,
+          1,
+          2,
+          9,
+          6,
+          7,
+          8,
+          6,
+          2,
+          7,
+          5,
+          3,
+          8,
+          4,
+          1,
+          9,
+          1,
+          9,
+          8,
+          7,
+          6,
+          4,
+          5,
+          3,
+          2,
+          5,
+          7,
+          2,
+          4,
+          1,
+          3,
+          8,
+          9,
+          6,
+          8,
+          3,
+          1,
+          6,
+          9,
+          2,
+          7,
+          4,
+          5,
+          9,
+          4,
+          6,
+          8,
+          5,
+          7,
+          3,
+          2,
+          1
+        ]

@@ -115,7 +115,6 @@ import Data.Nat (Nat (..))
 import Data.String (IsString (..))
 import Data.Type.Nat (Mult, SNatI, reflectToNum)
 import Data.Typeable (Proxy (Proxy), Typeable)
-import Debug.Trace (trace)
 import Snarkl.Common
   ( Op (..),
     UnOp (..),
