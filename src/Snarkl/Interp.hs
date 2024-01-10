@@ -8,11 +8,13 @@ import Data.Field.Galois (GaloisField)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Debug.Trace (traceM)
 import Snarkl.Common (Op (..), UnOp (ZEq))
 import Snarkl.Compile (compileTExpToProgram)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import qualified Snarkl.Language.Core as Core
 import Snarkl.Language.TExpr (TExp)
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
 type Env a = Map Core.Variable (Maybe a)
 
@@ -83,6 +85,7 @@ interpTExp ::
   InterpM k (Maybe k)
 interpTExp e = do
   let _exp = compileTExpToProgram e
+  -- traceM $ "interpTExp: " ++ show (pretty _exp)
   interpProg _exp
 
 interp ::

@@ -81,7 +81,8 @@ instance (Pretty k) => Pretty (Result k) where
 execute :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> Result k
 execute simpl mf inputs =
   let TExpPkg nv in_vars e = compileCompToTexp mf
-      r1cs = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
+      p = TExpPkg nv in_vars e
+      r1cs = compileTExpToR1CS simpl p
       [out_var] = r1cs_out_vars r1cs
       wit = wit_of_r1cs inputs r1cs
       out = case Map.lookup out_var wit of
@@ -98,17 +99,19 @@ execute simpl mf inputs =
       -- the input assignment (a subset of 'wit').
       -- Output the return value of 'e'.
       out_interp = comp_interp mf inputs
-      result =
-        ( if out_interp == out
-            then sat_r1cs wit r1cs
-            else
-              failWith $
-                ErrMsg $
-                  "interpreter result "
-                    ++ show out_interp
-                    ++ " differs from actual result "
-                    ++ show out
-        )
-      nw = r1cs_num_vars r1cs
-      ng = num_constraints r1cs
-   in Result result nw ng out r1cs wit
+   in error $ show (out_interp, length (r1cs_clauses r1cs), r1cs_num_vars r1cs)
+
+--   result =
+--     ( if out_interp == out
+--         then sat_r1cs wit r1cs
+--         else
+--           failWith $
+--             ErrMsg $
+--               "interpreter result "
+--                 ++ show out_interp
+--                 ++ " differs from actual result "
+--                 ++ show out
+--     )
+--   nw = r1cs_num_vars r1cs
+--   ng = num_constraints r1cs
+-- in Result result nw ng out r1cs wit

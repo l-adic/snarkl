@@ -9,6 +9,7 @@ import Snarkl.Syntax
 import Prelude hiding
   ( negate,
     return,
+    traverse,
     (&&),
     (*),
     (+),
@@ -23,6 +24,13 @@ type TF a = 'TFSum ('TFConst 'TUnit) ('TFProd ('TFConst a) 'TFId)
 type TList a = 'TMu (TF a)
 
 type List a k = TExp (TList a) k
+
+-- traverse :: (Typeable a, Zippable a k, Typeable b, Derive b k, Zippable b k, Derive a k) => (TExp a k -> Comp b k) -> List a k -> Comp (TList b) k
+-- traverse f as = case_list as nil $ \a as' ->
+--  do
+--    b <- f a
+--    bs <- traverse f as'
+--    cons b bs
 
 nil :: (Typeable a) => Comp (TList a) k
 nil = do

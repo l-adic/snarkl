@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Main where
 
 import Control.Monad (unless)
@@ -5,8 +7,10 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Snarkl.Example.Sudoku
 import Snarkl.Field (F_BN128)
 import Snarkl.Language (Comp)
+import Snarkl.Syntax
 import Snarkl.Toplevel
   ( Result (..),
     SimplParam (..),
@@ -22,7 +26,12 @@ import qualified Test.Snarkl.Unit.Programs as Programs
 
 main :: IO ()
 main = do
-  executeAndWriteArtifacts "./snarkl-output" "prog2" NoSimplify (Programs.prog2 10) [1 :: F_BN128]
+  executeAndWriteArtifacts
+    "./snarkl-output"
+    "prog2"
+    SimplifyDataflow
+    validPuzzle
+    (map (fromIntegral @_ @F_BN128) exampleValidPuzzle)
 
 executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> IO ()
 executeAndWriteArtifacts fp name simpl mf inputs = do

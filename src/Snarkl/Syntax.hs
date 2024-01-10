@@ -2,6 +2,7 @@
 
 module Snarkl.Syntax
   ( -- | Snarkl.Language.TExpr,
+    coerceToInt,
     TExp,
     Ty (..),
     TFunct (..),
@@ -10,6 +11,7 @@ module Snarkl.Syntax
     Comp,
     runComp,
     return,
+    ifThenElse_aux,
     (>>=),
     (>>),
     -- | Return a fresh input variable.
@@ -39,6 +41,7 @@ module Snarkl.Syntax
     (*),
     (/),
     (&&),
+    (||),
     zeq,
     not,
     xor,
@@ -91,7 +94,7 @@ module Snarkl.Syntax
   )
 where
 
-import Data.Field.Galois (GaloisField)
+import Data.Field.Galois (GaloisField, PrimeField, fromP)
 import Data.String (IsString (..))
 import Data.Typeable (Typeable)
 import Snarkl.Common
@@ -139,19 +142,25 @@ import Snarkl.Language.TExpr
 import Snarkl.Language.Type (Rep, TFunct (..), Ty (..))
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
-  ( curry,
+  ( all,
+    concat,
+    curry,
+    foldl,
     fromRational,
     negate,
     not,
     return,
+    traverse,
     uncurry,
     (&&),
     (*),
     (+),
     (-),
     (/),
+    (<*>),
     (>>),
     (>>=),
+    (||),
   )
 import qualified Prelude as P
 
@@ -625,6 +634,21 @@ fix ::
   Comp ty2 k
 fix = fixN 100
 
+{-
+  fix f = let x = f x in x
+
+fix' :: TExp ('TFun a a) k -> Comp a k
+fix' f =
+  let x = f `apply` x
+  in x
+
+fix' :: TExp ('TFun a a) k -> Comp a k
+fix' f = do
+  x <- f `apply` x
+  return x
+
+-}
+
 ----------------------------------------------------
 --
 -- Operators, Values
@@ -642,6 +666,9 @@ fix = fixN 100
 
 (/) :: TExp 'TField k -> TExp 'TField k -> TExp 'TField k
 (/) e1 e2 = TEBinop (TOp Div) e1 e2
+
+(||) :: TExp 'TBool k -> TExp 'TBool k -> TExp 'TBool k
+(||) e1 e2 = TEBinop (TOp Or) e1 e2
 
 (&&) :: TExp 'TBool k -> TExp 'TBool k -> TExp 'TBool k
 (&&) e1 e2 = TEBinop (TOp And) e1 e2
@@ -803,3 +830,19 @@ uncurry f p = do
 
 apply :: (Typeable a, Typeable b) => TExp ('TFun a b) k -> TExp a k -> Comp b k
 apply f x = return $ TEApp f x
+
+{-
+
+(<*>) :: (Typeable a) => (Typeable b) => Comp ('TFun a b) k -> Comp a k -> Comp b k
+
+(<$$>) :: (Typeable a) => (Typeable b) => TExp ('TFun a b) k -> Comp a k -> Comp b k
+(<$$>) f a = a >>= \_a -> apply f _a
+
+liftA2 :: (Typeable a) => (Typeable b) => (Typeable c) => TExp ('TFun a ('TFun b c)) k -> Comp a k -> Comp b k -> Comp c k
+liftA2 f x y = (f <$$> x) <*> y
+
+-}
+
+coerceToInt :: (PrimeField k) => TExp 'TField k -> Int
+coerceToInt (TEVal (VField x)) = fromIntegral $ fromP x
+coerceToInt _ = error "impossible: coerceToInt"

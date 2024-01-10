@@ -2,13 +2,14 @@
 
 module Snarkl.Language.Expr
   ( Exp (..),
-    mkProgram,
+    mkProgram',
     expSeq,
     expBinop,
+    do_const_prop,
   )
 where
 
-import Control.Error (hoistEither, runExceptT)
+import Control.Error (runExceptT)
 import Control.Monad.Except
   ( ExceptT,
     MonadError (throwError),
@@ -19,9 +20,8 @@ import Data.Foldable (toList)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Sequence (Seq, fromList, (<|), (><), (|>), pattern Empty, pattern (:<|))
+import Data.Sequence (Seq, filter, fromList, singleton, (<|), (><), (|>), pattern Empty, pattern (:<|))
 import Snarkl.Common (Op, UnOp, isAssoc)
-import Snarkl.Errors (ErrMsg (..), failWith)
 import qualified Snarkl.Language.Core as Core
 import Text.PrettyPrint.Leijen.Text
   ( Pretty (pretty),
@@ -30,6 +30,7 @@ import Text.PrettyPrint.Leijen.Text
     punctuate,
     (<+>),
   )
+import Prelude hiding (filter)
 
 data Exp :: Type -> Type where
   EVar :: Core.Variable -> Exp k
@@ -104,15 +105,26 @@ instance Pretty (Exp k) where
   pretty (ESeq es) = parens $ hsep $ punctuate ";" $ map pretty (toList es)
   pretty EUnit = "()"
 
-mkExpression :: Exp k -> Either String (Core.Exp k)
+mkExpression ::
+  (GaloisField k) => Exp k -> ExceptT String (State (Seq (Core.Assignment k))) (Core.Exp k)
 mkExpression = \case
   EVar x -> pure $ Core.EVar x
   EVal v -> pure $ Core.EVal v
-  EUnop op e -> Core.EUnop op <$> mkExpression e
-  EBinop op es -> Core.EBinop op <$> traverse mkExpression es
-  EIf e1 e2 e3 -> Core.EIf <$> mkExpression e1 <*> mkExpression e2 <*> mkExpression e3
+  EUnop op e -> Core.EUnop op <$> mkProgram e
+  EBinop op es -> Core.EBinop op <$> traverse mkProgram es
+  EIf e1 e2 e3 -> Core.EIf <$> mkProgram e1 <*> mkProgram e2 <*> mkProgram e3
   EUnit -> pure Core.EUnit
-  e -> throwError $ "mkExpression: " ++ show e
+  ESeq es -> do
+    res <- traverse mkProgram es
+    case filter (/= Core.EUnit) res of
+      Empty -> throwError "Fuck"
+      e :<| Empty -> pure e
+      e :<| _ -> throwError $ "something went wrong in mkExpression: " <> show e
+  EAssert (EVar v) e -> do
+    e' <- mkProgram e
+    modify (<> singleton (Core.Assignment v e'))
+    pure Core.EUnit
+  EAssert {} -> throwError "something went wrong in mkExpression: EAssert"
 
 -- | Smart constructor for sequence, ensuring all expressions are
 --  flattened to top level.
@@ -138,30 +150,42 @@ expBinop op e1 e2 =
           EBinop op (e1 : l2)
     (_, _) -> EBinop op [e1, e2]
 
-mkAssignment :: Exp k -> Either String (Core.Assignment k)
-mkAssignment (EAssert (EVar v) e) = Core.Assignment v <$> mkExpression e
-mkAssignment e = throwError $ "mkAssignment: expected EAssert, got " <> show e
-
 -- At this point the expression should be either:
 -- 1. A sequence of assignments, followed by an expression
 -- 2. An expression
-mkProgram :: (GaloisField k) => Exp k -> Core.Program k
-mkProgram _exp = either (failWith . ErrMsg) id $ do
-  let e' = do_const_prop _exp
-  case e' of
-    ESeq es -> do
-      let (eexpr, assignments) = runState (runExceptT $ go es) mempty
-      Core.Program assignments <$> eexpr
-      where
-        go :: Seq (Exp k) -> ExceptT String (State (Seq (Core.Assignment k))) (Core.Exp k)
-        go = \case
-          Empty -> throwError "mkProgram: empty sequence"
-          e :<| Empty -> hoistEither $ mkExpression e
-          e :<| rest -> do
-            case e of
-              EUnit -> go rest
-              _ -> do
-                assignment <- hoistEither $ mkAssignment e
-                modify (|> assignment)
-                go rest
-    _ -> Core.Program Empty <$> mkExpression e'
+mkProgram ::
+  (GaloisField k) =>
+  Exp k ->
+  ExceptT String (State (Seq (Core.Assignment k))) (Core.Exp k)
+mkProgram _exp = do
+  case _exp of
+    ESeq es -> case es of
+      Empty -> throwError "mkProgram: empty sequence"
+      e :<| Empty -> mkProgram e
+      e :<| rest -> do
+        case e of
+          EUnit -> mkProgram $ ESeq rest
+          EAssert (EVar v) e' -> do
+            res <- mkProgram e'
+            modify (<> singleton (Core.Assignment v res))
+            mkProgram $ ESeq rest
+          _ -> throwError "mkProgram: expected EUnit or EAssert"
+    e -> mkExpression e
+
+-- showConstructor :: Exp k -> String
+-- showConstructor = \case
+--  EVar {} -> "EVar"
+--  EVal {} -> "EVal"
+--  EUnop {} -> "EUnop"
+--  EBinop {} -> "EBinop"
+--  EIf {} -> "EIf"
+--  EAssert {} -> "EAssert"
+--  ESeq {} -> "ESeq"
+--  EUnit {} -> "EUnit"
+
+mkProgram' :: (GaloisField k) => Exp k -> Either String (Core.Program k)
+mkProgram' _exp = do
+  let (res, assigns) = runState (runExceptT $ mkProgram $ do_const_prop _exp) Empty
+  case res of
+    Left err -> Left err
+    Right e -> Right $ Core.Program assigns e

@@ -54,7 +54,7 @@ import Snarkl.Language
     Variable (..),
     booleanVarsOfTexp,
     expOfLambdaExp,
-    mkProgram,
+    mkProgram',
     runComp,
     tExpToLambdaExp,
   )
@@ -482,7 +482,11 @@ compileCompToTexp mf =
 
 compileTExpToProgram :: (GaloisField k) => TExp ty k -> Program k
 compileTExpToProgram te =
-  mkProgram . expOfLambdaExp . tExpToLambdaExp $ te
+  either (failWith . ErrMsg) id
+    . mkProgram'
+    . expOfLambdaExp
+    . tExpToLambdaExp
+    $ te
 
 -- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
 compileTexpToConstraints ::
@@ -499,7 +503,8 @@ compileTexpToConstraints (TExpPkg _out _in_vars te) =
               Set.toList $
                 Set.fromList in_vars
                   `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
-            Program assignments e = compileTExpToProgram te
+            (Program assignments e) = compileTExpToProgram te
+        -- traceM $ "compileTexpToConstraints: prog = \n" ++ show (pretty prog)
         traverse_ cs_of_assignment assignments
         -- e = do_const_prop e0
         -- Snarkl.Compile 'e' to constraints 'cs', with output wire 'out'.

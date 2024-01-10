@@ -11,6 +11,7 @@ module Snarkl.Language.SyntaxMonad
     return,
     (>>=),
     (>>),
+    (<*>),
     raise_err,
     Env (..),
     defaultEnv,
@@ -27,6 +28,7 @@ module Snarkl.Language.SyntaxMonad
     true,
     -- | Arrays
     arr,
+    arrLen,
     input_arr,
     get,
     set,
@@ -45,12 +47,14 @@ module Snarkl.Language.SyntaxMonad
     get_addr,
     guard,
     add_objects,
+    foldl,
   )
 where
 
 import Control.Monad (forM, replicateM)
 import Control.Monad.Supply (Supply, runSupply)
 import Control.Monad.Supply.Class (MonadSupply (fresh))
+import Data.Field.Galois (GaloisField, PrimeField (fromP))
 import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
 import Data.Typeable (Typeable)
@@ -61,7 +65,7 @@ import Snarkl.Language.TExpr
     TExp (..),
     TLoc (TLoc),
     TVar (TVar),
-    Val (VFalse, VLoc, VTrue, VUnit),
+    Val (VFalse, VField, VLoc, VTrue, VUnit),
     lastSeq,
     locOfTexp,
     teSeq,
@@ -69,7 +73,8 @@ import Snarkl.Language.TExpr
   )
 import Snarkl.Language.Type (Ty (..))
 import Prelude hiding
-  ( fromRational,
+  ( foldl,
+    fromRational,
     negate,
     not,
     return,
@@ -78,6 +83,7 @@ import Prelude hiding
     (+),
     (-),
     (/),
+    (<*>),
     (>>),
     (>>=),
   )
@@ -125,6 +131,17 @@ raise_err msg = State (\_ -> Left msg)
 
 return :: TExp ty a -> State s (TExp ty a)
 return e = State (\s -> Right (lastSeq e, s))
+
+(<*>) :: (Typeable a) => (Typeable b) => Comp ('TFun a b) k -> Comp a k -> Comp b k
+(<*>) f a = State $ \s ->
+  case runState f s of
+    Left err -> Left err
+    Right (f', s') -> case runState a s' of
+      Left err -> Left err
+      Right (a', s'') -> Right (TEApp f' a', s'')
+
+-----------------------------------------------
+-- Syntax Monad
 
 -- | At elaboration time, we maintain an environment containing
 --    (i) next_var:  the next free variable
@@ -570,3 +587,41 @@ is_bot e =
 assert_bot :: TExp ty k -> Comp 'TUnit k
 assert_bot (TEVar (TVar x)) = add_statics [(x, AnalBot)]
 assert_bot e = raise_err $ ErrMsg $ "in assert_bot, expected " ++ show e ++ " a variable"
+
+arrLen :: (GaloisField k) => TExp ('TArr ty) k -> Comp 'TField k
+arrLen as =
+  let l = locOfTexp as
+   in State
+        ( \s ->
+            Right
+              ( TEVal (VField $ fromIntegral (Map.size $ Map.filterWithKey (\(l', _) _ -> l' == l) (obj_map s))),
+                s
+              )
+        )
+
+foldl ::
+  (PrimeField k) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  TExp ('TFun b ('TFun a b)) k ->
+  TExp b k ->
+  TExp ('TArr a) k ->
+  Comp b k
+foldl f z as =
+  do
+    _len <- arrLen as
+    let len = case _len of
+          TEVal (VField l) -> fromIntegral $ fromP l
+          _ -> error "internal error in foldl: array length must be an int"
+        go i acc =
+          if i P.== len
+            then return acc
+            else do
+              x <- get (as, i)
+              let y = TEApp (TEApp f acc) x
+              go (i P.+ 1) y
+    go 0 z
+
+ifThenElse :: Bool -> a -> a -> a
+ifThenElse True x _ = x
+ifThenElse False _ y = y

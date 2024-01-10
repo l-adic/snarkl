@@ -9,7 +9,7 @@ module Snarkl.Language
 where
 
 import Snarkl.Language.Core (Assignment (..), Exp (..), Program (..), Variable (..))
-import Snarkl.Language.Expr (mkProgram)
+import Snarkl.Language.Expr (mkProgram')
 import Snarkl.Language.LambdaExpr (expOfLambdaExp)
 import Snarkl.Language.SyntaxMonad
   ( Comp,
