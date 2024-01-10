@@ -86,6 +86,7 @@ library
     , Cabal           >=1.22
     , containers      >=0.5   && <0.7
     , errors
+    , fin
     , galois-field    >=1.0.4
     , hspec           >=2.0
     , jsonl           >=0.1.4
@@ -93,7 +94,9 @@ library
     , mtl             >=2.2   && <2.3
     , parallel        >=3.2   && <3.3
     , process         >=1.2
+    , tagged
     , transformers
+    , vec
     , wl-pprint-text
 
   hs-source-dirs:     src
@@ -205,6 +208,7 @@ executable compile
     Snarkl.Example.Queue
     Snarkl.Example.Stack
     Snarkl.Example.Tree
+    Snarkl.Example.Sudoku
     Test.Snarkl.Unit.Programs
 
   default-extensions:
@@ -220,5 +224,6 @@ executable compile
       base          >=4.7
     , bytestring
     , containers
+    , fin
     , galois-field  >=1.0.4
     , snarkl        >=0.1.0.0

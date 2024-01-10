@@ -7,6 +7,7 @@ module Snarkl.Language.Type
   )
 where
 
+import Data.Nat (Nat)
 import Data.Typeable (Typeable)
 import Text.PrettyPrint.Leijen.Text (Pretty (pretty), parens, (<+>))
 
@@ -30,6 +31,7 @@ data Ty where
   TField :: Ty
   TBool :: Ty
   TArr :: Ty -> Ty
+  TVec :: Nat -> Ty -> Ty
   TProd :: Ty -> Ty -> Ty
   TSum :: Ty -> Ty -> Ty
   TMu :: TFunct -> Ty

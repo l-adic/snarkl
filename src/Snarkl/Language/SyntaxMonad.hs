@@ -55,9 +55,11 @@ import Control.Monad (forM, replicateM)
 import Control.Monad.Supply (Supply, runSupply)
 import Control.Monad.Supply.Class (MonadSupply (fresh))
 import Data.Field.Galois (GaloisField, PrimeField (fromP))
+import Data.Fin (Fin, toNatural)
 import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
 import Data.Typeable (Typeable)
+import Data.Vec.Lazy (Vec)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.Core (Variable (..))
 import Snarkl.Language.TExpr
@@ -72,6 +74,7 @@ import Snarkl.Language.TExpr
     varOfTExp,
   )
 import Snarkl.Language.Type (Ty (..))
+import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
   ( foldl,
     fromRational,

@@ -20,6 +20,7 @@ import Data.Field.Galois (GaloisField, PrimeField)
 import Data.List (intercalate)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
+import Debug.Trace (trace)
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn)
 import Snarkl.Compile
@@ -39,7 +40,7 @@ comp_interp ::
   k
 comp_interp mf inputs =
   let TExpPkg _ in_vars e = compileCompToTexp mf
-      input_map = Map.fromList $ zip in_vars inputs
+      input_map = trace (show (pretty e)) $ Map.fromList $ zip in_vars inputs
    in case interp input_map e of
         Left err -> failWith err
         Right (_, Nothing) -> failWith $ ErrMsg $ show e ++ " evaluated to bot"

@@ -91,12 +91,31 @@ module Snarkl.Syntax
     is_true,
     raise_err,
     runState,
+    -- | Vectors
+    vec,
+    getV,
+    getV2,
+    setV,
+    setV2,
+    mapV,
+    foldlV,
+    traverseV,
+    traverseV_,
+    concatV,
+    chunkV,
+    allV,
+    transpose,
+    unsafe_cast,
   )
 where
 
 import Data.Field.Galois (GaloisField, PrimeField, fromP)
+import Data.Fin (Fin, toNatural, universe)
+import Data.Nat (Nat (..))
 import Data.String (IsString (..))
-import Data.Typeable (Typeable)
+import Data.Type.Nat (Mult, SNatI, reflectToNum)
+import Data.Typeable (Proxy (Proxy), Typeable)
+import Debug.Trace (trace)
 import Snarkl.Common
   ( Op (..),
     UnOp (..),
@@ -846,3 +865,148 @@ liftA2 f x y = (f <$$> x) <*> y
 coerceToInt :: (PrimeField k) => TExp 'TField k -> Int
 coerceToInt (TEVal (VField x)) = fromIntegral $ fromP x
 coerceToInt _ = error "impossible: coerceToInt"
+
+vec :: forall (n :: Nat) proxy ty k. (SNatI n) => proxy n -> Comp ('TVec n ty) k
+vec _ = do
+  let n = reflectToNum (Proxy @n)
+  a <- arr n
+  return $ unsafe_cast a
+
+getV :: (Typeable ty) => (TExp ('TVec n ty) k, Fin n) -> Comp ty k
+getV (a, i) =
+  get (unsafe_cast a, fromIntegral $ toNatural i)
+
+getV2 :: (Typeable ty) => (TExp ('TVec n ('TVec m ty)) k, Fin n, Fin m) -> Comp ty k
+getV2 (a, i, j) =
+  get2 (unsafe_cast a, fromIntegral $ toNatural i, fromIntegral $ toNatural j)
+
+setV :: (Typeable ty) => (TExp ('TVec n ty) k, Fin n) -> TExp ty k -> Comp 'TUnit k
+setV (a, i) e =
+  set (unsafe_cast a, fromIntegral $ toNatural i) e
+
+setV2 :: (Typeable ty) => (TExp ('TVec n ('TVec m ty)) k, Fin n, Fin m) -> TExp ty k -> Comp 'TUnit k
+setV2 (a, i, j) e =
+  set2 (unsafe_cast a, fromIntegral $ toNatural i, fromIntegral $ toNatural j) e
+
+mapV :: forall a b (n :: Nat) k. (SNatI n) => (Typeable a) => (Typeable b) => TExp ('TFun a b) k -> TExp ('TVec n a) k -> Comp ('TVec n b) k
+mapV f a = do
+  b <- vec (Proxy @n)
+  _ <- forall (universe @n) $ \i -> do
+    ai <- getV (a, i)
+    bi <- apply f ai
+    setV (b, i) bi
+  return b
+
+foldlV ::
+  forall a b (n :: Nat) k.
+  (SNatI n) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  TExp ('TFun b ('TFun a b)) k ->
+  TExp b k ->
+  TExp ('TVec n a) k ->
+  Comp b k
+foldlV f b0 as = do
+  go (universe @n) b0
+  where
+    go ns acc = case ns of
+      [] -> return acc
+      (n : rest) -> do
+        ai <- getV (as, n)
+        let acc' = TEApp (TEApp f acc) ai
+        go rest acc'
+
+traverseV ::
+  forall a b (n :: Nat) k.
+  (SNatI n) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  (TExp a k -> Comp b k) ->
+  TExp ('TVec n a) k ->
+  Comp ('TVec n b) k
+traverseV f as = do
+  bs <- vec (Proxy @n)
+  _ <- forall (universe @n) $ \i -> do
+    ai <- getV (as, i)
+    bi <- f ai
+    setV (bs, i) bi
+  return bs
+
+traverseV_ ::
+  forall a b (n :: Nat) k.
+  (SNatI n) =>
+  (Typeable a) =>
+  (TExp a k -> Comp 'TUnit k) ->
+  TExp ('TVec n a) k ->
+  Comp 'TUnit k
+traverseV_ f as = do
+  forall (universe @n) $ \i -> do
+    ai <- getV (as, i)
+    f ai
+
+concatV ::
+  forall (n :: Nat) (m :: Nat) a k.
+  (SNatI n) =>
+  (SNatI m) =>
+  (Typeable a) =>
+  TExp ('TVec n ('TVec m a)) k ->
+  Comp ('TVec (Mult n m) a) k
+concatV asV = do
+  let n = reflectToNum (Proxy @n)
+      m = reflectToNum (Proxy @m)
+      as = unsafe_cast asV
+  bs :: TExp ('TArr a) k <- arr (n P.* m)
+  _ <- forall2 ([0 .. dec n], [0 .. dec m]) $ \i j -> do
+    ai <- get2 (as, i, j)
+    let idx = (n P.* i) P.+ j
+    set (bs, idx) ai
+  return $ unsafe_cast bs
+
+chunkV ::
+  forall (n :: Nat) (m :: Nat) k ty.
+  (Typeable ty) =>
+  (SNatI n) =>
+  (SNatI m) =>
+  TExp ('TVec (Mult n m) ty) k ->
+  Comp ('TVec n ('TVec m ty)) k
+chunkV asV = do
+  let n = reflectToNum (Proxy @n)
+      m = reflectToNum (Proxy @m)
+      as = unsafe_cast asV
+      is = fromIntegral . toNatural <$> universe @n
+      js = fromIntegral . toNatural <$> universe @n
+  bs <- arr2 @ty n m
+  _ <- forall2 (is, js) $ \i j -> do
+    let idx = n P.* i P.+ j
+    ai <- get (as, idx)
+    set2 (bs, i, j) ai
+  return $ unsafe_cast bs
+
+transpose ::
+  forall (n :: Nat) (m :: Nat) k ty.
+  (Typeable ty) =>
+  (SNatI n) =>
+  (SNatI m) =>
+  TExp ('TVec n ('TVec m ty)) k ->
+  Comp ('TVec m ('TVec n ty)) k
+transpose asV = do
+  let n = reflectToNum (Proxy @n)
+      m = reflectToNum (Proxy @m)
+      as = unsafe_cast asV
+      is = fromIntegral . toNatural <$> universe @n
+      js = fromIntegral . toNatural <$> universe @n
+  bs <- arr2 @ty m n
+  _ <- forall2 (is, js) $ \i j -> do
+    ai <- get2 (as, i, j)
+    set2 (bs, j, i) ai
+  return $ unsafe_cast bs
+
+allV ::
+  (SNatI n) =>
+  TExp ('TVec n 'TBool) k ->
+  Comp 'TBool k
+allV as = do
+  f <- lambda $ \acc ->
+    lambda $ \x ->
+      return $ acc && x
+  foldlV f true as

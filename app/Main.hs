@@ -29,7 +29,7 @@ main = do
   executeAndWriteArtifacts
     "./snarkl-output"
     "prog2"
-    SimplifyDataflow
+    NoSimplify
     validPuzzle
     (map (fromIntegral @_ @F_BN128) exampleValidPuzzle)
 
