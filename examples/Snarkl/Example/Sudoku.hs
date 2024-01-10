@@ -58,11 +58,6 @@ validPuzzle = do
         setV (as, i) (fromField $ fromIntegral i)
       return as
 
-inSet :: TExp ('TVec Nat9 'TField) k -> Comp ('TFun 'TField 'TBool) k
-inSet ns = lambda $ \a -> do
-  f <- lambda $ \acc -> lambda $ \n -> return (acc || eq n a)
-  foldlV f true ns
-
 sudokuSet :: (GaloisField k) => Comp ('TVec Nat9 'TField) k
 sudokuSet = do
   as <- vec (Proxy @Nat9)
@@ -88,11 +83,10 @@ isValidRow ::
   TExp ('TVec Nat9 'TField) k ->
   Comp 'TBool k
 isValidRow ss as = do
-  f <- lambda $ \n -> do
+  appearsOnce <- lambda $ \n -> do
     freq <- frequency n as
     return $ freq `eq` fromField 1
-  appearsOnceInRow <- traverseV (apply f) ss
-  allV appearsOnceInRow
+  mapV appearsOnce ss >>= allV
 
 asBoxes ::
   (Typeable ty) =>
