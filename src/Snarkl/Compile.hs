@@ -455,13 +455,15 @@ data TExpPkg ty k = TExpPkg
     out_variable :: Variable,
     -- | The variables marked as inputs.
     comp_input_variables :: [Variable],
+    -- | Initial known assignments, if any.
+    comp_required_assignments :: Map.Map String Variable,
     -- | The resulting 'TExp'.
     comp_texp :: TExp ty k
   }
   deriving (Show)
 
 instance Pretty (TExpPkg ty k) where
-  pretty (TExpPkg _ _ e) = pretty e
+  pretty (TExpPkg _ _ _ e) = pretty e
 
 deriving instance Eq (TExpPkg ty k)
 
@@ -478,7 +480,7 @@ compileCompToTexp mf =
     Right (e, rho) ->
       let out = Variable (next_variable rho)
           in_vars = sort $ input_vars rho
-       in TExpPkg out in_vars e
+       in TExpPkg out in_vars (known_assignments rho) e
 
 compileTExpToProgram :: (GaloisField k) => TExp ty k -> Program k
 compileTExpToProgram te =
@@ -493,9 +495,10 @@ compileTexpToConstraints ::
   (Typeable ty, GaloisField k) =>
   TExpPkg ty k ->
   ConstraintSystem k
-compileTexpToConstraints (TExpPkg _out _in_vars te) =
+compileTexpToConstraints (TExpPkg _out _in_vars _init_assignments te) =
   let out = _out ^. _Var
       in_vars = map (view _Var) _in_vars
+      knownAssignments = Map.map (view _Var) _init_assignments
       cenv_init = CEnv Set.empty (incVar out)
       (constrs, _) = State.runState go cenv_init
       go = do
@@ -518,6 +521,7 @@ compileTexpToConstraints (TExpPkg _out _in_vars te) =
             constraint_set
             num_constraint_vars
             in_vars
+            knownAssignments
             [out]
    in constrs
 

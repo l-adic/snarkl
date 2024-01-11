@@ -41,11 +41,12 @@ data R1CS a = R1CS
     r1cs_num_vars :: Int,
     r1cs_in_vars :: [Var],
     r1cs_out_vars :: [Var],
+    r1cs_known_vars :: Map.Map String Var,
     r1cs_gen_witness :: Assgn a -> Assgn a
   }
 
 instance (Show k) => Show (R1CS k) where
-  show (R1CS cs nvs ivs ovs _) = show (cs, nvs, ivs, ovs)
+  show (R1CS cs nvs ivs ovs known _) = show (cs, nvs, ivs, ovs, known)
 
 num_constraints :: R1CS k -> Int
 num_constraints = length . r1cs_clauses
@@ -86,10 +87,16 @@ sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
           )
 
 -- | For a given R1CS and inputs, calculate a satisfying assignment.
-wit_of_r1cs :: [k] -> R1CS k -> Assgn k
-wit_of_r1cs inputs r1cs =
+wit_of_r1cs :: [k] -> Map.Map String k -> R1CS k -> Assgn k
+wit_of_r1cs inputs knownAssignments r1cs =
   let in_vars = r1cs_in_vars r1cs
       f = r1cs_gen_witness r1cs . Map.fromList
+      initAssignments =
+        [ (var, val)
+          | (k, val) <- Map.toList knownAssignments,
+            (k', var) <- Map.toList (r1cs_known_vars r1cs),
+            k == k'
+        ]
    in if length in_vars /= length inputs
         then
           failWith $
@@ -101,4 +108,4 @@ wit_of_r1cs inputs r1cs =
                   ++ show (length inputs)
                   ++ " input(s)"
               )
-        else f (zip in_vars inputs)
+        else f (initAssignments <> zip in_vars inputs)

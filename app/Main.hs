@@ -5,6 +5,7 @@ module Main where
 import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (PrimeField)
+import qualified Data.Map as Map
 import Data.Typeable (Typeable)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Example.Sudoku
@@ -15,6 +16,7 @@ import Snarkl.Toplevel
   ( Result (..),
     SimplParam (..),
     execute,
+    execute',
     mkInputsFilePath,
     mkR1CSFilePath,
     mkWitnessFilePath,
@@ -31,11 +33,21 @@ main = do
     "sudoku"
     Simplify
     validPuzzle
-    (map (fromIntegral @_ @F_BN128) exampleValidPuzzle)
+    (fromIntegral @_ @F_BN128 <$> exampleValidPuzzle)
+    (fromIntegral @_ @F_BN128 <$> exampleValidPuzzleHiddenInput)
 
-executeAndWriteArtifacts :: (Typeable ty, PrimeField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> IO ()
-executeAndWriteArtifacts fp name simpl mf inputs = do
-  let Result {result_sat = isSatisfied, result_r1cs = r1cs, result_witness = wit} = execute simpl mf inputs
+executeAndWriteArtifacts ::
+  (Typeable ty) =>
+  (PrimeField k) =>
+  FilePath ->
+  String ->
+  SimplParam ->
+  Comp ty k ->
+  [k] ->
+  Map.Map String k ->
+  IO ()
+executeAndWriteArtifacts fp name simpl mf inputs known = do
+  let Result {result_sat = isSatisfied, result_r1cs = r1cs, result_witness = wit} = execute' simpl mf inputs known
   unless isSatisfied $ failWith $ ErrMsg "R1CS is not satisfied"
   let r1csFP = mkR1CSFilePath fp name
   LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
@@ -61,15 +73,21 @@ executeAndWriteArtifacts fp name simpl mf inputs = do
 
 -}
 
+exampleValidPuzzleHiddenInput ::
+  Map.Map String Int
+exampleValidPuzzleHiddenInput =
+  Map.fromList
+    [ ("sudokuVar-0", 2),
+      ("sudokuVar-1", 1),
+      ("sudokuVar-2", 5),
+      ("sudokuVar-3", 3),
+      ("sudokuVar-4", 7)
+    ]
+
 exampleValidPuzzle :: [Int]
 exampleValidPuzzle =
   (\a -> a Prelude.- 1)
-    <$> [ 2,
-          1,
-          5,
-          3,
-          7,
-          6,
+    <$> [ 6,
           9,
           8,
           4,

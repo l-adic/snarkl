@@ -83,6 +83,7 @@ data ConstraintSystem a = ConstraintSystem
   { cs_constraints :: ConstraintSet a,
     cs_num_vars :: Int,
     cs_in_vars :: [Var],
+    cs_known_assignments :: Map.Map String Var,
     cs_out_vars :: [Var]
   }
   deriving (Show, Eq)
@@ -178,6 +179,7 @@ r1cs_of_cs cs =
     (cs_num_vars cs)
     (cs_in_vars cs)
     (cs_out_vars cs)
+    (cs_known_assignments cs)
   where
     go [] = []
     go (CAdd a m : cs') =
@@ -216,11 +218,12 @@ renumber_constraints ::
     ConstraintSystem a
   )
 renumber_constraints cs =
-  (renum_f, ConstraintSystem new_cs (Map.size var_map) new_in_vars new_out_vars)
+  (renum_f, ConstraintSystem new_cs (Map.size var_map) new_in_vars new_known_assignments new_out_vars)
   where
     new_cs = Set.map renum_constr $ cs_constraints cs
     new_in_vars = map renum_f $ cs_in_vars cs
     new_out_vars = map renum_f $ cs_out_vars cs
+    new_known_assignments = renum_f <$> cs_known_assignments cs
 
     var_map =
       Map.fromList $

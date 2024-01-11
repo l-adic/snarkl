@@ -48,6 +48,7 @@ module Snarkl.Language.SyntaxMonad
     guard,
     add_objects,
     foldl,
+    fresh_known_assignment,
   )
 where
 
@@ -182,6 +183,7 @@ data Env k = Env
   { next_variable :: Int,
     next_loc :: Int,
     input_vars :: [Variable],
+    known_assignments :: Map.Map String Variable,
     obj_map :: ObjMap,
     anal_map :: Map.Map Variable (AnalBind k) -- supporting simple constprop analyses
   }
@@ -193,6 +195,7 @@ defaultEnv =
     { next_variable = 0,
       next_loc = 0,
       input_vars = [],
+      known_assignments = Map.empty,
       obj_map = Map.empty,
       anal_map = Map.empty
     }
@@ -512,6 +515,24 @@ add_statics binds =
             s
               { anal_map = Map.fromList binds `Map.union` anal_map s
               }
+          )
+    )
+
+fresh_known_assignment ::
+  String ->
+  Comp ty k
+fresh_known_assignment name = do
+  x <- fresh_var
+  State
+    ( \s ->
+        Right
+          ( x,
+            case Map.lookup name (known_assignments s) of
+              Just _ -> error $ "internal error in add_known_var: " ++ name ++ " already exists"
+              Nothing ->
+                s
+                  { known_assignments = Map.insert name (varOfTExp x) (known_assignments s)
+                  }
           )
     )
 

@@ -1,6 +1,9 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use if" #-}
 
 module Snarkl.Example.Sudoku where
 
@@ -10,7 +13,7 @@ import Data.Type.Nat (FromGHC, Nat3, Nat6, Nat9, SNatI, reify)
 import Data.Typeable (Proxy (Proxy), Typeable)
 import Debug.Trace (trace)
 import GHC.TypeLits (KnownNat)
-import Snarkl.Language.SyntaxMonad (arrLen, foldl)
+import Snarkl.Language.SyntaxMonad (arrLen, foldl, fresh_known_assignment)
 import Snarkl.Syntax
 import Prelude hiding
   ( all,
@@ -37,8 +40,14 @@ type SudokuSet k = TExp ('TVec Nat9 'TField) k
 validPuzzle ::
   Comp 'TBool k
 validPuzzle = do
-  sol <- input_arr2 @'TField 9 9
-  let p = unsafe_cast sol
+  input <- vec (Proxy @(FromGHC 81))
+  _ <- forall (universe @(FromGHC 81)) $ \i -> do
+    -- I would is if-then-else here, but rebindableSyntax ...
+    v <- case toInteger i < 5 of
+      True -> fresh_known_assignment $ "sudokuVar-" ++ show (toInteger i)
+      False -> fresh_input
+    setV (input, fromIntegral i) v
+  p <- chunkV @Nat9 @Nat9 input
   rowsValid <- do
     rowsValid <- traverseV isValidSet p
     allV rowsValid

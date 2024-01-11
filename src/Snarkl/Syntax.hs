@@ -932,7 +932,7 @@ traverseV f as = do
   return bs
 
 traverseV_ ::
-  forall a b (n :: Nat) k.
+  forall a (n :: Nat) k.
   (SNatI n) =>
   (Typeable a) =>
   (TExp a k -> Comp 'TUnit k) ->
