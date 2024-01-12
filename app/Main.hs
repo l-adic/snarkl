@@ -33,9 +33,9 @@ main = do
     "./snarkl-output"
     "sudoku"
     Simplify
-    (validPuzzle exampleValidPuzzleHiddenInput)
+    (validPuzzle [0, 1, 2, 3, 4])
     (exampleValidPuzzle :: [F_BN128])
-    Map.empty
+    exampleValidPuzzleHiddenInput
 
 executeAndWriteArtifacts ::
   (Typeable ty) =>
@@ -50,9 +50,9 @@ executeAndWriteArtifacts ::
 executeAndWriteArtifacts fp name simpl mf inputs known = do
   let Result {result_sat = isSatisfied, result_r1cs = r1cs, result_witness = wit} = execute' simpl mf inputs known
   unless isSatisfied $ failWith $ ErrMsg "R1CS is not satisfied"
-  let r1csFP = mkR1CSFilePath fp name
-  LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
-  putStrLn $ "Wrote R1CS to file " <> r1csFP
+  -- let r1csFP = mkR1CSFilePath fp name
+  -- LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
+  -- putStrLn $ "Wrote R1CS to file " <> r1csFP
   let witnessFP = mkWitnessFilePath fp name
   LBS.writeFile witnessFP (serializeWitnessAsJson r1cs wit)
   putStrLn $ "Wrote witness to file " <> witnessFP
@@ -76,14 +76,15 @@ executeAndWriteArtifacts fp name simpl mf inputs known = do
 
 exampleValidPuzzleHiddenInput ::
   (GaloisField k) =>
-  [(Int, k)]
+  Map.Map String k
 exampleValidPuzzleHiddenInput =
-  [ (0, 2),
-    (0, 1),
-    (0, 5),
-    (0, 3),
-    (0, 7)
-  ]
+  Map.fromList
+    [ ("x0", 2),
+      ("x1", 1),
+      ("x2", 5),
+      ("x3", 3),
+      ("x4", 7)
+    ]
 
 exampleValidPuzzle :: (GaloisField k) => [k]
 exampleValidPuzzle =

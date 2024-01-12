@@ -10,6 +10,7 @@ module Snarkl.Toplevel
     Result (..),
     execute,
     execute',
+    r1csOnly,
 
     -- * Re-exported modules
     module Snarkl.Backend.R1CS,
@@ -159,3 +160,13 @@ execute' simpl mf inputs knownVars =
                 ++ show (Map.keys knownVars)
                 ++ " does not match expected knownVars "
                 ++ show (Map.keys _known)
+
+r1csOnly ::
+  (Typeable ty) =>
+  (PrimeField k) =>
+  SimplParam ->
+  Comp ty k ->
+  R1CS k
+r1csOnly simpl mf =
+  let p = compileCompToTexp mf
+   in compileTExpToR1CS simpl p

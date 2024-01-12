@@ -37,9 +37,9 @@ import qualified Prelude as P
 
 validPuzzle ::
   (GaloisField k) =>
-  [(Int, k)] ->
+  [Int] ->
   Comp 'TBool k
-validPuzzle hiddenSolvedValues = do
+validPuzzle blanks = do
   input <- vec (Proxy @(FromGHC 81))
   sudokuSet <- sudokuSet
   _ <- forall (universe @(FromGHC 81)) $ \i -> do
@@ -49,10 +49,11 @@ validPuzzle hiddenSolvedValues = do
     -- i.e. a square which was empty in the original puzzle formulation
     -- but was filled in in the course of solving it.
     -- If it is, give it the assignment from the puzzle solution.
-    case lookup (fromIntegral i) hiddenSolvedValues of
-      Nothing -> return unit
-      Just k -> do
-        setV (input, fromIntegral i) (fromField k)
+    case fromIntegral i `elem` blanks of
+      True -> do
+        v <- fresh_known_assignment ("x" <> show i)
+        setV (input, fromIntegral i) v
+      False -> return unit
   p <- chunkV @Nat9 @Nat9 input
   rowsValid <- do
     rowsValid <- traverseV (isValidSet sudokuSet) p
