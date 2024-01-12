@@ -106,6 +106,7 @@ module Snarkl.Syntax
     allV,
     transpose,
     unsafe_cast,
+    anyV,
   )
 where
 
@@ -1009,3 +1010,13 @@ allV as = do
     lambda $ \x ->
       return $ acc && x
   foldlV f true as
+
+anyV ::
+  (SNatI n) =>
+  TExp ('TVec n 'TBool) k ->
+  Comp 'TBool k
+anyV as = do
+  f <- lambda $ \acc ->
+    lambda $ \x ->
+      return $ acc || x
+  foldlV f false as

@@ -3,8 +3,9 @@
 module Main where
 
 import Control.Monad (unless)
+import Data.Bifunctor (second)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Field.Galois (PrimeField)
+import Data.Field.Galois (GaloisField, PrimeField)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
@@ -32,9 +33,9 @@ main = do
     "./snarkl-output"
     "sudoku"
     Simplify
-    validPuzzle
-    (fromIntegral @_ @F_BN128 <$> exampleValidPuzzle)
-    (fromIntegral @_ @F_BN128 <$> exampleValidPuzzleHiddenInput)
+    (validPuzzle exampleValidPuzzleHiddenInput)
+    (exampleValidPuzzle :: [F_BN128])
+    Map.empty
 
 executeAndWriteArtifacts ::
   (Typeable ty) =>
@@ -74,93 +75,97 @@ executeAndWriteArtifacts fp name simpl mf inputs known = do
 -}
 
 exampleValidPuzzleHiddenInput ::
-  Map.Map String Int
+  (GaloisField k) =>
+  [(Int, k)]
 exampleValidPuzzleHiddenInput =
-  Map.fromList
-    [ ("sudokuVar-0", 2),
-      ("sudokuVar-1", 1),
-      ("sudokuVar-2", 5),
-      ("sudokuVar-3", 3),
-      ("sudokuVar-4", 7)
-    ]
+  [ (0, 2),
+    (0, 1),
+    (0, 5),
+    (0, 3),
+    (0, 7)
+  ]
 
-exampleValidPuzzle :: [Int]
+exampleValidPuzzle :: (GaloisField k) => [k]
 exampleValidPuzzle =
-  (\a -> a Prelude.- 1)
-    <$> [ 6,
-          9,
-          8,
-          4,
-          3,
-          6,
-          4,
-          9,
-          8,
-          1,
-          2,
-          5,
-          7,
-          7,
-          8,
-          9,
-          2,
-          4,
-          5,
-          1,
-          6,
-          3,
-          4,
-          5,
-          3,
-          1,
-          2,
-          9,
-          6,
-          7,
-          8,
-          6,
-          2,
-          7,
-          5,
-          3,
-          8,
-          4,
-          1,
-          9,
-          1,
-          9,
-          8,
-          7,
-          6,
-          4,
-          5,
-          3,
-          2,
-          5,
-          7,
-          2,
-          4,
-          1,
-          3,
-          8,
-          9,
-          6,
-          8,
-          3,
-          1,
-          6,
-          9,
-          2,
-          7,
-          4,
-          5,
-          9,
-          4,
-          6,
-          8,
-          5,
-          7,
-          3,
-          2,
-          1
-        ]
+  [ 0,
+    0,
+    0,
+    0,
+    0,
+    6,
+    9,
+    8,
+    4,
+    3,
+    6,
+    4,
+    9,
+    8,
+    1,
+    2,
+    5,
+    7,
+    7,
+    8,
+    9,
+    2,
+    4,
+    5,
+    1,
+    6,
+    3,
+    4,
+    5,
+    3,
+    1,
+    2,
+    9,
+    6,
+    7,
+    8,
+    6,
+    2,
+    7,
+    5,
+    3,
+    8,
+    4,
+    1,
+    9,
+    1,
+    9,
+    8,
+    7,
+    6,
+    4,
+    5,
+    3,
+    2,
+    5,
+    7,
+    2,
+    4,
+    1,
+    3,
+    8,
+    9,
+    6,
+    8,
+    3,
+    1,
+    6,
+    9,
+    2,
+    7,
+    4,
+    5,
+    9,
+    4,
+    6,
+    8,
+    5,
+    7,
+    3,
+    2,
+    1
+  ]
