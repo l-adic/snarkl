@@ -23,6 +23,7 @@ import Data.List (intercalate)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Debug.Trace (trace)
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn)
 import Snarkl.Compile
@@ -137,19 +138,20 @@ execute' simpl mf inputs knownVars =
               -- the input assignment (a subset of 'wit').
               -- Output the return value of 'e'.
               out_interp = comp_interp' mf inputs knownVars
-              -- in error $ show (out_interp, length (r1cs_clauses r1cs), r1cs_num_vars r1cs)
 
               result =
-                ( if out_interp == out
-                    then sat_r1cs wit r1cs
-                    else
-                      failWith $
-                        ErrMsg $
-                          "interpreter result "
-                            ++ show out_interp
-                            ++ " differs from actual result "
-                            ++ show out
-                )
+                trace
+                  (show (out_interp, length (r1cs_clauses r1cs), r1cs_num_vars r1cs))
+                  ( if out_interp == out
+                      then sat_r1cs wit r1cs
+                      else
+                        failWith $
+                          ErrMsg $
+                            "interpreter result "
+                              ++ show out_interp
+                              ++ " differs from actual result "
+                              ++ show out
+                  )
               nw = r1cs_num_vars r1cs
               ng = num_constraints r1cs
            in Result result nw ng out r1cs wit

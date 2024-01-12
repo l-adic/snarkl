@@ -49,6 +49,7 @@ module Snarkl.Language.SyntaxMonad
     add_objects,
     foldl,
     fresh_known_assignment,
+    te_assert,
   )
 where
 

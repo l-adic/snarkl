@@ -13,7 +13,7 @@ import Data.Type.Nat (FromGHC, Nat3, Nat6, Nat9, SNatI, reify)
 import Data.Typeable (Proxy (Proxy), Typeable)
 import Debug.Trace (trace)
 import GHC.TypeLits (KnownNat)
-import Snarkl.Language.SyntaxMonad (arrLen, foldl, fresh_known_assignment)
+import Snarkl.Language.SyntaxMonad (arrLen, foldl, fresh_known_assignment, te_assert)
 import Snarkl.Syntax
 import Prelude hiding
   ( all,
@@ -52,19 +52,22 @@ validPuzzle blanks = do
     case fromIntegral i `elem` blanks of
       True -> do
         v <- fresh_known_assignment ("x" <> show i)
+        vi <- fresh_var
+        n <- isInSudokuSet sudokuSet v
+        te_assert vi n
         setV (input, fromIntegral i) v
       False -> return unit
   p <- chunkV @Nat9 @Nat9 input
   rowsValid <- do
-    rowsValid <- traverseV (isValidSet sudokuSet) p
+    rowsValid <- traverseV isValidSet p
     allV rowsValid
   colsValid <- do
     pt <- transpose p
-    validCols <- traverseV (isValidSet sudokuSet) pt
+    validCols <- traverseV isValidSet pt
     allV validCols
   boxesValid <- do
     bs <- asBoxes p
-    validateBoxes sudokuSet bs
+    validateBoxes bs
   return $ rowsValid && colsValid && boxesValid
   where
     sudokuSet :: (GaloisField k) => Comp SudokuSet k
@@ -77,15 +80,13 @@ validPuzzle blanks = do
 type SudokuSet = 'TVec Nat9 'TField
 
 isValidSet ::
-  TExp SudokuSet k ->
   TExp ('TVec Nat9 'TField) k ->
   Comp 'TBool k
-isValidSet sudokuSet as = do
+isValidSet as = do
   bs <- vec (Proxy @Nat9)
   _ <- setV (bs, 0) true
   _ <- forall (drop 1 $ universe @Nat9) $ \i -> do
     a <- getV (as, i)
-    isValidNum <- isInSudokuSet sudokuSet a
     let js = take (fromIntegral i) $ universe @Nat9
     reify (fromIntegral $ length js) $ \pj -> do
       iChecks <- vec pj
@@ -93,7 +94,7 @@ isValidSet sudokuSet as = do
         b <- getV (as, j)
         setV (iChecks, fromIntegral j) (not $ eq a b)
       bi <- allV iChecks
-      setV (bs, i) (bi && isValidNum)
+      setV (bs, i) bi
   allV bs
 
 isInSudokuSet ::
@@ -114,15 +115,14 @@ asBoxes ::
 asBoxes as = traverseV chunkV as >>= chunkV
 
 validateBoxes ::
-  TExp SudokuSet k ->
   TExp ('TVec Nat3 ('TVec Nat3 ('TVec Nat3 ('TVec Nat3 'TField)))) k ->
   Comp 'TBool k
-validateBoxes sudokuSet as = do
+validateBoxes as = do
   bs <- vec (Proxy @Nat9)
   _ <- forall2 (universe @Nat3, universe @Nat3) $ \i j -> do
     box <- getV2 (as, i, j)
     b <- concatV @Nat3 @Nat3 box
-    validBox <- isValidSet sudokuSet b
+    validBox <- isValidSet b
     let idx :: Fin Nat9
         idx = 3 P.* weakenLeft (Proxy @Nat6) i P.+ weakenRight (Proxy @Nat6) j
     setV (bs, idx) validBox
