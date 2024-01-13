@@ -10,6 +10,7 @@ import Data.Data (Typeable)
 import Data.Field.Galois (GaloisField)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Sequence (pattern Empty, pattern (:|>))
 import Snarkl.Common (Op (..), UnOp (ZEq))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language (Exp (..), TExp, Variable, expOfTExp)
@@ -108,7 +109,7 @@ interpExpr e = case e of
         ZEq -> return $ Just $ fieldOfBool (v2' == 0)
   EBinop op _es -> case _es of
     [] -> failWith $ ErrMsg "empty binary args"
-    (a : as) -> do
+    a : as -> do
       b <- interpExpr a
       foldM (interpBinopExpr op) b as
   EIf eb e1 e2 ->
@@ -124,9 +125,11 @@ interpExpr e = case e of
           v2 <- interpExpr e2
           addBinds [(x, v2)]
       (_, _) -> raiseErr $ ErrMsg $ show e1 ++ " not a variable"
-  ESeq es -> case es of
-    [] -> failWith $ ErrMsg "empty sequence"
-    _ -> last <$> mapM interpExpr es
+  ESeq es -> do
+    es' <- mapM interpExpr es
+    case es' of
+      Empty -> failWith $ ErrMsg "empty sequence"
+      _ :|> a -> pure a
   EUnit -> return $ Just 1
   where
     interpBinopExpr :: (GaloisField a) => Op -> Maybe a -> Exp a -> InterpM a (Maybe a)

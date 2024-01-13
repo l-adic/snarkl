@@ -201,7 +201,7 @@ lambdaExpOfTExp te = case te of
   TEUnop (TUnop op) te1 ->
     LE.EUnop op (lambdaExpOfTExp te1)
   TEBinop (TOp op) te1 te2 ->
-    LE.expBinop op (lambdaExpOfTExp te1) (lambdaExpOfTExp te2)
+    LE.EBinop op (lambdaExpOfTExp te1) (lambdaExpOfTExp te2)
   TEIf te1 te2 te3 ->
     LE.EIf (lambdaExpOfTExp te1) (lambdaExpOfTExp te2) (lambdaExpOfTExp te3)
   TEAssert te1 te2 ->
