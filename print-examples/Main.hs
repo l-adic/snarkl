@@ -3,11 +3,10 @@
 module Main where
 
 import Data.Foldable (traverse_)
-import Prettyprinter
-import Prettyprinter.Render.String (renderString)
 import Snarkl.Field ()
 import Snarkl.Toplevel (compileCompToTexp)
 import Test.Snarkl.Unit.Programs
+import Text.PrettyPrint.Leijen.Text
 
 main :: IO ()
 main = do
@@ -59,11 +58,9 @@ main = do
       if texp /= texp
         then putStrLn ("--| " <> name <> " (FAILED)")
         else do
-          let doc = pretty texp
-              layout = layoutPretty defaultLayoutOptions doc
           putStrLn (replicate 80 '-')
           putStrLn "\n"
           putStrLn ("--| " <> name)
           putStrLn "\n"
-          putStrLn $ renderString layout
+          print $ pretty texp
           putStrLn "\n"

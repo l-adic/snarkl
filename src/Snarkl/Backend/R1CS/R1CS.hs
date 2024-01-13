@@ -11,10 +11,10 @@ import Control.Parallel.Strategies
 import qualified Data.Aeson as A
 import Data.Field.Galois (GaloisField, PrimeField)
 import qualified Data.Map as Map
-import Prettyprinter (Pretty (..), (<+>))
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
 import Snarkl.Errors
+import Text.PrettyPrint.Leijen.Text (Pretty (..), (<+>))
 
 ----------------------------------------------------------------
 --                Rank-1 Constraint Systems                   --

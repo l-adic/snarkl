@@ -14,15 +14,15 @@ import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Prettyprinter
+import Snarkl.Common (Op, UnOp, isAssoc)
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
+import Text.PrettyPrint.Leijen.Text
   ( Pretty (pretty),
     hsep,
     parens,
     punctuate,
     (<+>),
   )
-import Snarkl.Common (Op, UnOp, isAssoc)
-import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
 newtype Variable = Variable Int deriving (Eq, Ord, Show, Pretty)
 

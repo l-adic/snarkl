@@ -4,7 +4,7 @@ module Snarkl.Common where
 
 import qualified Data.Aeson as A
 import qualified Data.Map as Map
-import Prettyprinter (Pretty (pretty))
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
 newtype Var = Var Int deriving (Eq, Ord, Show, A.ToJSON)
 
