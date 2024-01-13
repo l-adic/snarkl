@@ -24,6 +24,7 @@ import Data.Either (fromRight)
 import Data.Field.Galois (GaloisField)
 import Data.List (sort)
 import qualified Data.Map as Map
+import Data.Sequence (pattern Empty, pattern (:<|))
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS.R1CS (R1CS)
@@ -400,9 +401,9 @@ cs_of_exp out e = case e of
       x <- fresh_var -- x is garbage
       go x le
     where
-      go _ [] = failWith $ ErrMsg "internal error: empty ESeq"
-      go _ [e1] = cs_of_exp out e1
-      go garbage_var (e1 : le') =
+      go _ Empty = failWith $ ErrMsg "internal error: empty ESeq"
+      go _ (e1 :<| Empty) = cs_of_exp out e1
+      go garbage_var (e1 :<| le') =
         do
           cs_of_exp garbage_var e1
           go garbage_var le'

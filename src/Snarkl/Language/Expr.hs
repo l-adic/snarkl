@@ -32,7 +32,7 @@ data Exp :: Type -> Type where
   EVar :: Variable -> Exp a
   EVal :: (GaloisField a) => a -> Exp a
   EUnop :: UnOp -> Exp a -> Exp a
-  EBinop :: Op -> Seq (Exp a) -> Exp a
+  EBinop :: Op -> [Exp a] -> Exp a
   EIf :: Exp a -> Exp a -> Exp a -> Exp a
   EAssert :: Exp a -> Exp a -> Exp a
   ESeq :: Seq (Exp a) -> Exp a
@@ -54,14 +54,14 @@ exp_binop op e1 e2 =
   case (e1, e2) of
     (EBinop op1 l1, EBinop op2 l2)
       | op1 == op2 && op2 == op && isAssoc op ->
-          EBinop op (l1 >< l2)
+          EBinop op (l1 <> l2)
     (EBinop op1 l1, _)
       | op1 == op && isAssoc op ->
-          EBinop op (l1 |> e2)
+          EBinop op (l1 <> [e2])
     (_, EBinop op2 l2)
       | op2 == op && isAssoc op ->
-          EBinop op (e1 <| l2)
-    (_, _) -> EBinop op (fromList [e1, e2])
+          EBinop op (e1 : l2)
+    (_, _) -> EBinop op [e1, e2]
 
 -- | Smart constructor for sequence, ensuring all expressions are
 --  flattened to top level.
