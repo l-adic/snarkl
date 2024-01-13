@@ -86,7 +86,6 @@ library
     , lens
     , mtl            >=2.2   && <2.3
     , parallel       >=3.2   && <3.3
-    , prettyprinter
     , process        >=1.2
     , wl-pprint-text
 
@@ -245,5 +244,4 @@ executable compile
     , containers
     , galois-field   >=1.0.4
     , hspec          >=2.0
-    , prettyprinter
     , snarkl         >=0.1.0.0
