@@ -5,8 +5,8 @@ module Snarkl.Backend.R1CS.Poly where
 import qualified Data.Aeson as A
 import Data.Field.Galois (GaloisField, PrimeField, fromP)
 import qualified Data.Map as Map
-import Prettyprinter (Pretty (..))
 import Snarkl.Common
+import Text.PrettyPrint.Leijen.Text (Pretty (..))
 
 data Poly a where
   Poly :: (GaloisField a) => Assgn a -> Poly a

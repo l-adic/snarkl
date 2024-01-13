@@ -88,6 +88,7 @@ library
     , parallel       >=3.2   && <3.3
     , prettyprinter
     , process        >=1.2
+    , wl-pprint-text
 
   hs-source-dirs:     src
   default-language:   Haskell2010
@@ -211,8 +212,8 @@ executable print-examples
     , containers
     , galois-field   >=1.0.4
     , hspec          >=2.0
-    , prettyprinter
     , snarkl         >=0.1.0.0
+    , wl-pprint-text
 
 executable compile
   main-is:            Main.hs

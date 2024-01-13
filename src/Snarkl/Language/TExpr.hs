@@ -25,11 +25,11 @@ where
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
 import Data.Typeable (Proxy (..), Typeable, eqT, typeOf, typeRep, type (:~:) (Refl))
-import Prettyprinter (Pretty (pretty), line, parens, (<+>))
 import Snarkl.Common (Op, UnOp)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.Expr (Variable)
 import qualified Snarkl.Language.LambdaExpr as LE
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty), line, parens, (<+>))
 
 data TFunct where
   TFConst :: Ty -> TFunct
