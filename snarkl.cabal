@@ -65,7 +65,9 @@ library
     GADTs
     GeneralizedNewtypeDeriving
     KindSignatures
+    LambdaCase
     OverloadedStrings
+    PatternSynonyms
     PolyKinds
     RankNTypes
     ScopedTypeVariables

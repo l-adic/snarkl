@@ -11,9 +11,11 @@ where
 
 import Control.Monad.State (State, evalState, gets, modify)
 import Data.Field.Galois (GaloisField)
+import Data.Foldable (toList)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Sequence (Seq, fromList, (<|), (><), (|>))
 import Snarkl.Common (Op, UnOp, isAssoc)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Text.PrettyPrint.Leijen.Text
@@ -30,10 +32,10 @@ data Exp :: Type -> Type where
   EVar :: Variable -> Exp a
   EVal :: (GaloisField a) => a -> Exp a
   EUnop :: UnOp -> Exp a -> Exp a
-  EBinop :: Op -> [Exp a] -> Exp a
+  EBinop :: Op -> Seq (Exp a) -> Exp a
   EIf :: Exp a -> Exp a -> Exp a -> Exp a
   EAssert :: Exp a -> Exp a -> Exp a
-  ESeq :: [Exp a] -> Exp a
+  ESeq :: Seq (Exp a) -> Exp a
   EUnit :: Exp a
 
 deriving instance (Eq a) => Eq (Exp a)
@@ -52,24 +54,24 @@ exp_binop op e1 e2 =
   case (e1, e2) of
     (EBinop op1 l1, EBinop op2 l2)
       | op1 == op2 && op2 == op && isAssoc op ->
-          EBinop op (l1 ++ l2)
+          EBinop op (l1 >< l2)
     (EBinop op1 l1, _)
       | op1 == op && isAssoc op ->
-          EBinop op (l1 ++ [e2])
+          EBinop op (l1 |> e2)
     (_, EBinop op2 l2)
       | op2 == op && isAssoc op ->
-          EBinop op (e1 : l2)
-    (_, _) -> EBinop op [e1, e2]
+          EBinop op (e1 <| l2)
+    (_, _) -> EBinop op (fromList [e1, e2])
 
 -- | Smart constructor for sequence, ensuring all expressions are
 --  flattened to top level.
 exp_seq :: Exp a -> Exp a -> Exp a
 exp_seq e1 e2 =
   case (e1, e2) of
-    (ESeq l1, ESeq l2) -> ESeq (l1 ++ l2)
-    (ESeq l1, _) -> ESeq (l1 ++ [e2])
-    (_, ESeq l2) -> ESeq (e1 : l2)
-    (_, _) -> ESeq [e1, e2]
+    (ESeq l1, ESeq l2) -> ESeq (l1 >< l2)
+    (ESeq l1, _) -> ESeq (l1 |> e2)
+    (_, ESeq l2) -> ESeq (e1 <| l2)
+    (_, _) -> ESeq (fromList [e1, e2])
 
 is_pure :: Exp a -> Bool
 is_pure e =
@@ -139,5 +141,5 @@ instance (Pretty a) => Pretty (Exp a) where
   pretty (EIf b e1 e2) =
     "if" <+> pretty b <+> "then" <+> pretty e1 <+> "else" <+> pretty e2
   pretty (EAssert e1 e2) = pretty e1 <+> ":=" <+> pretty e2
-  pretty (ESeq es) = parens $ hsep $ punctuate ";" $ map pretty es
+  pretty (ESeq es) = parens $ hsep $ punctuate ";" $ map pretty (toList es)
   pretty EUnit = "()"
