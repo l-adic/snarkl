@@ -55,6 +55,12 @@ library
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
     Snarkl.Toplevel
+    Snarkl.CLI
+
+  other-modules:
+    Snarkl.CLI.Compile
+    Snarkl.CLI.GenWitness
+    Snarkl.CLI.RunAll
 
   default-extensions:
     BangPatterns
@@ -87,8 +93,10 @@ library
     , jsonl          >=0.1.4
     , lens
     , mtl            >=2.2   && <2.3
+    , optparse-applicative
     , parallel       >=3.2   && <3.3
     , process        >=1.2
+    , streamly
     , wl-pprint-text
 
   hs-source-dirs:     src

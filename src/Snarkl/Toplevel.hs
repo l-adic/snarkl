@@ -12,7 +12,6 @@ module Snarkl.Toplevel
 
     -- * Re-exported modules
     module Snarkl.Language,
-    module Snarkl.Constraint,
     module Snarkl.Backend.R1CS,
     module Snarkl.Compile,
   )
@@ -25,12 +24,11 @@ import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn)
 import Snarkl.Compile
-import Snarkl.Constraint
+import Snarkl.Constraint ()
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
 import Snarkl.Language
 import Text.PrettyPrint.Leijen.Text (Pretty (..), line, (<+>))
-import Prelude
 
 ----------------------------------------------------
 --
@@ -86,7 +84,7 @@ instance (Pretty k) => Pretty (Result k) where
 --   (3) Check whether 'w' satisfies the constraint system produced in (1).
 --   (4) Check whether the R1CS result matches the interpreter result.
 --   (5) Return the 'Result'.
-execute :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> Result k
+execute :: (Typeable ty, PrimeField k) => [SimplParam] -> Comp ty k -> [k] -> Result k
 execute simpl mf inputs =
   let TExpPkg nv in_vars e = compileCompToTexp mf
       r1cs = compileTExpToR1CS simpl (TExpPkg nv in_vars e)

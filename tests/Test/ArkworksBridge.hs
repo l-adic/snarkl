@@ -10,9 +10,9 @@ import qualified System.Exit as GHC
 import System.Process (createProcess, shell, waitForProcess)
 
 data CMD k where
-  CreateTrustedSetup :: (Typeable ty, GaloisField k) => FilePath -> String -> SimplParam -> Comp ty k -> CMD k
-  CreateProof :: (Typeable ty, GaloisField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> CMD k
-  RunR1CS :: (Typeable ty, GaloisField k) => FilePath -> String -> SimplParam -> Comp ty k -> [k] -> CMD k
+  CreateTrustedSetup :: (Typeable ty, GaloisField k) => FilePath -> String -> [SimplParam] -> Comp ty k -> CMD k
+  CreateProof :: (Typeable ty, GaloisField k) => FilePath -> String -> [SimplParam] -> Comp ty k -> [k] -> CMD k
+  RunR1CS :: (Typeable ty, GaloisField k) => FilePath -> String -> [SimplParam] -> Comp ty k -> [k] -> CMD k
 
 runCMD :: (PrimeField k) => CMD k -> IO GHC.ExitCode
 runCMD (CreateTrustedSetup rootDir name simpl c) = do
