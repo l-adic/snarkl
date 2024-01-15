@@ -36,6 +36,7 @@ library
     Snarkl.Backend.R1CS.Poly
     Snarkl.Backend.R1CS.R1CS
     Snarkl.Backend.R1CS.Serialize
+    Snarkl.CLI
     Snarkl.Common
     Snarkl.Compile
     Snarkl.Constraint
@@ -55,7 +56,6 @@ library
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
     Snarkl.Toplevel
-    Snarkl.CLI
 
   other-modules:
     Snarkl.CLI.Compile
@@ -84,18 +84,18 @@ library
 
   build-depends:
       aeson
-    , base           >=4.7
+    , base                  >=4.7
     , bytestring
-    , Cabal          >=1.22
-    , containers     >=0.5   && <0.7
-    , galois-field   >=1.0.4
-    , hspec          >=2.0
-    , jsonl          >=0.1.4
+    , Cabal                 >=1.22
+    , containers            >=0.5   && <0.7
+    , galois-field          >=1.0.4
+    , hspec                 >=2.0
+    , jsonl                 >=0.1.4
     , lens
-    , mtl            >=2.2   && <2.3
+    , mtl                   >=2.2   && <2.3
     , optparse-applicative
-    , parallel       >=3.2   && <3.3
-    , process        >=1.2
+    , parallel              >=3.2   && <3.3
+    , process               >=1.2
     , string-conversions
     , wl-pprint-text
 
@@ -149,7 +149,7 @@ test-suite spec
 benchmark criterion
   type:               exitcode-stdio-1.0
   main-is:            Main.hs
-  ghc-options: -threaded -O2
+  ghc-options:        -threaded -O2
   other-modules:
     Harness
     Snarkl.Example.Basic
@@ -217,11 +217,11 @@ executable print-examples
   hs-source-dirs:     print-examples examples tests
   default-language:   Haskell2010
   build-depends:
-      base           >=4.7
+      base            >=4.7
     , containers
-    , galois-field   >=1.0.4
-    , hspec          >=2.0
-    , snarkl         >=0.1.0.0
+    , galois-field    >=1.0.4
+    , hspec           >=2.0
+    , snarkl          >=0.1.0.0
     , wl-pprint-text
 
 executable snarkl
@@ -249,9 +249,9 @@ executable snarkl
   hs-source-dirs:     app examples tests
   default-language:   Haskell2010
   build-depends:
-      base           >=4.7
+      base          >=4.7
     , bytestring
     , containers
-    , galois-field   >=1.0.4
-    , hspec          >=2.0
-    , snarkl         >=0.1.0.0
+    , galois-field  >=1.0.4
+    , hspec         >=2.0
+    , snarkl        >=0.1.0.0
