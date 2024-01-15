@@ -1,22 +1,19 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Snarkl.CLI (compiler) where
 
-import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (PrimeField)
-import Data.Maybe (catMaybes)
 import Data.Typeable (Typeable)
-import Options.Applicative (execParser, fullDesc, header, helper, info, (<**>))
-import Snarkl.Backend.R1CS
-import Snarkl.CLI.Compile (CompileOpts (..), OptimiseOpts (..), compileOptsParser)
-import Snarkl.CLI.GenWitness (GenWitnessOpts (..))
-import Snarkl.Compile
-import Snarkl.Constraint ()
+import Options.Applicative (command, execParser, fullDesc, header, helper, info, progDesc, subparser, (<**>))
+import Snarkl.CLI.Compile (CompileOpts, compile, compileOptsParser)
+import Snarkl.CLI.GenWitness (GenWitnessOpts, genWitness, genWitnessOptsParser)
+import Snarkl.CLI.RunAll (RunAllOpts, runAll, runAllOptsParser)
 import Snarkl.Language
 
 data CMD
   = Compile CompileOpts
   | GenWitness GenWitnessOpts
+  | RunAll RunAllOpts
 
 compiler ::
   forall ty k.
@@ -26,12 +23,16 @@ compiler ::
   Comp ty k ->
   IO ()
 compiler name comp = do
-  compileOpts <- execParser opts
-  runCMD (Compile compileOpts) name comp
+  cmd <- execParser opts
+  runCMD cmd name comp
   where
+    cmds =
+      command "compile" (info (Compile <$> compileOptsParser <**> helper) (progDesc "Compile to program to an r1cs and constraints file"))
+        <> command "gen-witness" (info (GenWitness <$> genWitnessOptsParser <**> helper) (progDesc "Generate a witness for the program"))
+        <> command "run-all" (info (RunAll <$> runAllOptsParser <**> helper) (progDesc "Compile to program to an r1cs and constraints file and generate a witness"))
     opts =
       info
-        (compileOptsParser <**> helper)
+        (subparser cmds <**> helper)
         ( fullDesc
             <> header ("Compiling the program " <> name <> " to a ZK-SNARK")
         )
@@ -45,16 +46,6 @@ runCMD ::
   Comp ty k ->
   IO ()
 runCMD cmd name comp = case cmd of
-  Compile (CompileOpts {..}) -> do
-    let simpl =
-          catMaybes
-            [ if simplify optimiseOpts then Just Simplify else Nothing,
-              if removeUnreachable optimiseOpts then Just RemoveUnreachable else Nothing
-            ]
-        TExpPkg nv in_vars e = compileCompToTexp comp
-        r1cs = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
-        r1csFP = mkR1CSFilePath name r1csOutput
-    LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
-    putStrLn $ "Wrote R1CS to file " <> r1csOutput
-  GenWitness (GenWitnessOpts {..}) -> do
-    
+  Compile opts -> compile opts name comp
+  GenWitness opts -> genWitness opts name comp
+  RunAll opts -> runAll opts name comp

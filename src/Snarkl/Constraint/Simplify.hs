@@ -6,7 +6,7 @@ module Snarkl.Constraint.Simplify
   )
 where
 
-import Control.Monad.State (State, evalState, when)
+import Control.Monad.State (State, evalState, gets, when)
 import Data.Field.Galois (GaloisField)
 import Data.List (foldl')
 import qualified Data.Set as Set
@@ -20,13 +20,12 @@ import Snarkl.Constraint.Constraints
     constraint_vars,
   )
 import Snarkl.Constraint.SimplMonad
-  ( SEnv (SEnv),
+  ( SEnv (SEnv, solve_mode),
     SolveMode (JustSimplify, UseMagic),
     assgn_of_vars,
     bind_of_var,
     bind_var,
     root_of_var,
-    solve_mode_flag,
     unite_vars,
   )
 import qualified Snarkl.Constraint.UnionFind as UF
@@ -46,14 +45,15 @@ subst_constr ::
 subst_constr !constr = case constr of
   CMagic !_ !xs !mf ->
     do
-      solve <- solve_mode_flag
-      if solve
-        then do
-          b <- mf xs
-          if b
-            then return $ cadd 0 []
-            else return constr
-        else return constr
+      solveMode <- gets solve_mode
+      case solveMode of
+        UseMagic ->
+          do
+            b <- mf xs
+            if b
+              then return $ cadd 0 []
+              else return constr
+        JustSimplify -> return constr
   CAdd a m ->
     do
       -- Variables resolvable to constants

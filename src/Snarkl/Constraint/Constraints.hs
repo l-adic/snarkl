@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
@@ -8,19 +9,29 @@ module Snarkl.Constraint.Constraints
     cadd,
     ConstraintSet,
     ConstraintSystem (..),
+    SimplifiedConstraintSystem (..),
     r1cs_of_cs,
     renumber_constraints,
     constraint_vars,
+    serializeConstraintSystemAsJson,
+    mkConstraintsFilePath,
+    parseConstraintSystem,
+    constraintSystemToHeader,
   )
 where
 
+import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.State (State)
-import Data.Bifunctor (Bifunctor (first))
-import Data.Field.Galois (GaloisField, Prime)
+import qualified Data.Aeson as A
+import Data.Bifunctor (Bifunctor (first, second))
+import Data.ByteString.Builder (toLazyByteString)
+import qualified Data.ByteString.Lazy as LBS
+import Data.Field.Galois (GaloisField (char, deg), Prime, PrimeField (fromP))
+import Data.Foldable (Foldable (toList))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
-import Snarkl.Common (Assgn, Var (Var))
+import Snarkl.Backend.R1CS (JSONLine (unJSONLine), Poly (Poly), R1C (R1C), R1CS (R1CS), R1CSHeader (..), const_poly, jsonLine, jsonlBuilder, var_poly)
+import Snarkl.Common (Var (Var))
 import Snarkl.Constraint.SimplMonad (SEnv)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
@@ -30,6 +41,12 @@ import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
 newtype CoeffList k v = CoeffList {asList :: [(k, v)]}
   deriving (Eq)
+
+instance (PrimeField v) => A.ToJSON (CoeffList Var v) where
+  toJSON (CoeffList l) = A.toJSON $ map (second fromP) l
+
+instance (PrimeField v) => A.FromJSON (CoeffList Var v) where
+  parseJSON v = CoeffList . map (second fromInteger) <$> A.parseJSON v
 
 -- COEFFLIST INVARIANT: no key appears more than once.  Upon duplicate
 -- insertion, insert field sum of the values.  Terms with 0 coeff. are
@@ -72,6 +89,46 @@ data Constraint a
   = CAdd !a !(CoeffList Var a)
   | CMult !(a, Var) !(a, Var) !(a, Maybe Var)
   | CMagic Var [Var] ([Var] -> State (SEnv a) Bool)
+
+instance (PrimeField a) => A.ToJSON (Constraint a) where
+  toJSON (CAdd a m) =
+    A.object
+      [ "tag" A..= ("CAdd" :: String),
+        "data"
+          A..= A.object
+            [ "a" A..= fromP a,
+              "m" A..= m
+            ]
+      ]
+  toJSON (CMult (c, x) (d, y) (e, mz)) =
+    A.object
+      [ "tag" A..= ("CMult" :: String),
+        "data"
+          A..= A.object
+            [ "cx" A..= (fromP c, x),
+              "dy" A..= (fromP d, y),
+              "ez" A..= (fromP e, mz)
+            ]
+      ]
+  toJSON (CMagic {}) = error "ToJSON (Constraint a): CMagic not implemented"
+
+instance (PrimeField a) => A.FromJSON (Constraint a) where
+  parseJSON =
+    A.withObject "Constraint" $ \v -> do
+      tag <- v A..: "tag"
+      case tag :: String of
+        "CAdd" -> do
+          d <- v A..: "data"
+          a <- d A..: "a"
+          m <- d A..: "m"
+          pure $ CAdd (fromInteger a) m
+        "CMult" -> do
+          d <- v A..: "data"
+          cx <- d A..: "cx"
+          dy <- d A..: "dy"
+          ez <- d A..: "ez"
+          pure $ CMult (first fromInteger cx) (first fromInteger dy) (first fromInteger ez)
+        _ -> error "FromJSON (Constraint a): unknown tag"
 
 -- | Smart constructor enforcing CoeffList invariant
 cadd :: (GaloisField a) => a -> [(Var, a)] -> Constraint a
@@ -165,14 +222,18 @@ instance (Show a) => Show (Constraint a) where
 -- Compilation to R1CS
 ----------------------------------------------------------------
 
+-- Contains no magic constraints, hence we can serialize them
+newtype SimplifiedConstraintSystem a = SimplifiedConstraintSystem
+  { unSimplifiedConstraintSystem :: ConstraintSystem a
+  }
+  deriving (Show, Eq)
+
 r1cs_of_cs ::
   (GaloisField a) =>
   -- | Constraints
-  ConstraintSystem a ->
-  -- | Witness generator
-  (Assgn a -> Assgn a) ->
+  SimplifiedConstraintSystem a ->
   R1CS a
-r1cs_of_cs cs =
+r1cs_of_cs (SimplifiedConstraintSystem cs) =
   R1CS
     (go $ Set.toList $ cs_constraints cs)
     (cs_num_vars cs)
@@ -250,3 +311,41 @@ renumber_constraints cs =
           CMult (c, renum_f x) (d, renum_f y) (e, fmap renum_f mz)
         CMagic nm xs f ->
           CMagic nm (map renum_f xs) f
+
+constraintSystemToHeader :: (GaloisField k) => SimplifiedConstraintSystem k -> R1CSHeader k
+constraintSystemToHeader (SimplifiedConstraintSystem (ConstraintSystem {..} :: ConstraintSystem k)) =
+  R1CSHeader
+    { field_characteristic = toInteger $ char (undefined :: k),
+      extension_degree = toInteger $ deg (undefined :: k),
+      n_constraints = Set.size cs_constraints,
+      -- TODO: should we also add the number of output variables? We do this for
+      -- the R1CS header, but the examples i checked didn't seem to work
+      n_variables = cs_num_vars,
+      input_variables = cs_in_vars,
+      output_variables = cs_out_vars
+    }
+
+serializeConstraintSystemAsJson :: (PrimeField k) => SimplifiedConstraintSystem k -> LBS.ByteString
+serializeConstraintSystemAsJson cs =
+  let b = jsonLine (constraintSystemToHeader cs) <> jsonlBuilder (toList $ cs_constraints $ unSimplifiedConstraintSystem cs)
+   in toLazyByteString $ unJSONLine b
+
+parseConstraintSystem :: (PrimeField k) => LBS.ByteString -> Either String (SimplifiedConstraintSystem k)
+parseConstraintSystem file = do
+  let ls = LBS.split 0x0a file
+  case ls of
+    [] -> throwError "Empty file"
+    (h : cs) -> do
+      header <- A.eitherDecode h
+      constraints <- traverse A.eitherDecode cs
+      return $
+        SimplifiedConstraintSystem $
+          ConstraintSystem
+            { cs_constraints = Set.fromList constraints,
+              cs_num_vars = n_variables header,
+              cs_in_vars = input_variables header,
+              cs_out_vars = output_variables header
+            }
+
+mkConstraintsFilePath :: FilePath -> String -> FilePath
+mkConstraintsFilePath rootDir name = rootDir <> "/" <> name <> "-constraints.jsonl"

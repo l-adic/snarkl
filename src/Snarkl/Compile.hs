@@ -13,6 +13,7 @@ module Snarkl.Compile
   )
 where
 
+import Control.Arrow (Arrow (second))
 import Control.Lens (Iso', iso, view, (#), (^.))
 import Control.Monad.State
   ( State,
@@ -32,6 +33,7 @@ import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint
   ( Constraint (CMagic, CMult),
     ConstraintSystem (ConstraintSystem),
+    SimplifiedConstraintSystem (..),
     bind_of_var,
     bind_var,
     cadd,
@@ -40,7 +42,6 @@ import Snarkl.Constraint
     r1cs_of_cs,
     removeUnreachable,
     renumber_constraints,
-    solve,
   )
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
@@ -424,7 +425,7 @@ compileConstraintsToR1CS ::
   (GaloisField a) =>
   [SimplParam] ->
   ConstraintSystem a ->
-  R1CS a
+  (R1CS a, SimplifiedConstraintSystem a)
 compileConstraintsToR1CS simpls cs =
   let -- Simplify resulting constraints.
       cs_simpl =
@@ -435,15 +436,14 @@ compileConstraintsToR1CS simpls cs =
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
       -- their renumbered counterparts.
-      (_, cs') = renumber_constraints cs_dataflow
-      -- 'f' is a function mapping input bindings to witnesses.
+      (_, cs') = second SimplifiedConstraintSystem $ renumber_constraints cs_dataflow
+   in -- 'f' is a function mapping input bindings to witnesses.
       -- NOTE: we assume the initial variable assignment passed to
       -- 'f' is the one derived by zipping the inputs together with
       -- the (renamed) input vars. of the R1CS produced by this
       -- function. Alternatively, we could 'Map.mapKeys renumber_f'
       -- before applying 'solve cs''.
-      f = solve cs'
-   in r1cs_of_cs cs' f
+      (r1cs_of_cs cs', cs')
   where
     must_simplify :: Bool
     must_simplify = Simplify `elem` simpls
@@ -550,7 +550,7 @@ compileTExpToR1CS ::
   (Typeable ty, GaloisField k) =>
   [SimplParam] ->
   TExpPkg ty k ->
-  R1CS k
+  (R1CS k, SimplifiedConstraintSystem k)
 compileTExpToR1CS simpl = compileConstraintsToR1CS simpl . compileTexpToConstraints
 
 -- | Snarkl.Compile Snarkl computations to 'R1CS'.
@@ -558,7 +558,7 @@ compileCompToR1CS ::
   (Typeable ty, GaloisField k) =>
   [SimplParam] ->
   Comp ty k ->
-  R1CS k
+  (R1CS k, SimplifiedConstraintSystem k)
 compileCompToR1CS simpl = compileConstraintsToR1CS simpl . compileCompToConstraints
 
 --------------------------------------------------------------------------------

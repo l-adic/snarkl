@@ -96,7 +96,7 @@ library
     , optparse-applicative
     , parallel       >=3.2   && <3.3
     , process        >=1.2
-    , streamly
+    , string-conversions
     , wl-pprint-text
 
   hs-source-dirs:     src
@@ -224,7 +224,7 @@ executable print-examples
     , snarkl         >=0.1.0.0
     , wl-pprint-text
 
-executable compile
+executable snarkl
   main-is:            Main.hs
   other-modules:
     Snarkl.Example.Basic

@@ -9,7 +9,6 @@ module Snarkl.Constraint.SimplMonad
     bind_of_var,
     assgn_of_vars,
     SolveMode (..),
-    solve_mode_flag,
   )
 where
 
@@ -86,12 +85,3 @@ assgn_of_vars vars =
             Right c -> [(x, c)]
         )
       $ zip vars binds
-
--- | Are we in solve mode?
-solve_mode_flag :: State (SEnv a) Bool
-solve_mode_flag =
-  do
-    env <- get
-    case solve_mode env of
-      UseMagic -> return True
-      JustSimplify -> return False

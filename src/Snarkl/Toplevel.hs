@@ -9,6 +9,7 @@ module Snarkl.Toplevel
     -- * Convenience functions
     Result (..),
     execute,
+    wit_of_cs,
 
     -- * Re-exported modules
     module Snarkl.Language,
@@ -24,7 +25,7 @@ import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn)
 import Snarkl.Compile
-import Snarkl.Constraint ()
+import Snarkl.Constraint (ConstraintSystem (cs_in_vars), SimplifiedConstraintSystem (..), solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
 import Snarkl.Language
@@ -87,9 +88,9 @@ instance (Pretty k) => Pretty (Result k) where
 execute :: (Typeable ty, PrimeField k) => [SimplParam] -> Comp ty k -> [k] -> Result k
 execute simpl mf inputs =
   let TExpPkg nv in_vars e = compileCompToTexp mf
-      r1cs = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
+      (r1cs, constraintSystem) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
       [out_var] = r1cs_out_vars r1cs
-      wit = wit_of_r1cs inputs r1cs
+      wit = wit_of_cs inputs constraintSystem
       out = case Map.lookup out_var wit of
         Nothing ->
           failWith $
@@ -118,3 +119,32 @@ execute simpl mf inputs =
       nw = r1cs_num_vars r1cs
       ng = num_constraints r1cs
    in Result result nw ng out r1cs wit
+
+--
+-- data ConstraintSystem a = ConstraintSystem
+--  { cs_constraints :: ConstraintSet a,
+--    cs_num_vars :: Int,
+--    cs_in_vars :: [Var],
+--    cs_out_vars :: [Var]
+--  }
+--  deriving (Show, Eq)
+
+-- | For a given R1CS and inputs, calculate a satisfying assignment.
+wit_of_cs :: (GaloisField k) => [k] -> SimplifiedConstraintSystem k -> Assgn k
+wit_of_cs inputs (SimplifiedConstraintSystem cs) =
+  let in_vars = cs_in_vars cs
+      f = gen_witness . Map.fromList
+   in if length in_vars /= length inputs
+        then
+          failWith $
+            ErrMsg
+              ( "expected "
+                  ++ show (length in_vars)
+                  ++ " input(s)"
+                  ++ " but got "
+                  ++ show (length inputs)
+                  ++ " input(s)"
+              )
+        else f (zip in_vars inputs)
+  where
+    gen_witness = solve cs

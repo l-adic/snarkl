@@ -6,7 +6,15 @@ import qualified Data.Aeson as A
 import qualified Data.Map as Map
 import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
-newtype Var = Var Int deriving (Eq, Ord, Show, A.ToJSON)
+newtype Var = Var Int deriving (Eq, Ord, Show)
+
+instance A.ToJSON Var where
+  toJSON (Var i) = A.toJSON (i + 1)
+
+instance A.FromJSON Var where
+  parseJSON v = do
+    i <- A.parseJSON v
+    return $ Var (i - 1)
 
 instance Pretty Var where
   pretty (Var i) = "x_" <> pretty i
