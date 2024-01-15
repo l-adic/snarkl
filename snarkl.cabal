@@ -61,6 +61,7 @@ library
     Snarkl.CLI.Compile
     Snarkl.CLI.GenWitness
     Snarkl.CLI.RunAll
+    Snarkl.CLI.Utils
 
   default-extensions:
     BangPatterns
@@ -88,6 +89,8 @@ library
     , bytestring
     , Cabal                 >=1.22
     , containers            >=0.5   && <0.7
+    , directory
+    , filepath
     , galois-field          >=1.0.4
     , hspec                 >=2.0
     , jsonl                 >=0.1.4

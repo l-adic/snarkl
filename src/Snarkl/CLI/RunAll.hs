@@ -11,10 +11,11 @@ import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
-import Options.Applicative (Parser, help, long, strOption)
+import Options.Applicative (Parser, help, long, strOption, value)
 import Snarkl.Backend.R1CS (R1CS (r1cs_clauses, r1cs_out_vars), mkR1CSFilePath, mkWitnessFilePath, parseInputs, r1csToHeader, sat_r1cs, serializeR1CSAsJson, serializeWitnessAsJson)
 import Snarkl.CLI.Compile (OptimizeOpts (removeUnreachable, simplify), optimizeOptsParser)
 import Snarkl.CLI.GenWitness (InputOpts (Explicit, FromFile), inputOptsParser)
+import qualified Snarkl.CLI.Utils as Utils
 import Snarkl.Compile (SimplParam (RemoveUnreachable, Simplify), TExpPkg (TExpPkg), compileCompToTexp, compileTExpToR1CS)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language (Comp)
@@ -33,12 +34,14 @@ runAllOptsParser =
     <$> strOption
       ( long "r1cs-output-dir"
           <> help "the directory to write the r1cs artifact"
+          <> value "./snarkl-output"
       )
     <*> optimizeOptsParser
     <*> inputOptsParser
     <*> strOption
       ( long "witness-output-dir"
           <> help "the directory to write the witness.jsonl file"
+          <> value "./snarkl-output"
       )
 
 runAll ::
@@ -91,8 +94,8 @@ runAll RunAllOpts {..} name comp = do
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let r1csFP = mkR1CSFilePath r1csOutput name
-  LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
-  putStrLn $ "Wrote R1CS to file " <> r1csOutput
+  Utils.writeFile r1csFP (serializeR1CSAsJson r1cs)
+  putStrLn $ "Wrote R1CS to " <> r1csFP
   let witnessFP = mkWitnessFilePath witnessOutput name
-  LBS.writeFile witnessFP (serializeWitnessAsJson (r1csToHeader r1cs) witness)
-  putStrLn $ "Wrote witness to file " <> witnessOutput
+  Utils.writeFile witnessFP (serializeWitnessAsJson (r1csToHeader r1cs) witness)
+  putStrLn $ "Wrote witness to " <> witnessFP

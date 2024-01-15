@@ -18,8 +18,9 @@ import Data.Foldable (Foldable (toList))
 import qualified Data.Map as Map
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
-import Options.Applicative (Parser, eitherReader, help, long, option, strOption)
+import Options.Applicative (Parser, eitherReader, help, long, option, strOption, value)
 import Snarkl.Backend.R1CS
+import qualified Snarkl.CLI.Utils as Utils
 import Snarkl.Constraint (ConstraintSystem (cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemToHeader, mkConstraintsFilePath, parseConstraintSystem)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
@@ -57,15 +58,18 @@ genWitnessOptsParser =
     <$> strOption
       ( long "constraints-input-dir"
           <> help "the directory where the constrains.jsonl file is located"
+          <> value "./snarkl-output"
       )
     <*> strOption
       ( long "r1cs-input-dir"
           <> help "the directory where the r1cs.jsonl file is located"
+          <> value "./snarkl-output"
       )
     <*> inputOptsParser
     <*> strOption
       ( long "witness-output-dir"
           <> help "the directory to write the witness.jsonl file"
+          <> value "./snarkl-output"
       )
 
 genWitness ::
@@ -118,5 +122,5 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let witnessFP = mkWitnessFilePath witnessOutput name
-  LBS.writeFile witnessFP (serializeWitnessAsJson (constraintSystemToHeader constraints) witness)
-  putStrLn $ "Wrote witness to file " <> witnessOutput
+  Utils.writeFile witnessFP (serializeWitnessAsJson (constraintSystemToHeader constraints) witness)
+  putStrLn $ "Wrote witness to " <> witnessFP

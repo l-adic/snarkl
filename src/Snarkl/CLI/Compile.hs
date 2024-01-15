@@ -12,15 +12,15 @@ where
 
 import Control.Monad (unless)
 import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (PrimeField (fromP))
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
-import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, strOption, subparser, switch, (<**>))
+import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, strOption, subparser, switch, value, (<**>))
 import Snarkl.Backend.R1CS
+import qualified Snarkl.CLI.Utils as Utils
 import Snarkl.Compile
 import Snarkl.Constraint (ConstraintSystem (cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemToHeader, mkConstraintsFilePath, parseConstraintSystem, serializeConstraintSystemAsJson)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
@@ -57,10 +57,12 @@ compileOptsParser =
     <*> strOption
       ( long "r1cs-output-dir"
           <> help "the directory to write the r1cs artifact"
+          <> value "./snarkl-output"
       )
     <*> strOption
       ( long "constraints-output-dir"
           <> help "the directory to write the constraints artifact"
+          <> value "./snarkl-output"
       )
 
 compile ::
@@ -80,8 +82,8 @@ compile CompileOpts {..} name comp = do
       TExpPkg nv in_vars e = compileCompToTexp comp
       (r1cs, cs) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
       r1csFP = mkR1CSFilePath r1csOutput name
-  LBS.writeFile r1csFP (serializeR1CSAsJson r1cs)
-  putStrLn $ "Wrote R1CS to file " <> r1csOutput
+  Utils.writeFile r1csFP (serializeR1CSAsJson r1cs)
+  putStrLn $ "Wrote R1CS to " <> r1csFP
   let csFP = mkConstraintsFilePath constraintsOutput name
-  LBS.writeFile csFP (serializeConstraintSystemAsJson cs)
-  putStrLn $ "Wrote constraints to file " <> constraintsOutput
+  Utils.writeFile csFP (serializeConstraintSystemAsJson cs)
+  putStrLn $ "Wrote constraints to " <> csFP

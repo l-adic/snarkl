@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Snarkl.CLI (compiler) where
+module Snarkl.CLI (defaultMain) where
 
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
@@ -15,37 +15,28 @@ data CMD
   | GenWitness GenWitnessOpts
   | RunAll RunAllOpts
 
-compiler ::
+defaultMain ::
   forall ty k.
   (Typeable ty) =>
   (PrimeField k) =>
   String ->
   Comp ty k ->
   IO ()
-compiler name comp = do
-  cmd <- execParser opts
-  runCMD cmd name comp
+defaultMain name comp = do
+  _opts <- execParser opts
+  runCMD _opts
   where
     cmds =
-      command "compile" (info (Compile <$> compileOptsParser <**> helper) (progDesc "Compile to program to an r1cs and constraints file"))
-        <> command "gen-witness" (info (GenWitness <$> genWitnessOptsParser <**> helper) (progDesc "Generate a witness for the program"))
-        <> command "run-all" (info (RunAll <$> runAllOptsParser <**> helper) (progDesc "Compile to program to an r1cs and constraints file and generate a witness"))
+      command "compile" (info (Compile <$> compileOptsParser <**> helper) (progDesc "Compile the program to an r1cs and constraint system"))
+        <> command "solve" (info (GenWitness <$> genWitnessOptsParser <**> helper) (progDesc "Generate a witness for the program"))
+        <> command "run-all" (info (RunAll <$> runAllOptsParser <**> helper) (progDesc "Compile the program to an r1cs and generate a witness (useful for testing)"))
     opts =
       info
         (subparser cmds <**> helper)
         ( fullDesc
             <> header ("Compiling the program " <> name <> " to a ZK-SNARK")
         )
-
-runCMD ::
-  forall ty k.
-  (Typeable ty) =>
-  (PrimeField k) =>
-  CMD ->
-  String ->
-  Comp ty k ->
-  IO ()
-runCMD cmd name comp = case cmd of
-  Compile opts -> compile opts name comp
-  GenWitness opts -> genWitness opts name comp
-  RunAll opts -> runAll opts name comp
+    runCMD cmd = case cmd of
+      Compile _opts -> compile _opts name comp
+      GenWitness _opts -> genWitness _opts name comp
+      RunAll _opts -> runAll _opts name comp
