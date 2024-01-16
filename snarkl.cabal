@@ -61,7 +61,7 @@ library
     Snarkl.CLI.Compile
     Snarkl.CLI.GenWitness
     Snarkl.CLI.RunAll
-    Snarkl.CLI.Utils
+    Snarkl.Utils
 
   default-extensions:
     BangPatterns
@@ -79,6 +79,8 @@ library
     RankNTypes
     ScopedTypeVariables
     StandaloneDeriving
+    TupleSections
+    TypeApplications
     TypeFamilies
     TypeSynonymInstances
     UndecidableInstances

@@ -13,25 +13,19 @@ module Snarkl.Constraint.Constraints
     r1cs_of_cs,
     renumber_constraints,
     constraint_vars,
-    serializeConstraintSystemAsJson,
     mkConstraintsFilePath,
-    parseConstraintSystem,
     constraintSystemToHeader,
   )
 where
 
-import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.State (State)
 import qualified Data.Aeson as A
 import Data.Bifunctor (Bifunctor (first, second))
-import Data.ByteString.Builder (toLazyByteString)
-import qualified Data.ByteString.Lazy as LBS
-import Data.Field.Galois (GaloisField (char, deg), Prime, PrimeField (fromP))
-import Data.Foldable (Foldable (toList))
+import Data.Field.Galois (GaloisField (char, deg), Prime, PrimeField)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Snarkl.Backend.R1CS (JSONLine (unJSONLine), Poly (Poly), R1C (R1C), R1CS (R1CS), R1CSHeader (..), const_poly, jsonLine, jsonlBuilder, var_poly)
-import Snarkl.Common (Var (Var))
+import Snarkl.Backend.R1CS (ConstraintHeader (..), Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
+import Snarkl.Common (Assgn (Assgn), FieldElem (..), Var (Var))
 import Snarkl.Constraint.SimplMonad (SEnv)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
@@ -43,10 +37,10 @@ newtype CoeffList k v = CoeffList {asList :: [(k, v)]}
   deriving (Eq)
 
 instance (PrimeField v) => A.ToJSON (CoeffList Var v) where
-  toJSON (CoeffList l) = A.toJSON $ map (second fromP) l
+  toJSON (CoeffList l) = A.toJSON $ map (second FieldElem) l
 
 instance (PrimeField v) => A.FromJSON (CoeffList Var v) where
-  parseJSON v = CoeffList . map (second fromInteger) <$> A.parseJSON v
+  parseJSON v = CoeffList . map (second unFieldElem) <$> A.parseJSON v
 
 -- COEFFLIST INVARIANT: no key appears more than once.  Upon duplicate
 -- insertion, insert field sum of the values.  Terms with 0 coeff. are
@@ -96,7 +90,7 @@ instance (PrimeField a) => A.ToJSON (Constraint a) where
       [ "tag" A..= ("CAdd" :: String),
         "data"
           A..= A.object
-            [ "a" A..= fromP a,
+            [ "a" A..= FieldElem a,
               "m" A..= m
             ]
       ]
@@ -105,9 +99,9 @@ instance (PrimeField a) => A.ToJSON (Constraint a) where
       [ "tag" A..= ("CMult" :: String),
         "data"
           A..= A.object
-            [ "cx" A..= (fromP c, x),
-              "dy" A..= (fromP d, y),
-              "ez" A..= (fromP e, mz)
+            [ "cx" A..= (FieldElem c, x),
+              "dy" A..= (FieldElem d, y),
+              "ez" A..= (FieldElem e, mz)
             ]
       ]
   toJSON (CMagic {}) = error "ToJSON (Constraint a): CMagic not implemented"
@@ -121,13 +115,13 @@ instance (PrimeField a) => A.FromJSON (Constraint a) where
           d <- v A..: "data"
           a <- d A..: "a"
           m <- d A..: "m"
-          pure $ CAdd (fromInteger a) m
+          pure $ CAdd (unFieldElem a) m
         "CMult" -> do
           d <- v A..: "data"
           cx <- d A..: "cx"
           dy <- d A..: "dy"
           ez <- d A..: "ez"
-          pure $ CMult (first fromInteger cx) (first fromInteger dy) (first fromInteger ez)
+          pure $ CMult (first unFieldElem cx) (first unFieldElem dy) (first unFieldElem ez)
         _ -> error "FromJSON (Constraint a): unknown tag"
 
 -- | Smart constructor enforcing CoeffList invariant
@@ -244,7 +238,7 @@ r1cs_of_cs (SimplifiedConstraintSystem cs) =
     go (CAdd a m : cs') =
       R1C
         ( const_poly 1,
-          Poly $ Map.insert (Var (-1)) a $ Map.fromList (asList m),
+          Poly $ Assgn $ Map.insert (Var (-1)) a $ Map.fromList (asList m),
           const_poly 0
         )
         : go cs'
@@ -312,9 +306,9 @@ renumber_constraints cs =
         CMagic nm xs f ->
           CMagic nm (map renum_f xs) f
 
-constraintSystemToHeader :: (GaloisField k) => SimplifiedConstraintSystem k -> R1CSHeader k
+constraintSystemToHeader :: (GaloisField k) => SimplifiedConstraintSystem k -> ConstraintHeader k
 constraintSystemToHeader (SimplifiedConstraintSystem (ConstraintSystem {..} :: ConstraintSystem k)) =
-  R1CSHeader
+  ConstraintHeader
     { field_characteristic = toInteger $ char (undefined :: k),
       extension_degree = toInteger $ deg (undefined :: k),
       n_constraints = Set.size cs_constraints,
@@ -324,28 +318,6 @@ constraintSystemToHeader (SimplifiedConstraintSystem (ConstraintSystem {..} :: C
       input_variables = cs_in_vars,
       output_variables = cs_out_vars
     }
-
-serializeConstraintSystemAsJson :: (PrimeField k) => SimplifiedConstraintSystem k -> LBS.ByteString
-serializeConstraintSystemAsJson cs =
-  let b = jsonLine (constraintSystemToHeader cs) <> jsonlBuilder (toList $ cs_constraints $ unSimplifiedConstraintSystem cs)
-   in toLazyByteString $ unJSONLine b
-
-parseConstraintSystem :: (PrimeField k) => LBS.ByteString -> Either String (SimplifiedConstraintSystem k)
-parseConstraintSystem file = do
-  let ls = LBS.split 0x0a file
-  case ls of
-    [] -> throwError "Empty file"
-    (h : cs) -> do
-      header <- A.eitherDecode h
-      constraints <- traverse A.eitherDecode cs
-      return $
-        SimplifiedConstraintSystem $
-          ConstraintSystem
-            { cs_constraints = Set.fromList constraints,
-              cs_num_vars = n_variables header,
-              cs_in_vars = input_variables header,
-              cs_out_vars = output_variables header
-            }
 
 mkConstraintsFilePath :: FilePath -> String -> FilePath
 mkConstraintsFilePath rootDir name = rootDir <> "/" <> name <> "-constraints.jsonl"

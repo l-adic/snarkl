@@ -10,7 +10,7 @@ import Control.Monad.State (State, evalState, gets, when)
 import Data.Field.Galois (GaloisField)
 import Data.List (foldl')
 import qualified Data.Set as Set
-import Snarkl.Common (Assgn, Var)
+import Snarkl.Common (Assgn (Assgn), Var)
 import Snarkl.Constraint.Constraints
   ( CoeffList (CoeffList, asList),
     Constraint (..),
@@ -185,7 +185,7 @@ do_simplify ::
   ConstraintSystem a ->
   -- | Resulting assignment, simplified constraint set
   (Assgn a, ConstraintSystem a)
-do_simplify in_solve_mode env cs =
+do_simplify in_solve_mode (Assgn env) cs =
   -- NOTE: Pinned vars include:
   --   - input vars
   --   - output vars

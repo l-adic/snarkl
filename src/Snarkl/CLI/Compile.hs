@@ -12,20 +12,20 @@ where
 
 import Control.Monad (unless)
 import qualified Data.Aeson as A
-import Data.Field.Galois (PrimeField (fromP))
+import Data.Field.Galois (PrimeField)
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
-import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, strOption, subparser, switch, value, (<**>))
+import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
 import Snarkl.Backend.R1CS
-import qualified Snarkl.CLI.Utils as Utils
 import Snarkl.Compile
-import Snarkl.Constraint (ConstraintSystem (cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemToHeader, mkConstraintsFilePath, parseConstraintSystem, serializeConstraintSystemAsJson)
+import Snarkl.Constraint (ConstraintSystem (cs_constraints, cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemToHeader, mkConstraintsFilePath)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
+import qualified Snarkl.Utils as Utils
 
 data OptimizeOpts = OptimizeOpts
   { simplify :: Bool,
@@ -58,11 +58,13 @@ compileOptsParser =
       ( long "r1cs-output-dir"
           <> help "the directory to write the r1cs artifact"
           <> value "./snarkl-output"
+          <> showDefault
       )
     <*> strOption
       ( long "constraints-output-dir"
           <> help "the directory to write the constraints artifact"
           <> value "./snarkl-output"
+          <> showDefault
       )
 
 compile ::
@@ -82,8 +84,8 @@ compile CompileOpts {..} name comp = do
       TExpPkg nv in_vars e = compileCompToTexp comp
       (r1cs, cs) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
       r1csFP = mkR1CSFilePath r1csOutput name
-  Utils.writeFile r1csFP (serializeR1CSAsJson r1cs)
+  Utils.writeJSONLines r1csFP (Just $ r1csToHeader r1cs) (r1cs_clauses r1cs)
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let csFP = mkConstraintsFilePath constraintsOutput name
-  Utils.writeFile csFP (serializeConstraintSystemAsJson cs)
+  Utils.writeJSONLines csFP (Just $ constraintSystemToHeader cs) (toList $ cs_constraints $ unSimplifiedConstraintSystem cs)
   putStrLn $ "Wrote constraints to " <> csFP

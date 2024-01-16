@@ -3,6 +3,8 @@
 module Snarkl.Common where
 
 import qualified Data.Aeson as A
+import Data.Field.Galois (PrimeField (fromP))
+import Data.Foldable (Foldable (toList))
 import qualified Data.Map as Map
 import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
@@ -22,7 +24,29 @@ instance Pretty Var where
 incVar :: Var -> Var
 incVar (Var i) = Var (i + 1)
 
-type Assgn a = Map.Map Var a
+newtype Assgn a = Assgn (Map.Map Var a) deriving (Show, Eq, Functor, Foldable)
+
+newtype FieldElem k = FieldElem {unFieldElem :: k} deriving (Show, Eq)
+
+instance (PrimeField k) => A.ToJSON (FieldElem k) where
+  toJSON (FieldElem k) = A.toJSON (show $ fromP k)
+
+instance (PrimeField k) => A.FromJSON (FieldElem k) where
+  parseJSON v = do
+    k <- A.parseJSON v
+    return $ FieldElem (fromInteger $ read k)
+
+instance (PrimeField a) => A.ToJSON (Assgn a) where
+  toJSON (Assgn m) =
+    let kvs = map (\(var, coeff) -> (FieldElem coeff, var)) $ Map.toList m
+     in A.toJSON kvs
+
+instance (PrimeField a) => A.FromJSON (Assgn a) where
+  parseJSON =
+    A.withArray "Assgn" $ \arr -> do
+      kvs <- mapM A.parseJSON arr
+      let m = Map.fromList $ map (\(FieldElem k, v) -> (v, k)) (toList kvs)
+      return (Assgn m)
 
 data UnOp = ZEq
   deriving (Eq, Show)

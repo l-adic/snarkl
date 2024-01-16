@@ -29,7 +29,7 @@ import Data.Sequence (pattern Empty, pattern (:<|))
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS.R1CS (R1CS)
-import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
+import Snarkl.Common (Assgn (Assgn), Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint
   ( Constraint (CMagic, CMult),
     ConstraintSystem (ConstraintSystem),
@@ -430,7 +430,7 @@ compileConstraintsToR1CS simpls cs =
   let -- Simplify resulting constraints.
       cs_simpl =
         if must_simplify
-          then snd $ do_simplify False Map.empty cs
+          then snd $ do_simplify False (Assgn Map.empty) cs
           else cs
       cs_dataflow = if must_dataflow then removeUnreachable cs_simpl else cs_simpl
       -- Renumber constraint variables sequentially, from 0 to

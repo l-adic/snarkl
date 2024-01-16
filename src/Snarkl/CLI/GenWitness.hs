@@ -12,19 +12,22 @@ where
 import Control.Applicative ((<|>))
 import Control.Monad (unless)
 import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as LBS
-import Data.Field.Galois (PrimeField (fromP))
+import Data.Field.Galois (PrimeField)
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.String.Conversions as CS
-import Data.Typeable (Typeable)
-import Options.Applicative (Parser, eitherReader, help, long, option, strOption, value)
+import Data.Typeable (Proxy (Proxy), Typeable)
+import Data.Void (Void)
+import Options.Applicative (Parser, eitherReader, help, long, option, showDefault, strOption, value)
 import Snarkl.Backend.R1CS
-import qualified Snarkl.CLI.Utils as Utils
-import Snarkl.Constraint (ConstraintSystem (cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemToHeader, mkConstraintsFilePath, parseConstraintSystem)
+import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem, unFieldElem))
+import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (SimplifiedConstraintSystem, unSimplifiedConstraintSystem), constraintSystemToHeader, mkConstraintsFilePath)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
+import qualified Snarkl.Utils as LBS
+import qualified Snarkl.Utils as Utils
 import Text.Read (readEither)
 
 data InputOpts
@@ -59,17 +62,20 @@ genWitnessOptsParser =
       ( long "constraints-input-dir"
           <> help "the directory where the constrains.jsonl file is located"
           <> value "./snarkl-output"
+          <> showDefault
       )
     <*> strOption
       ( long "r1cs-input-dir"
           <> help "the directory where the r1cs.jsonl file is located"
           <> value "./snarkl-output"
+          <> showDefault
       )
     <*> inputOptsParser
     <*> strOption
       ( long "witness-output-dir"
           <> help "the directory to write the witness.jsonl file"
           <> value "./snarkl-output"
+          <> showDefault
       )
 
 genWitness ::
@@ -82,19 +88,25 @@ genWitness ::
   IO ()
 genWitness GenWitnessOpts {..} name comp = do
   --  parse the constraints file
-  let csFP = mkConstraintsFilePath constraintsInput name
-  constraintsBS <- LBS.readFile csFP
-  let constraints = either error id $ parseConstraintSystem constraintsBS
-      [out_var] = cs_out_vars (unSimplifiedConstraintSystem constraints)
+  constraints <- do
+    let csFP = mkConstraintsFilePath constraintsInput name
+    (Just ConstraintHeader {..}, cs) <- LBS.readJSONLines csFP (Just $ Proxy @(ConstraintHeader k))
+    pure $
+      SimplifiedConstraintSystem $
+        ConstraintSystem
+          { cs_constraints = Set.fromList cs,
+            cs_num_vars = n_variables,
+            cs_in_vars = input_variables,
+            cs_out_vars = output_variables
+          }
+  let [out_var] = cs_out_vars (unSimplifiedConstraintSystem constraints)
   -- parse the inputs, either from cli or from file
   is <- case inputs of
     Explicit is -> pure $ map fromInteger is
-    FromFile fp -> do
-      inputsBS <- LBS.readFile fp
-      either error pure $ parseInputs inputsBS
+    FromFile fp -> map unFieldElem . snd <$> Utils.readJSONLines fp (Nothing :: Maybe (Proxy Void))
   let out_interp = comp_interp comp is
-      witness = wit_of_cs is constraints
-      out = case Map.lookup out_var witness of
+      witness@(Witness (Assgn m)) = wit_of_cs is constraints
+      out = case Map.lookup out_var m of
         Nothing ->
           failWith $
             ErrMsg
@@ -111,16 +123,23 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ show out_interp
           ++ " differs from actual result "
           ++ show out
-  let r1csFP = mkR1CSFilePath r1csInput name
-  r1csBS <- LBS.readFile r1csFP
-  let r1cs = either error id $ deserializeR1CS r1csBS
+  r1cs <- do
+    let r1csFP = mkR1CSFilePath r1csInput name
+    (Just ConstraintHeader {..}, items) <- Utils.readJSONLines r1csFP (Just $ Proxy @(ConstraintHeader k))
+    pure $
+      R1CS
+        { r1cs_clauses = items,
+          r1cs_num_vars = n_variables,
+          r1cs_in_vars = input_variables,
+          r1cs_out_vars = output_variables
+        }
   unless (sat_r1cs witness r1cs) $
     failWith $
       ErrMsg $
         "witness\n  "
-          ++ CS.cs (A.encode $ toList (fromP <$> witness))
+          ++ CS.cs (A.encode $ toList (FieldElem <$> witness))
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let witnessFP = mkWitnessFilePath witnessOutput name
-  Utils.writeFile witnessFP (serializeWitnessAsJson (constraintSystemToHeader constraints) witness)
+  Utils.writeJSONLines witnessFP (Just $ constraintSystemToHeader constraints) (FieldElem <$> witness)
   putStrLn $ "Wrote witness to " <> witnessFP

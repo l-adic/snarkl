@@ -1,6 +1,7 @@
 module Snarkl.Backend.R1CS.R1CS
   ( R1C (..),
     R1CS (..),
+    Witness (..),
     sat_r1cs,
     num_constraints,
   )
@@ -48,31 +49,30 @@ data R1CS a = R1CS
     r1cs_num_vars :: Int,
     r1cs_in_vars :: [Var],
     r1cs_out_vars :: [Var]
-    -- r1cs_gen_witness :: Assgn a -> Assgn a
   }
   deriving (Show)
 
--- instance (Show a) => Show (R1CS a)
+newtype Witness k = Witness {unWitness :: Assgn k} deriving (Show, Foldable, Functor)
 
 num_constraints :: R1CS a -> Int
 num_constraints = length . r1cs_clauses
 
 -- sat_r1c: Does witness 'w' satisfy constraint 'c'?
-sat_r1c :: (GaloisField a) => Assgn a -> R1C a -> Bool
+sat_r1c :: (GaloisField a) => Witness a -> R1C a -> Bool
 sat_r1c w c
   | R1C (aV, bV, cV) <- c =
       inner aV w * inner bV w == inner cV w
   where
-    inner :: (GaloisField a) => Poly a -> Assgn a -> a
-    inner (Poly v) w' =
+    inner :: (GaloisField a) => Poly a -> Witness a -> a
+    inner (Poly (Assgn v)) (Witness (Assgn wit)) =
       let c0 = Map.findWithDefault 0 (Var (-1)) v
-       in Map.foldlWithKey (f w') c0 v
+       in Map.foldlWithKey (f wit) c0 v
 
-    f w' acc v_key v_val =
-      (v_val * Map.findWithDefault 0 v_key w') + acc
+    f wit acc v_key v_val =
+      (v_val * Map.findWithDefault 0 v_key wit) + acc
 
 -- sat_r1cs: Does witness 'w' satisfy constraint set 'cs'?
-sat_r1cs :: (GaloisField a) => Assgn a -> R1CS a -> Bool
+sat_r1cs :: (GaloisField a) => Witness a -> R1CS a -> Bool
 sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
   where
     is_sat cs0 = map g cs0 `using` parListChunk (chunk_sz cs0) rseq

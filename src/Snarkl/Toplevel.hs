@@ -23,7 +23,7 @@ import Data.List (intercalate)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
-import Snarkl.Common (Assgn)
+import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Compile
 import Snarkl.Constraint (ConstraintSystem (cs_in_vars), SimplifiedConstraintSystem (..), solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
@@ -59,7 +59,7 @@ data Result k = Result
     result_constraints :: Int,
     result_result :: k,
     result_r1cs :: R1CS k,
-    result_witness :: Assgn k
+    result_witness :: Witness k
   }
   deriving (Show)
 
@@ -90,8 +90,8 @@ execute simpl mf inputs =
   let TExpPkg nv in_vars e = compileCompToTexp mf
       (r1cs, constraintSystem) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
       [out_var] = r1cs_out_vars r1cs
-      wit = wit_of_cs inputs constraintSystem
-      out = case Map.lookup out_var wit of
+      wit@(Witness (Assgn m)) = wit_of_cs inputs constraintSystem
+      out = case Map.lookup out_var m of
         Nothing ->
           failWith $
             ErrMsg
@@ -120,20 +120,10 @@ execute simpl mf inputs =
       ng = num_constraints r1cs
    in Result result nw ng out r1cs wit
 
---
--- data ConstraintSystem a = ConstraintSystem
---  { cs_constraints :: ConstraintSet a,
---    cs_num_vars :: Int,
---    cs_in_vars :: [Var],
---    cs_out_vars :: [Var]
---  }
---  deriving (Show, Eq)
-
 -- | For a given R1CS and inputs, calculate a satisfying assignment.
-wit_of_cs :: (GaloisField k) => [k] -> SimplifiedConstraintSystem k -> Assgn k
+wit_of_cs :: (GaloisField k) => [k] -> SimplifiedConstraintSystem k -> Witness k
 wit_of_cs inputs (SimplifiedConstraintSystem cs) =
   let in_vars = cs_in_vars cs
-      f = gen_witness . Map.fromList
    in if length in_vars /= length inputs
         then
           failWith $
@@ -145,6 +135,6 @@ wit_of_cs inputs (SimplifiedConstraintSystem cs) =
                   ++ show (length inputs)
                   ++ " input(s)"
               )
-        else f (zip in_vars inputs)
-  where
-    gen_witness = solve cs
+        else
+          let inputAssignments = Assgn . Map.fromList $ zip in_vars inputs
+           in Witness $ solve cs inputAssignments

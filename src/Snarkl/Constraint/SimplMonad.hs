@@ -15,7 +15,7 @@ where
 import Control.Monad.State
 import Data.Field.Galois (GaloisField)
 import qualified Data.Map as Map
-import Snarkl.Common (Assgn, Var)
+import Snarkl.Common (Assgn (Assgn), Var)
 import qualified Snarkl.Constraint.UnionFind as UF
 
 ----------------------------------------------------------------
@@ -78,6 +78,7 @@ assgn_of_vars vars =
   do
     binds <- mapM bind_of_var vars
     return
+      $ Assgn
       $ Map.fromList
       $ concatMap
         ( \(x, ec) -> case ec of

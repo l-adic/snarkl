@@ -4,22 +4,24 @@ module Snarkl.CLI.RunAll where
 
 import Control.Monad (unless)
 import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as LBS
-import Data.Field.Galois (PrimeField (fromP))
+import Data.Field.Galois (PrimeField)
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
+import Data.Proxy (Proxy)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
-import Options.Applicative (Parser, help, long, strOption, value)
-import Snarkl.Backend.R1CS (R1CS (r1cs_clauses, r1cs_out_vars), mkR1CSFilePath, mkWitnessFilePath, parseInputs, r1csToHeader, sat_r1cs, serializeR1CSAsJson, serializeWitnessAsJson)
+import Data.Void (Void)
+import Options.Applicative (Parser, help, long, showDefault, strOption, value)
+import Snarkl.Backend.R1CS (R1CS (r1cs_clauses, r1cs_out_vars), Witness (Witness), mkR1CSFilePath, mkWitnessFilePath, r1csToHeader, sat_r1cs)
 import Snarkl.CLI.Compile (OptimizeOpts (removeUnreachable, simplify), optimizeOptsParser)
 import Snarkl.CLI.GenWitness (InputOpts (Explicit, FromFile), inputOptsParser)
-import qualified Snarkl.CLI.Utils as Utils
+import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem, unFieldElem))
 import Snarkl.Compile (SimplParam (RemoveUnreachable, Simplify), TExpPkg (TExpPkg), compileCompToTexp, compileTExpToR1CS)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language (Comp)
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
+import qualified Snarkl.Utils as Utils
 
 data RunAllOpts = RunAllOpts
   { r1csOutput :: FilePath,
@@ -35,6 +37,7 @@ runAllOptsParser =
       ( long "r1cs-output-dir"
           <> help "the directory to write the r1cs artifact"
           <> value "./snarkl-output"
+          <> showDefault
       )
     <*> optimizeOptsParser
     <*> inputOptsParser
@@ -42,6 +45,7 @@ runAllOptsParser =
       ( long "witness-output-dir"
           <> help "the directory to write the witness.jsonl file"
           <> value "./snarkl-output"
+          <> showDefault
       )
 
 runAll ::
@@ -64,12 +68,10 @@ runAll RunAllOpts {..} name comp = do
   -- parse the inputs, either from cli or from file
   is <- case inputs of
     Explicit is -> pure $ map fromInteger is
-    FromFile fp -> do
-      inputsBS <- LBS.readFile fp
-      either error pure $ parseInputs inputsBS
+    FromFile fp -> map unFieldElem . snd <$> Utils.readJSONLines fp (Nothing :: Maybe (Proxy Void))
   let out_interp = comp_interp comp is
-      witness = wit_of_cs is cs
-      out = case Map.lookup out_var witness of
+      witness@(Witness (Assgn m)) = wit_of_cs is cs
+      out = case Map.lookup out_var m of
         Nothing ->
           failWith $
             ErrMsg
@@ -90,12 +92,12 @@ runAll RunAllOpts {..} name comp = do
     failWith $
       ErrMsg $
         "witness\n  "
-          ++ CS.cs (A.encode $ toList (fromP <$> witness))
+          ++ CS.cs (A.encode $ toList (FieldElem <$> witness))
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let r1csFP = mkR1CSFilePath r1csOutput name
-  Utils.writeFile r1csFP (serializeR1CSAsJson r1cs)
+  Utils.writeJSONLines r1csFP (Just $ r1csToHeader r1cs) (r1cs_clauses r1cs)
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let witnessFP = mkWitnessFilePath witnessOutput name
-  Utils.writeFile witnessFP (serializeWitnessAsJson (r1csToHeader r1cs) witness)
+  Utils.writeJSONLines witnessFP (Just $ r1csToHeader r1cs) (fmap FieldElem witness)
   putStrLn $ "Wrote witness to " <> witnessFP
