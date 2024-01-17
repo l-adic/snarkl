@@ -229,8 +229,6 @@ constraintSystemHeader (SimplifiedConstraintSystem (ConstraintSystem {..}) :: Si
     { field_characteristic = toInteger $ char (undefined :: a),
       extension_degree = toInteger $ deg (undefined :: a),
       n_constraints = Set.size cs_constraints,
-      -- TODO: should we also add the number of output variables? We do this for
-      -- the R1CS header, but the examples i checked didn't seem to work
       n_variables = cs_num_vars,
       input_variables = cs_in_vars,
       output_variables = cs_out_vars

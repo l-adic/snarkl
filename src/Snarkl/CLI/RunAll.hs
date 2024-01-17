@@ -89,7 +89,7 @@ runAll RunAllOpts {..} name comp = do
           ++ show out_interp
           ++ " differs from actual result "
           ++ show out
-  let witnessAssgn = witness_assgn witness
+  let witnessAssgn@(Assgn assgn) = witness_assgn witness
   unless (sat_r1cs witness r1cs) $
     failWith $
       ErrMsg $
@@ -103,5 +103,5 @@ runAll RunAllOpts {..} name comp = do
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let witnessFP = mkWitnessFilePath witnessOutput name
   writeFileWithDir witnessFP $
-    toJSONLines (r1csHeader r1cs) (fmap FieldElem witnessAssgn)
+    toJSONLines (r1csHeader r1cs) (Map.toList $ fmap FieldElem assgn)
   putStrLn $ "Wrote witness to " <> witnessFP

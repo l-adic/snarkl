@@ -13,7 +13,6 @@ import Control.Applicative ((<|>))
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
-import Data.Foldable (Foldable (toList))
 import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (NoHeader), ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -25,7 +24,7 @@ import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, mkWitnessFilePa
 import Snarkl.Common (Assgn (Assgn), ConstraintHeader (..), FieldElem (..))
 import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (SimplifiedConstraintSystem, unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language
+import Snarkl.Language (Comp)
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
 import Text.Read (readEither)
 
@@ -104,7 +103,7 @@ genWitness GenWitnessOpts {..} name comp = do
   is <- case inputs of
     Explicit is -> pure $ map fromInteger is
     FromFile fp -> do
-      eInput <- fromJSONLines <$> readLines fp
+      eInput <- fromJSONLines @NoHeader @(FieldElem k) <$> readLines fp
       (NoHeader, input) <- either (failWith . ErrMsg) pure eInput
       pure $ map unFieldElem input
   let out_interp = comp_interp comp is
@@ -138,17 +137,17 @@ genWitness GenWitnessOpts {..} name comp = do
           r1cs_in_vars = input_variables,
           r1cs_out_vars = output_variables
         }
-  let witnessAssgn = witness_assgn witness
+  let witnessAssgn@(Assgn assgn) = witness_assgn witness
   unless (sat_r1cs witness r1cs) $
     failWith $
       ErrMsg $
         "witness\n  "
-          ++ CS.cs (A.encode $ toList (FieldElem <$> witnessAssgn))
+          ++ CS.cs (A.encode witnessAssgn)
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let witnessFP = mkWitnessFilePath witnessOutput name
   writeFileWithDir witnessFP $
     toJSONLines
       (witnessHeader witness)
-      (FieldElem <$> witnessAssgn)
+      (Map.toList (FieldElem <$> assgn))
   putStrLn $ "Wrote witness to " <> witnessFP

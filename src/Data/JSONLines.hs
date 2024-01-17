@@ -44,19 +44,19 @@ toBS (JSONLine a) = toLazyByteString a
 class ToJSONLines hdr item where
   toJSONLines :: (Foldable t) => hdr -> t item -> LBS.ByteString
 
-instance (A.ToJSON item) => ToJSONLines NoHeader item where
+instance {-# OVERLAPPING #-} (A.ToJSON item) => ToJSONLines NoHeader item where
   toJSONLines _ = toBS . jsonlBuilder
 
-instance {-# OVERLAPPABLE #-} (A.ToJSON hdr, A.ToJSON item) => ToJSONLines hdr item where
+instance (A.ToJSON hdr, A.ToJSON item) => ToJSONLines hdr item where
   toJSONLines hdr items = toBS $ jsonLine hdr <> jsonlBuilder items
 
 class FromJSONLines hdr item where
   fromJSONLines :: [LazyByteString] -> Either String (hdr, [item])
 
-instance (A.FromJSON item) => FromJSONLines NoHeader item where
+instance {-# OVERLAPS #-} (A.FromJSON item) => FromJSONLines NoHeader item where
   fromJSONLines items = (NoHeader,) <$> traverse A.eitherDecode items
 
-instance {-# OVERLAPPABLE #-} (A.FromJSON hdr, A.FromJSON item) => FromJSONLines hdr item where
+instance (A.FromJSON hdr, A.FromJSON item) => FromJSONLines hdr item where
   fromJSONLines (hdr : items) = do
     hdr' <- A.eitherDecode hdr
     items' <- traverse A.eitherDecode items

@@ -24,7 +24,7 @@ instance Pretty Var where
 incVar :: Var -> Var
 incVar (Var i) = Var (i + 1)
 
-newtype Assgn a = Assgn (Map.Map Var a) deriving (Show, Eq, Functor, Foldable)
+newtype Assgn a = Assgn (Map.Map Var a) deriving (Show, Eq, Functor)
 
 newtype FieldElem k = FieldElem {unFieldElem :: k} deriving (Show, Eq)
 
