@@ -18,13 +18,12 @@ import Data.JSONLines (ToJSONLines (toJSONLines), WithHeader (..))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
-import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
 import Snarkl.Backend.R1CS
 import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, writeFileWithDir)
 import Snarkl.Compile
-import Snarkl.Constraint (ConstraintSystem (cs_constraints, cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemHeader)
+import Snarkl.Constraint (ConstraintSystem (cs_constraints, cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
@@ -86,10 +85,8 @@ compile CompileOpts {..} name comp = do
       TExpPkg nv in_vars e = compileCompToTexp comp
       (r1cs, cs) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
   let r1csFP = mkR1CSFilePath r1csOutput name
-  writeFileWithDir r1csFP . toJSONLines $
-    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
+  writeFileWithDir r1csFP $ toJSONLines r1cs
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let csFP = mkConstraintsFilePath constraintsOutput name
-  writeFileWithDir csFP . toJSONLines $
-    WithHeader (constraintSystemHeader cs) (Set.toList $ cs_constraints $ unSimplifiedConstraintSystem cs)
+  writeFileWithDir csFP $ toJSONLines cs
   putStrLn $ "Wrote constraints to " <> csFP

@@ -3,8 +3,10 @@
 module Snarkl.Common where
 
 import qualified Data.Aeson as A
+import Data.Bifunctor (Bifunctor (second))
 import Data.Field.Galois (PrimeField (fromP))
-import Data.Foldable (Foldable (toList))
+import Data.Foldable (toList)
+import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (..), ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
@@ -29,6 +31,18 @@ incVar (Var i) = Var (i + 1)
 
 newtype Assgn a = Assgn (Map.Map Var a) deriving (Show, Eq, Functor)
 
+instance (PrimeField a) => A.ToJSON (Assgn a) where
+  toJSON (Assgn m) =
+    let kvs = map (\(var, coeff) -> (FieldElem coeff, var)) $ Map.toList m
+     in A.toJSON kvs
+
+instance (PrimeField a) => A.FromJSON (Assgn a) where
+  parseJSON =
+    A.withArray "Assgn" $ \arr -> do
+      kvs <- mapM A.parseJSON arr
+      let m = Map.fromList $ map (\(FieldElem k, v) -> (v, k)) (toList kvs)
+      return (Assgn m)
+
 -- We use this wrapper to get a stringified representation of big integers.
 -- This plays better with downstream dependencies, e.g. javascript.
 newtype FieldElem k = FieldElem {unFieldElem :: k} deriving (Show, Eq)
@@ -41,17 +55,13 @@ instance (PrimeField k) => A.FromJSON (FieldElem k) where
     k <- A.parseJSON v
     return $ FieldElem (fromInteger $ read k)
 
-instance (PrimeField a) => A.ToJSON (Assgn a) where
-  toJSON (Assgn m) =
-    let kvs = map (\(var, coeff) -> (FieldElem coeff, var)) $ Map.toList m
-     in A.toJSON kvs
+instance (PrimeField k) => ToJSONLines (Assgn k) where
+  toJSONLines (Assgn m) = toJSONLines $ NoHeader (Map.toList $ FieldElem <$> m)
 
-instance (PrimeField a) => A.FromJSON (Assgn a) where
-  parseJSON =
-    A.withArray "Assgn" $ \arr -> do
-      kvs <- mapM A.parseJSON arr
-      let m = Map.fromList $ map (\(FieldElem k, v) -> (v, k)) (toList kvs)
-      return (Assgn m)
+instance (PrimeField k) => FromJSONLines (Assgn k) where
+  fromJSONLines ls = do
+    NoHeader kvs <- fromJSONLines ls
+    pure . Assgn . Map.fromList $ map (second unFieldElem) kvs
 
 data UnOp = ZEq
   deriving (Eq, Show)

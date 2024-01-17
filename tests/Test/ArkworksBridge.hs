@@ -2,7 +2,7 @@ module Test.ArkworksBridge where
 
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
-import Data.JSONLines (NoHeader (NoHeader), ToJSONLines (toJSONLines), WithHeader (WithHeader))
+import Data.JSONLines (ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
@@ -24,8 +24,7 @@ runCMD :: (PrimeField k) => CMD k -> IO GHC.ExitCode
 runCMD (CreateTrustedSetup rootDir name simpl c) = do
   let (r1cs, _) = compileCompToR1CS simpl c
       r1csFilePath = mkR1CSFilePath rootDir name
-  LBS.writeFile r1csFilePath . toJSONLines $
-    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
+  LBS.writeFile r1csFilePath $ toJSONLines r1cs
   let cmd =
         mkCommand
           "create-trusted-setup"
@@ -38,13 +37,11 @@ runCMD (CreateTrustedSetup rootDir name simpl c) = do
   waitForProcess hdl
 runCMD (CreateProof rootDir name simpl c inputs) = do
   let (r1cs, simplifiedCS) = compileCompToR1CS simpl c
-      wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs simplifiedCS
+      witness = wit_of_cs inputs simplifiedCS
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
-  LBS.writeFile r1csFilePath . toJSONLines $
-    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
-  LBS.writeFile witsFilePath . toJSONLines $
-    WithHeader (witnessHeader wit) (Map.toList (FieldElem <$> m))
+  LBS.writeFile r1csFilePath $ toJSONLines r1cs
+  LBS.writeFile witsFilePath $ toJSONLines witness
   let cmd =
         mkCommand
           "create-proof"
@@ -61,13 +58,9 @@ runCMD (RunR1CS rootDir name simpl c inputs) = do
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
       inputsFilePath = mkInputsFilePath rootDir name
-  LBS.writeFile r1csFilePath . toJSONLines $
-    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
-  LBS.writeFile witsFilePath . toJSONLines $
-    WithHeader (witnessHeader wit) (Map.toList (FieldElem <$> m))
-  let Assgn inputAssignments = witnessInputs wit
-  LBS.writeFile inputsFilePath . toJSONLines $
-    NoHeader (Map.toList $ FieldElem <$> inputAssignments)
+  LBS.writeFile r1csFilePath $ toJSONLines r1cs
+  LBS.writeFile witsFilePath $ toJSONLines wit
+  LBS.writeFile inputsFilePath $ toJSONLines $ witnessInputs wit
   let cmd =
         mkCommand
           "run-r1cs"

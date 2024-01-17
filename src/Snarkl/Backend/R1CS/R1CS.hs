@@ -1,11 +1,8 @@
 module Snarkl.Backend.R1CS.R1CS
   ( R1C (..),
     R1CS (..),
-    r1csHeader,
     Witness (..),
-    witnessHeader,
     witnessInputs,
-    WitnessHeader (..),
     sat_r1cs,
     num_constraints,
   )
@@ -13,7 +10,9 @@ where
 
 import Control.Parallel.Strategies
 import qualified Data.Aeson as A
+import Data.Bifunctor (Bifunctor (second))
 import Data.Field.Galois (GaloisField (char, deg), PrimeField)
+import Data.JSONLines (FromJSONLines (fromJSONLines), ToJSONLines (toJSONLines), WithHeader (..))
 import qualified Data.Map as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
@@ -55,16 +54,29 @@ data R1CS a = R1CS
   }
   deriving (Show)
 
-r1csHeader :: (GaloisField a) => R1CS a -> ConstraintHeader
-r1csHeader (cs :: R1CS a) =
-  ConstraintHeader
-    { field_characteristic = toInteger $ char (undefined :: a),
-      extension_degree = toInteger $ deg (undefined :: a),
-      n_constraints = num_constraints cs,
-      n_variables = r1cs_num_vars cs,
-      input_variables = r1cs_in_vars cs,
-      output_variables = r1cs_out_vars cs
-    }
+instance (PrimeField k) => ToJSONLines (R1CS k) where
+  toJSONLines cs = toJSONLines $ WithHeader (r1csHeader cs) (r1cs_clauses cs)
+    where
+      r1csHeader (_ :: R1CS a) =
+        ConstraintHeader
+          { field_characteristic = toInteger $ char (undefined :: a),
+            extension_degree = toInteger $ deg (undefined :: a),
+            n_constraints = num_constraints cs,
+            n_variables = r1cs_num_vars cs,
+            input_variables = r1cs_in_vars cs,
+            output_variables = r1cs_out_vars cs
+          }
+
+instance (PrimeField k) => FromJSONLines (R1CS k) where
+  fromJSONLines ls = do
+    WithHeader ConstraintHeader {..} cs <- fromJSONLines ls
+    pure
+      R1CS
+        { r1cs_clauses = cs,
+          r1cs_num_vars = fromIntegral n_variables,
+          r1cs_in_vars = input_variables,
+          r1cs_out_vars = output_variables
+        }
 
 data Witness k = Witness
   { witness_assgn :: Assgn k,
@@ -99,13 +111,30 @@ instance A.FromJSON WitnessHeader where
       num_vars <- v A..: "n_variables"
       pure $ WitnessHeader in_vars out_vars num_vars
 
-witnessHeader :: Witness k -> WitnessHeader
-witnessHeader (Witness {..}) =
-  WitnessHeader
-    { in_vars = witness_in_vars,
-      out_vars = witness_out_vars,
-      num_vars = witness_num_vars
-    }
+instance (PrimeField k) => ToJSONLines (Witness k) where
+  toJSONLines wit@(Witness {witness_assgn = Assgn m}) =
+    toJSONLines $
+      WithHeader
+        (witnessHeader wit)
+        (Map.toList (FieldElem <$> m))
+    where
+      witnessHeader (Witness {..}) =
+        WitnessHeader
+          { in_vars = witness_in_vars,
+            out_vars = witness_out_vars,
+            num_vars = witness_num_vars
+          }
+
+instance (PrimeField k) => FromJSONLines (Witness k) where
+  fromJSONLines ls = do
+    WithHeader WitnessHeader {..} assgn <- fromJSONLines ls
+    pure
+      Witness
+        { witness_assgn = Assgn $ Map.fromList (second unFieldElem <$> assgn),
+          witness_in_vars = in_vars,
+          witness_out_vars = out_vars,
+          witness_num_vars = num_vars
+        }
 
 witnessInputs :: Witness k -> Assgn k
 witnessInputs (Witness {witness_in_vars, witness_assgn = Assgn m}) =

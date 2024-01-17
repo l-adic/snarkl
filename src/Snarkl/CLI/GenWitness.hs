@@ -13,16 +13,16 @@ import Control.Applicative ((<|>))
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
-import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (..), ToJSONLines (toJSONLines), WithHeader (..))
+import Data.JSONLines (FromJSONLines (fromJSONLines), ToJSONLines (toJSONLines))
+import Data.List (sortOn)
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (Parser, eitherReader, help, long, option, showDefault, strOption, value)
 import Snarkl.Backend.R1CS
 import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
-import Snarkl.Common (Assgn (Assgn), ConstraintHeader (..), FieldElem (..))
-import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (SimplifiedConstraintSystem, unSimplifiedConstraintSystem))
+import Snarkl.Common (Assgn (Assgn))
+import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language (Comp)
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
@@ -89,23 +89,15 @@ genWitness GenWitnessOpts {..} name comp = do
   constraints <- do
     let csFP = mkConstraintsFilePath constraintsInput name
     eConstraints <- fromJSONLines <$> readFileLines csFP
-    (WithHeader ConstraintHeader {..} cs) <- either (failWith . ErrMsg) pure eConstraints
-    pure $
-      SimplifiedConstraintSystem $
-        ConstraintSystem
-          { cs_constraints = Set.fromList cs,
-            cs_num_vars = n_variables,
-            cs_in_vars = input_variables,
-            cs_out_vars = output_variables
-          }
+    either (failWith . ErrMsg) pure eConstraints
   let [out_var] = cs_out_vars (unSimplifiedConstraintSystem constraints)
   -- parse the inputs, either from cli or from file
   is <- case inputs of
     Explicit is -> pure $ map fromInteger is
     FromFile fp -> do
       eInput <- fromJSONLines <$> readFileLines fp
-      NoHeader input <- either (failWith . ErrMsg) pure eInput
-      pure $ map unFieldElem input
+      let Assgn input = either (failWith . ErrMsg) id eInput
+      pure . map snd . sortOn fst $ Map.toList input
   let out_interp = comp_interp comp is
       witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs is constraints
       out = case Map.lookup out_var m of
@@ -127,25 +119,13 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ show out
   r1cs <- do
     let r1csFP = mkR1CSFilePath r1csInput name
-    (WithHeader ConstraintHeader {..} items) <- do
-      eConstraints <- fromJSONLines <$> readFileLines r1csFP
-      either (failWith . ErrMsg) pure eConstraints
-    pure $
-      R1CS
-        { r1cs_clauses = items,
-          r1cs_num_vars = n_variables,
-          r1cs_in_vars = input_variables,
-          r1cs_out_vars = output_variables
-        }
-  let witnessAssgn@(Assgn assgn) = witness_assgn witness
+    eConstraints <- fromJSONLines <$> readFileLines r1csFP
+    either (failWith . ErrMsg) pure eConstraints
   unless (sat_r1cs witness r1cs) $
     failWith $
       ErrMsg $
-        "witness\n  "
-          ++ CS.cs (A.encode witnessAssgn)
-          ++ "\nfailed to satisfy R1CS\n  "
+        "witness failed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let witnessFP = mkWitnessFilePath witnessOutput name
-  writeFileWithDir witnessFP . toJSONLines $
-    WithHeader (witnessHeader witness) (Map.toList (FieldElem <$> assgn))
+  writeFileWithDir witnessFP $ toJSONLines witness
   putStrLn $ "Wrote witness to " <> witnessFP

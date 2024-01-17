@@ -9,7 +9,6 @@ module Snarkl.Constraint.Constraints
     ConstraintSet,
     ConstraintSystem (..),
     SimplifiedConstraintSystem (..),
-    constraintSystemHeader,
     r1cs_of_cs,
     renumber_constraints,
     constraint_vars,
@@ -20,6 +19,7 @@ import Control.Monad.State (State)
 import qualified Data.Aeson as A
 import Data.Bifunctor (Bifunctor (first, second))
 import Data.Field.Galois (GaloisField (char, deg), Prime, PrimeField)
+import Data.JSONLines (FromJSONLines (fromJSONLines), ToJSONLines (toJSONLines), WithHeader (..))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
@@ -220,19 +220,31 @@ newtype SimplifiedConstraintSystem a = SimplifiedConstraintSystem
   }
   deriving (Show, Eq)
 
-constraintSystemHeader ::
-  (GaloisField a) =>
-  SimplifiedConstraintSystem a ->
-  ConstraintHeader
-constraintSystemHeader (SimplifiedConstraintSystem (ConstraintSystem {..}) :: SimplifiedConstraintSystem a) =
-  ConstraintHeader
-    { field_characteristic = toInteger $ char (undefined :: a),
-      extension_degree = toInteger $ deg (undefined :: a),
-      n_constraints = Set.size cs_constraints,
-      n_variables = cs_num_vars,
-      input_variables = cs_in_vars,
-      output_variables = cs_out_vars
-    }
+instance (PrimeField k) => ToJSONLines (SimplifiedConstraintSystem k) where
+  toJSONLines scs@(SimplifiedConstraintSystem (ConstraintSystem {..})) =
+    toJSONLines $ WithHeader (constraintSystemHeader scs) (Set.toList cs_constraints)
+    where
+      constraintSystemHeader (_ :: SimplifiedConstraintSystem a) =
+        ConstraintHeader
+          { field_characteristic = toInteger $ char (undefined :: a),
+            extension_degree = toInteger $ deg (undefined :: a),
+            n_constraints = Set.size cs_constraints,
+            n_variables = cs_num_vars,
+            input_variables = cs_in_vars,
+            output_variables = cs_out_vars
+          }
+
+instance (PrimeField k) => FromJSONLines (SimplifiedConstraintSystem k) where
+  fromJSONLines ls = do
+    WithHeader ConstraintHeader {..} cs <- fromJSONLines ls
+    pure $
+      SimplifiedConstraintSystem $
+        ConstraintSystem
+          { cs_constraints = Set.fromList cs,
+            cs_num_vars = fromIntegral n_variables,
+            cs_in_vars = input_variables,
+            cs_out_vars = output_variables
+          }
 
 r1cs_of_cs ::
   (GaloisField a) =>

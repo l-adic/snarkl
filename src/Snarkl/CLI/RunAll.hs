@@ -5,17 +5,17 @@ module Snarkl.CLI.RunAll where
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
-import Data.JSONLines (FromJSONLines (..), NoHeader (..), ToJSONLines (..), WithHeader (..))
+import Data.JSONLines (FromJSONLines (..), NoHeader (..), ToJSONLines (..))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (Parser, help, long, showDefault, strOption, value)
-import Snarkl.Backend.R1CS (R1CS (r1cs_clauses, r1cs_out_vars), Witness (Witness, witness_assgn), r1csHeader, sat_r1cs)
+import Snarkl.Backend.R1CS (R1CS (r1cs_clauses, r1cs_out_vars), Witness (Witness, witness_assgn), sat_r1cs)
 import Snarkl.CLI.Common (mkR1CSFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
 import Snarkl.CLI.Compile (OptimizeOpts (removeUnreachable, simplify), optimizeOptsParser)
 import Snarkl.CLI.GenWitness (InputOpts (Explicit, FromFile), inputOptsParser)
-import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem, unFieldElem))
+import Snarkl.Common (Assgn (Assgn), unFieldElem)
 import Snarkl.Compile (SimplParam (RemoveUnreachable, Simplify), TExpPkg (TExpPkg), compileCompToTexp, compileTExpToR1CS)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language (Comp)
@@ -89,19 +89,15 @@ runAll RunAllOpts {..} name comp = do
           ++ show out_interp
           ++ " differs from actual result "
           ++ show out
-  let witnessAssgn@(Assgn assgn) = witness_assgn witness
   unless (sat_r1cs witness r1cs) $
     failWith $
       ErrMsg $
         "witness\n  "
-          ++ CS.cs (A.encode witnessAssgn)
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let r1csFP = mkR1CSFilePath r1csOutput name
-  writeFileWithDir r1csFP . toJSONLines $
-    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
+  writeFileWithDir r1csFP $ toJSONLines r1cs
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let witnessFP = mkWitnessFilePath witnessOutput name
-  writeFileWithDir witnessFP . toJSONLines $
-    WithHeader (r1csHeader r1cs) (Map.toList $ fmap FieldElem assgn)
+  writeFileWithDir witnessFP $ toJSONLines witness
   putStrLn $ "Wrote witness to " <> witnessFP

@@ -28,7 +28,7 @@ instance Monoid JSONLine where
 data WithHeader :: Type -> Type -> Type where
   WithHeader :: hdr -> [item] -> WithHeader hdr item
 
-data NoHeader item = NoHeader [item]
+newtype NoHeader item = NoHeader [item]
 
 jsonlBuilder ::
   (Foldable t) =>
