@@ -4,6 +4,7 @@ module Snarkl.Backend.R1CS.R1CS
     r1csHeader,
     Witness (..),
     witnessHeader,
+    witnessInputs,
     WitnessHeader (..),
     sat_r1cs,
     num_constraints,
@@ -85,17 +86,17 @@ data WitnessHeader = WitnessHeader
 instance A.ToJSON WitnessHeader where
   toJSON (WitnessHeader in_vars out_vars num_vars) =
     A.object
-      [ "in_vars" A..= in_vars,
-        "out_vars" A..= out_vars,
-        "num_vars" A..= num_vars
+      [ "input_variables" A..= in_vars,
+        "output_variables" A..= out_vars,
+        "n_variables" A..= num_vars
       ]
 
 instance A.FromJSON WitnessHeader where
   parseJSON =
     A.withObject "WitnessHeader" $ \v -> do
-      in_vars <- v A..: "in_vars"
-      out_vars <- v A..: "out_vars"
-      num_vars <- v A..: "num_vars"
+      in_vars <- v A..: "input_variables"
+      out_vars <- v A..: "output_variables"
+      num_vars <- v A..: "n_variables"
       pure $ WitnessHeader in_vars out_vars num_vars
 
 witnessHeader :: Witness k -> WitnessHeader
@@ -105,6 +106,10 @@ witnessHeader (Witness {..}) =
       out_vars = witness_out_vars,
       num_vars = witness_num_vars
     }
+
+witnessInputs :: Witness k -> Assgn k
+witnessInputs (Witness {witness_in_vars, witness_assgn = Assgn m}) =
+  Assgn $ Map.filterWithKey (\k _ -> k `elem` witness_in_vars) m
 
 num_constraints :: R1CS a -> Int
 num_constraints = length . r1cs_clauses

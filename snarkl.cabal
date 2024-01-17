@@ -37,6 +37,7 @@ library
     Snarkl.Backend.R1CS.Poly
     Snarkl.Backend.R1CS.R1CS
     Snarkl.CLI
+    Snarkl.CLI.Common
     Snarkl.Common
     Snarkl.Compile
     Snarkl.Constraint
@@ -58,7 +59,6 @@ library
     Snarkl.Toplevel
 
   other-modules:
-    Snarkl.CLI.Common
     Snarkl.CLI.Compile
     Snarkl.CLI.GenWitness
     Snarkl.CLI.RunAll

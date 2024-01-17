@@ -2,10 +2,16 @@ module Test.ArkworksBridge where
 
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
+import Data.JSONLines (NoHeader (NoHeader), ToJSONLines (toJSONLines), WithHeader (WithHeader))
+import qualified Data.Map as Map
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
+import Snarkl.Backend.R1CS.R1CS (witnessInputs)
+import Snarkl.CLI.Common (mkInputsFilePath, mkR1CSFilePath, mkWitnessFilePath)
+import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem))
 import Snarkl.Compile (SimplParam, compileCompToR1CS)
 import Snarkl.Language (Comp)
+import Snarkl.Toplevel (wit_of_cs)
 import qualified System.Exit as GHC
 import System.Process (createProcess, shell, waitForProcess)
 
@@ -16,9 +22,10 @@ data CMD k where
 
 runCMD :: (PrimeField k) => CMD k -> IO GHC.ExitCode
 runCMD (CreateTrustedSetup rootDir name simpl c) = do
-  let r1cs = compileCompToR1CS simpl c
+  let (r1cs, _) = compileCompToR1CS simpl c
       r1csFilePath = mkR1CSFilePath rootDir name
-  LBS.writeFile r1csFilePath (serializeR1CSAsJson r1cs)
+  LBS.writeFile r1csFilePath . toJSONLines $
+    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
   let cmd =
         mkCommand
           "create-trusted-setup"
@@ -30,12 +37,14 @@ runCMD (CreateTrustedSetup rootDir name simpl c) = do
   (_, _, _, hdl) <- createProcess $ shell cmd
   waitForProcess hdl
 runCMD (CreateProof rootDir name simpl c inputs) = do
-  let r1cs = compileCompToR1CS simpl c
-      wit = wit_of_r1cs inputs r1cs
+  let (r1cs, simplifiedCS) = compileCompToR1CS simpl c
+      wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs simplifiedCS
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
-  LBS.writeFile r1csFilePath (serializeR1CSAsJson r1cs)
-  LBS.writeFile witsFilePath (serializeWitnessAsJson r1cs wit)
+  LBS.writeFile r1csFilePath . toJSONLines $
+    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
+  LBS.writeFile witsFilePath . toJSONLines $
+    WithHeader (witnessHeader wit) (Map.toList (FieldElem <$> m))
   let cmd =
         mkCommand
           "create-proof"
@@ -47,14 +56,18 @@ runCMD (CreateProof rootDir name simpl c inputs) = do
   (_, _, _, hdl) <- createProcess $ shell cmd
   waitForProcess hdl
 runCMD (RunR1CS rootDir name simpl c inputs) = do
-  let r1cs = compileCompToR1CS simpl c
-      wit = wit_of_r1cs inputs r1cs
+  let (r1cs, simplifiedCS) = compileCompToR1CS simpl c
+      wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs simplifiedCS
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
       inputsFilePath = mkInputsFilePath rootDir name
-  LBS.writeFile r1csFilePath (serializeR1CSAsJson r1cs)
-  LBS.writeFile witsFilePath (serializeWitnessAsJson r1cs wit)
-  LBS.writeFile inputsFilePath (serializeInputsAsJson r1cs inputs)
+  LBS.writeFile r1csFilePath . toJSONLines $
+    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
+  LBS.writeFile witsFilePath . toJSONLines $
+    WithHeader (witnessHeader wit) (Map.toList (FieldElem <$> m))
+  let Assgn inputAssignments = witnessInputs wit
+  LBS.writeFile inputsFilePath . toJSONLines $
+    NoHeader (Map.toList $ FieldElem <$> inputAssignments)
   let cmd =
         mkCommand
           "run-r1cs"

@@ -565,5 +565,3 @@ compileCompToR1CS simpl = compileConstraintsToR1CS simpl . compileCompToConstrai
 
 _Var :: Iso' Variable Var
 _Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
-
---------------------------------------------------------------------------------
