@@ -113,7 +113,7 @@ data ConstraintHeader = ConstraintHeader
 instance A.ToJSON ConstraintHeader where
   toJSON (ConstraintHeader {..}) =
     A.object
-      [ "field_characteristic" A..= field_characteristic,
+      [ "field_characteristic" A..= show field_characteristic,
         "extension_degree" A..= extension_degree,
         "n_constraints" A..= n_constraints,
         "n_variables" A..= n_variables,
@@ -124,7 +124,7 @@ instance A.ToJSON ConstraintHeader where
 instance A.FromJSON ConstraintHeader where
   parseJSON =
     A.withObject "ConstraintHeader" $ \v -> do
-      field_characteristic <- v A..: "field_characteristic"
+      field_characteristic <- read <$> v A..: "field_characteristic"
       extension_degree <- v A..: "extension_degree"
       n_constraints <- v A..: "n_constraints"
       n_variables <- v A..: "n_variables"
