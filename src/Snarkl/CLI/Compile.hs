@@ -10,14 +10,14 @@ module Snarkl.CLI.Compile
   )
 where
 
-import qualified Data.Set as Set
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
 import Data.Foldable (Foldable (toList))
-import Data.JSONLines (ToJSONLines (toJSONLines), WithHeader(..))
+import Data.JSONLines (ToJSONLines (toJSONLines), WithHeader (..))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
+import qualified Data.Set as Set
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
@@ -58,13 +58,13 @@ compileOptsParser =
     <$> optimizeOptsParser
     <*> strOption
       ( long "r1cs-output-dir"
-          <> help "the directory to write the r1cs artifact"
+          <> help "the directory to write the r1cs.jsonl artifact"
           <> value "./snarkl-output"
           <> showDefault
       )
     <*> strOption
       ( long "constraints-output-dir"
-          <> help "the directory to write the constraints artifact"
+          <> help "the directory to write the constraints.jsonl artifact"
           <> value "./snarkl-output"
           <> showDefault
       )
@@ -86,10 +86,10 @@ compile CompileOpts {..} name comp = do
       TExpPkg nv in_vars e = compileCompToTexp comp
       (r1cs, cs) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
   let r1csFP = mkR1CSFilePath r1csOutput name
-  writeFileWithDir r1csFP . toJSONLines $ 
+  writeFileWithDir r1csFP . toJSONLines $
     WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let csFP = mkConstraintsFilePath constraintsOutput name
-  writeFileWithDir csFP . toJSONLines $ 
+  writeFileWithDir csFP . toJSONLines $
     WithHeader (constraintSystemHeader cs) (Set.toList $ cs_constraints $ unSimplifiedConstraintSystem cs)
   putStrLn $ "Wrote constraints to " <> csFP

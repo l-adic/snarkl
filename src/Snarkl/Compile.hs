@@ -436,14 +436,14 @@ compileConstraintsToR1CS simpls cs =
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
       -- their renumbered counterparts.
-      (_, cs') = second SimplifiedConstraintSystem $ renumber_constraints cs_dataflow
+      (_, simplifiedCS) = second SimplifiedConstraintSystem $ renumber_constraints cs_dataflow
    in -- 'f' is a function mapping input bindings to witnesses.
       -- NOTE: we assume the initial variable assignment passed to
       -- 'f' is the one derived by zipping the inputs together with
       -- the (renamed) input vars. of the R1CS produced by this
       -- function. Alternatively, we could 'Map.mapKeys renumber_f'
       -- before applying 'solve cs''.
-      (r1cs_of_cs cs', cs')
+      (r1cs_of_cs simplifiedCS, simplifiedCS)
   where
     must_simplify :: Bool
     must_simplify = Simplify `elem` simpls

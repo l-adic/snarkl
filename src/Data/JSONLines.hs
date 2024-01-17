@@ -2,15 +2,15 @@ module Data.JSONLines
   ( ToJSONLines (..),
     FromJSONLines (..),
     JSONLine (..),
-    WithHeader(..),
+    WithHeader (..),
     NoHeader (..),
   )
 where
 
-import Data.Kind (Type)
 import qualified Data.Aeson as A
 import Data.ByteString.Builder (Builder, lazyByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as LBS
+import Data.Kind (Type)
 import Data.String.Conversions (LazyByteString)
 
 data JSONLine
@@ -25,8 +25,8 @@ instance Semigroup JSONLine where
 instance Monoid JSONLine where
   mempty = EmptyLine
 
-data WithHeader :: Type -> Type -> Type where 
-  WithHeader  :: hdr -> [item] -> WithHeader hdr item
+data WithHeader :: Type -> Type -> Type where
+  WithHeader :: hdr -> [item] -> WithHeader hdr item
 
 data NoHeader item = NoHeader [item]
 

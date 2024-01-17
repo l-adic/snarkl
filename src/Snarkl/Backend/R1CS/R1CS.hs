@@ -127,7 +127,7 @@ sat_r1c w c
 sat_r1cs :: (GaloisField a) => Witness a -> R1CS a -> Bool
 sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
   where
-    is_sat cs0 = map (sat_r1c w ) cs0 `using` parListChunk (chunk_sz cs0) rseq
+    is_sat cs0 = map (sat_r1c w) cs0 `using` parListChunk (chunk_sz cs0) rseq
     num_chunks = 32
     chunk_sz cs0 =
       truncate $ (fromIntegral (length cs0) :: Rational) / num_chunks

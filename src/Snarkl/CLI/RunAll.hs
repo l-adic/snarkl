@@ -5,7 +5,7 @@ module Snarkl.CLI.RunAll where
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
-import Data.JSONLines (FromJSONLines (..), NoHeader (..), WithHeader(..), ToJSONLines (..))
+import Data.JSONLines (FromJSONLines (..), NoHeader (..), ToJSONLines (..), WithHeader (..))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
@@ -33,7 +33,7 @@ runAllOptsParser =
   RunAllOpts
     <$> strOption
       ( long "r1cs-output-dir"
-          <> help "the directory to write the r1cs artifact"
+          <> help "the directory to write the r1cs.jsonl artifact"
           <> value "./snarkl-output"
           <> showDefault
       )
@@ -41,7 +41,7 @@ runAllOptsParser =
     <*> inputOptsParser
     <*> strOption
       ( long "witness-output-dir"
-          <> help "the directory to write the witness.jsonl file"
+          <> help "the directory to write the witness.jsonl artifact"
           <> value "./snarkl-output"
           <> showDefault
       )
@@ -98,10 +98,10 @@ runAll RunAllOpts {..} name comp = do
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let r1csFP = mkR1CSFilePath r1csOutput name
-  writeFileWithDir r1csFP . toJSONLines $ 
+  writeFileWithDir r1csFP . toJSONLines $
     WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let witnessFP = mkWitnessFilePath witnessOutput name
-  writeFileWithDir witnessFP . toJSONLines $ 
+  writeFileWithDir witnessFP . toJSONLines $
     WithHeader (r1csHeader r1cs) (Map.toList $ fmap FieldElem assgn)
   putStrLn $ "Wrote witness to " <> witnessFP

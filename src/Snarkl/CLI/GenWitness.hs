@@ -13,7 +13,7 @@ import Control.Applicative ((<|>))
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
-import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (..), WithHeader(..), ToJSONLines (toJSONLines))
+import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (..), ToJSONLines (toJSONLines), WithHeader (..))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.String.Conversions as CS
@@ -43,7 +43,7 @@ inputOptsParser =
     <|> FromFile
       <$> strOption
         ( long "inputs-dir"
-            <> help "The directory where the inputs.jsonl file is located"
+            <> help "The directory where the inputs.jsonl artifact is located"
         )
 
 data GenWitnessOpts = GenWitnessOpts
@@ -58,7 +58,7 @@ genWitnessOptsParser =
   GenWitnessOpts
     <$> strOption
       ( long "constraints-input-dir"
-          <> help "the directory where the constraints.jsonl file is located"
+          <> help "the directory where the constraints.jsonl artifact is located"
           <> value "./snarkl-output"
           <> showDefault
       )
@@ -146,6 +146,6 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let witnessFP = mkWitnessFilePath witnessOutput name
-  writeFileWithDir witnessFP . toJSONLines $ 
+  writeFileWithDir witnessFP . toJSONLines $
     WithHeader (witnessHeader witness) (Map.toList (FieldElem <$> assgn))
   putStrLn $ "Wrote witness to " <> witnessFP
