@@ -1,7 +1,10 @@
 module Snarkl.Backend.R1CS.R1CS
   ( R1C (..),
     R1CS (..),
+    r1csHeader,
     Witness (..),
+    witnessHeader,
+    WitnessHeader (..),
     sat_r1cs,
     num_constraints,
   )
@@ -9,11 +12,10 @@ where
 
 import Control.Parallel.Strategies
 import qualified Data.Aeson as A
-import Data.Field.Galois (GaloisField, PrimeField)
+import Data.Field.Galois (GaloisField (char, deg), PrimeField)
 import qualified Data.Map as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
--- import Snarkl.Errors
 import Text.PrettyPrint.Leijen.Text (Pretty (..), (<+>))
 
 ----------------------------------------------------------------
@@ -52,7 +54,57 @@ data R1CS a = R1CS
   }
   deriving (Show)
 
-newtype Witness k = Witness {unWitness :: Assgn k} deriving (Show, Foldable, Functor)
+r1csHeader :: (GaloisField a) => R1CS a -> ConstraintHeader
+r1csHeader (cs :: R1CS a) =
+  ConstraintHeader
+    { field_characteristic = toInteger $ char (undefined :: a),
+      extension_degree = toInteger $ deg (undefined :: a),
+      n_constraints = length (r1cs_clauses cs),
+      n_variables = r1cs_num_vars cs,
+      input_variables = r1cs_in_vars cs,
+      output_variables = r1cs_out_vars cs
+    }
+
+data Witness k = Witness
+  { witness_assgn :: Assgn k,
+    witness_in_vars :: [Var],
+    witness_out_vars :: [Var],
+    witness_num_vars :: Int
+  }
+  deriving (Show)
+
+instance Functor Witness where
+  fmap f w = w {witness_assgn = fmap f (witness_assgn w)}
+
+data WitnessHeader = WitnessHeader
+  { in_vars :: [Var],
+    out_vars :: [Var],
+    num_vars :: Int
+  }
+
+instance A.ToJSON WitnessHeader where
+  toJSON (WitnessHeader in_vars out_vars num_vars) =
+    A.object
+      [ "in_vars" A..= in_vars,
+        "out_vars" A..= out_vars,
+        "num_vars" A..= num_vars
+      ]
+
+instance A.FromJSON WitnessHeader where
+  parseJSON =
+    A.withObject "WitnessHeader" $ \v -> do
+      in_vars <- v A..: "in_vars"
+      out_vars <- v A..: "out_vars"
+      num_vars <- v A..: "num_vars"
+      pure $ WitnessHeader in_vars out_vars num_vars
+
+witnessHeader :: Witness k -> WitnessHeader
+witnessHeader (Witness {..}) =
+  WitnessHeader
+    { in_vars = witness_in_vars,
+      out_vars = witness_out_vars,
+      num_vars = witness_num_vars
+    }
 
 num_constraints :: R1CS a -> Int
 num_constraints = length . r1cs_clauses
@@ -64,7 +116,7 @@ sat_r1c w c
       inner aV w * inner bV w == inner cV w
   where
     inner :: (GaloisField a) => Poly a -> Witness a -> a
-    inner (Poly (Assgn v)) (Witness (Assgn wit)) =
+    inner (Poly (Assgn v)) (Witness {witness_assgn = Assgn wit}) =
       let c0 = Map.findWithDefault 0 (Var (-1)) v
        in Map.foldlWithKey (f wit) c0 v
 

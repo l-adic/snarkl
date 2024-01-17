@@ -14,18 +14,19 @@ import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
 import Data.Foldable (Foldable (toList))
+import Data.JSONLines (ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
 import Snarkl.Backend.R1CS
+import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, writeFileWithDir)
 import Snarkl.Compile
-import Snarkl.Constraint (ConstraintSystem (cs_constraints, cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemToHeader, mkConstraintsFilePath)
+import Snarkl.Constraint (ConstraintSystem (cs_constraints, cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem), constraintSystemHeader)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
-import qualified Snarkl.Utils as Utils
 
 data OptimizeOpts = OptimizeOpts
   { simplify :: Bool,
@@ -83,9 +84,15 @@ compile CompileOpts {..} name comp = do
           ]
       TExpPkg nv in_vars e = compileCompToTexp comp
       (r1cs, cs) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
-      r1csFP = mkR1CSFilePath r1csOutput name
-  Utils.writeJSONLines r1csFP (Just $ r1csToHeader r1cs) (r1cs_clauses r1cs)
+  let r1csFP = mkR1CSFilePath r1csOutput name
+  writeFileWithDir r1csFP $
+    toJSONLines
+      (r1csHeader r1cs)
+      (r1cs_clauses r1cs)
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let csFP = mkConstraintsFilePath constraintsOutput name
-  Utils.writeJSONLines csFP (Just $ constraintSystemToHeader cs) (toList $ cs_constraints $ unSimplifiedConstraintSystem cs)
+  writeFileWithDir csFP $
+    toJSONLines
+      (constraintSystemHeader cs)
+      (cs_constraints $ unSimplifiedConstraintSystem cs)
   putStrLn $ "Wrote constraints to " <> csFP

@@ -100,3 +100,42 @@ isAssoc op = case op of
   XOr -> True
   Eq -> True
   BEq -> True
+
+data ConstraintHeader = ConstraintHeader
+  { field_characteristic :: Integer,
+    extension_degree :: Integer,
+    n_constraints :: Int,
+    n_variables :: Int,
+    input_variables :: [Var],
+    output_variables :: [Var]
+  }
+
+instance A.ToJSON ConstraintHeader where
+  toJSON (ConstraintHeader {..}) =
+    A.object
+      [ "field_characteristic" A..= field_characteristic,
+        "extension_degree" A..= extension_degree,
+        "n_constraints" A..= n_constraints,
+        "n_variables" A..= n_variables,
+        "input_variables" A..= input_variables,
+        "output_variables" A..= output_variables
+      ]
+
+instance A.FromJSON ConstraintHeader where
+  parseJSON =
+    A.withObject "ConstraintHeader" $ \v -> do
+      field_characteristic <- v A..: "field_characteristic"
+      extension_degree <- v A..: "extension_degree"
+      n_constraints <- v A..: "n_constraints"
+      n_variables <- v A..: "n_variables"
+      input_variables <- v A..: "input_variables"
+      output_variables <- v A..: "output_variables"
+      pure $
+        ConstraintHeader
+          { field_characteristic,
+            extension_degree,
+            n_constraints,
+            n_variables,
+            input_variables,
+            output_variables
+          }

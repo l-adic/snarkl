@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
@@ -10,11 +9,10 @@ module Snarkl.Constraint.Constraints
     ConstraintSet,
     ConstraintSystem (..),
     SimplifiedConstraintSystem (..),
+    constraintSystemHeader,
     r1cs_of_cs,
     renumber_constraints,
     constraint_vars,
-    mkConstraintsFilePath,
-    constraintSystemToHeader,
   )
 where
 
@@ -24,8 +22,8 @@ import Data.Bifunctor (Bifunctor (first, second))
 import Data.Field.Galois (GaloisField (char, deg), Prime, PrimeField)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Snarkl.Backend.R1CS (ConstraintHeader (..), Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
-import Snarkl.Common (Assgn (Assgn), FieldElem (..), Var (Var))
+import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
+import Snarkl.Common (Assgn (Assgn), ConstraintHeader (..), FieldElem (..), Var (Var))
 import Snarkl.Constraint.SimplMonad (SEnv)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
@@ -222,6 +220,22 @@ newtype SimplifiedConstraintSystem a = SimplifiedConstraintSystem
   }
   deriving (Show, Eq)
 
+constraintSystemHeader ::
+  (GaloisField a) =>
+  SimplifiedConstraintSystem a ->
+  ConstraintHeader
+constraintSystemHeader (SimplifiedConstraintSystem (ConstraintSystem {..}) :: SimplifiedConstraintSystem a) =
+  ConstraintHeader
+    { field_characteristic = toInteger $ char (undefined :: a),
+      extension_degree = toInteger $ deg (undefined :: a),
+      n_constraints = Set.size cs_constraints,
+      -- TODO: should we also add the number of output variables? We do this for
+      -- the R1CS header, but the examples i checked didn't seem to work
+      n_variables = cs_num_vars,
+      input_variables = cs_in_vars,
+      output_variables = cs_out_vars
+    }
+
 r1cs_of_cs ::
   (GaloisField a) =>
   -- | Constraints
@@ -305,19 +319,3 @@ renumber_constraints cs =
           CMult (c, renum_f x) (d, renum_f y) (e, fmap renum_f mz)
         CMagic nm xs f ->
           CMagic nm (map renum_f xs) f
-
-constraintSystemToHeader :: (GaloisField k) => SimplifiedConstraintSystem k -> ConstraintHeader k
-constraintSystemToHeader (SimplifiedConstraintSystem (ConstraintSystem {..} :: ConstraintSystem k)) =
-  ConstraintHeader
-    { field_characteristic = toInteger $ char (undefined :: k),
-      extension_degree = toInteger $ deg (undefined :: k),
-      n_constraints = Set.size cs_constraints,
-      -- TODO: should we also add the number of output variables? We do this for
-      -- the R1CS header, but the examples i checked didn't seem to work
-      n_variables = cs_num_vars,
-      input_variables = cs_in_vars,
-      output_variables = cs_out_vars
-    }
-
-mkConstraintsFilePath :: FilePath -> String -> FilePath
-mkConstraintsFilePath rootDir name = rootDir <> "/" <> name <> "-constraints.jsonl"

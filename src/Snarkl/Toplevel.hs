@@ -25,7 +25,7 @@ import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Compile
-import Snarkl.Constraint (ConstraintSystem (cs_in_vars), SimplifiedConstraintSystem (..), solve)
+import Snarkl.Constraint (ConstraintSystem (cs_in_vars, cs_num_vars, cs_out_vars), SimplifiedConstraintSystem (..), solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
 import Snarkl.Language
@@ -90,7 +90,7 @@ execute simpl mf inputs =
   let TExpPkg nv in_vars e = compileCompToTexp mf
       (r1cs, constraintSystem) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
       [out_var] = r1cs_out_vars r1cs
-      wit@(Witness (Assgn m)) = wit_of_cs inputs constraintSystem
+      wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs constraintSystem
       out = case Map.lookup out_var m of
         Nothing ->
           failWith $
@@ -137,4 +137,9 @@ wit_of_cs inputs (SimplifiedConstraintSystem cs) =
               )
         else
           let inputAssignments = Assgn . Map.fromList $ zip in_vars inputs
-           in Witness $ solve cs inputAssignments
+           in Witness
+                { witness_assgn = solve cs inputAssignments,
+                  witness_in_vars = in_vars,
+                  witness_out_vars = cs_out_vars cs,
+                  witness_num_vars = cs_num_vars cs
+                }

@@ -32,10 +32,10 @@ library
   exposed-modules:
     Control.Monad.Supply
     Control.Monad.Supply.Class
+    Data.JSONLines
     Snarkl.Backend.R1CS
     Snarkl.Backend.R1CS.Poly
     Snarkl.Backend.R1CS.R1CS
-    Snarkl.Backend.R1CS.Serialize
     Snarkl.CLI
     Snarkl.Common
     Snarkl.Compile
@@ -58,25 +58,30 @@ library
     Snarkl.Toplevel
 
   other-modules:
+    Snarkl.CLI.Common
     Snarkl.CLI.Compile
     Snarkl.CLI.GenWitness
     Snarkl.CLI.RunAll
-    Snarkl.Utils
 
   default-extensions:
     BangPatterns
     DataKinds
     DeriveDataTypeable
+    DeriveGeneric
     FlexibleContexts
     FlexibleInstances
+    FunctionalDependencies
     GADTs
     GeneralizedNewtypeDeriving
     KindSignatures
     LambdaCase
+    MultiParamTypeClasses
+    NamedFieldPuns
     OverloadedStrings
     PatternSynonyms
     PolyKinds
     RankNTypes
+    RecordWildCards
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
