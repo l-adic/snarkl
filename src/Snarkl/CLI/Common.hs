@@ -12,10 +12,10 @@ writeFileWithDir filePath contents = do
   createDirectoryIfMissing True (takeDirectory filePath)
   LBS.writeFile filePath contents
 
-readLines ::
+readFileLines ::
   FilePath ->
   IO [LBS.ByteString]
-readLines filePath = do
+readFileLines filePath = do
   contents <- LBS.readFile filePath
   return $ LBS.split 0xa contents
 

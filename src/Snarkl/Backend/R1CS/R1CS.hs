@@ -59,7 +59,7 @@ r1csHeader (cs :: R1CS a) =
   ConstraintHeader
     { field_characteristic = toInteger $ char (undefined :: a),
       extension_degree = toInteger $ deg (undefined :: a),
-      n_constraints = length (r1cs_clauses cs),
+      n_constraints = num_constraints cs,
       n_variables = r1cs_num_vars cs,
       input_variables = r1cs_in_vars cs,
       output_variables = r1cs_out_vars cs
@@ -127,9 +127,7 @@ sat_r1c w c
 sat_r1cs :: (GaloisField a) => Witness a -> R1CS a -> Bool
 sat_r1cs w cs = and $ is_sat (r1cs_clauses cs)
   where
-    is_sat cs0 = map g cs0 `using` parListChunk (chunk_sz cs0) rseq
+    is_sat cs0 = map (sat_r1c w ) cs0 `using` parListChunk (chunk_sz cs0) rseq
     num_chunks = 32
     chunk_sz cs0 =
       truncate $ (fromIntegral (length cs0) :: Rational) / num_chunks
-    g c =
-      sat_r1c w c

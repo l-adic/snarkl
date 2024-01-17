@@ -13,14 +13,14 @@ import Control.Applicative ((<|>))
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
-import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (NoHeader), ToJSONLines (toJSONLines))
+import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (..), WithHeader(..), ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (Parser, eitherReader, help, long, option, showDefault, strOption, value)
 import Snarkl.Backend.R1CS
-import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, mkWitnessFilePath, readLines, writeFileWithDir)
+import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
 import Snarkl.Common (Assgn (Assgn), ConstraintHeader (..), FieldElem (..))
 import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (SimplifiedConstraintSystem, unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
@@ -58,7 +58,7 @@ genWitnessOptsParser =
   GenWitnessOpts
     <$> strOption
       ( long "constraints-input-dir"
-          <> help "the directory where the constrains.jsonl file is located"
+          <> help "the directory where the constraints.jsonl file is located"
           <> value "./snarkl-output"
           <> showDefault
       )
@@ -88,8 +88,8 @@ genWitness GenWitnessOpts {..} name comp = do
   --  parse the constraints file
   constraints <- do
     let csFP = mkConstraintsFilePath constraintsInput name
-    eConstraints <- fromJSONLines <$> readLines csFP
-    (ConstraintHeader {..}, cs) <- either (failWith . ErrMsg) pure eConstraints
+    eConstraints <- fromJSONLines <$> readFileLines csFP
+    (WithHeader ConstraintHeader {..} cs) <- either (failWith . ErrMsg) pure eConstraints
     pure $
       SimplifiedConstraintSystem $
         ConstraintSystem
@@ -103,8 +103,8 @@ genWitness GenWitnessOpts {..} name comp = do
   is <- case inputs of
     Explicit is -> pure $ map fromInteger is
     FromFile fp -> do
-      eInput <- fromJSONLines @NoHeader @(FieldElem k) <$> readLines fp
-      (NoHeader, input) <- either (failWith . ErrMsg) pure eInput
+      eInput <- fromJSONLines <$> readFileLines fp
+      NoHeader input <- either (failWith . ErrMsg) pure eInput
       pure $ map unFieldElem input
   let out_interp = comp_interp comp is
       witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs is constraints
@@ -127,8 +127,8 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ show out
   r1cs <- do
     let r1csFP = mkR1CSFilePath r1csInput name
-    (Just ConstraintHeader {..}, items) <- do
-      eConstraints <- fromJSONLines <$> readLines r1csFP
+    (WithHeader ConstraintHeader {..} items) <- do
+      eConstraints <- fromJSONLines <$> readFileLines r1csFP
       either (failWith . ErrMsg) pure eConstraints
     pure $
       R1CS
@@ -146,8 +146,6 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ "\nfailed to satisfy R1CS\n  "
           ++ CS.cs (A.encode $ r1cs_clauses r1cs)
   let witnessFP = mkWitnessFilePath witnessOutput name
-  writeFileWithDir witnessFP $
-    toJSONLines
-      (witnessHeader witness)
-      (Map.toList (FieldElem <$> assgn))
+  writeFileWithDir witnessFP . toJSONLines $ 
+    WithHeader (witnessHeader witness) (Map.toList (FieldElem <$> assgn))
   putStrLn $ "Wrote witness to " <> witnessFP

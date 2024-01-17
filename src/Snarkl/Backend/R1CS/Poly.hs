@@ -15,9 +15,7 @@ instance (PrimeField a) => A.ToJSON (Poly a) where
   toJSON (Poly m) = A.toJSON m
 
 instance (PrimeField a) => A.FromJSON (Poly a) where
-  parseJSON v = do
-    m <- A.parseJSON v
-    return (Poly m)
+  parseJSON v = Poly <$> A.parseJSON v
 
 instance (Pretty a) => Pretty (Poly a) where
   pretty (Poly (Assgn m)) = pretty $ Map.toList m

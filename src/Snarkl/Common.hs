@@ -10,6 +10,9 @@ import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
 newtype Var = Var Int deriving (Eq, Ord, Show)
 
+-- Internally variables start at index 0 and the constant "variable" with
+-- value 1 is at index -1. This works well internall but poorly for downstream
+-- dependencies, so when serializing/deserializing we adjust.
 instance A.ToJSON Var where
   toJSON (Var i) = A.toJSON (i + 1)
 
@@ -26,6 +29,8 @@ incVar (Var i) = Var (i + 1)
 
 newtype Assgn a = Assgn (Map.Map Var a) deriving (Show, Eq, Functor)
 
+-- We use this wrapper to get a stringified representation of big integers.
+-- This plays better with downstream dependencies, e.g. javascript.
 newtype FieldElem k = FieldElem {unFieldElem :: k} deriving (Show, Eq)
 
 instance (PrimeField k) => A.ToJSON (FieldElem k) where

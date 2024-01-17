@@ -2,12 +2,12 @@ module Data.JSONLines
   ( ToJSONLines (..),
     FromJSONLines (..),
     JSONLine (..),
+    WithHeader(..),
     NoHeader (..),
-    jsonlBuilder,
-    jsonLine,
   )
 where
 
+import Data.Kind (Type)
 import qualified Data.Aeson as A
 import Data.ByteString.Builder (Builder, lazyByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -25,7 +25,10 @@ instance Semigroup JSONLine where
 instance Monoid JSONLine where
   mempty = EmptyLine
 
-data NoHeader = NoHeader
+data WithHeader :: Type -> Type -> Type where 
+  WithHeader  :: hdr -> [item] -> WithHeader hdr item
+
+data NoHeader item = NoHeader [item]
 
 jsonlBuilder ::
   (Foldable t) =>
@@ -41,24 +44,24 @@ toBS :: JSONLine -> LBS.ByteString
 toBS EmptyLine = mempty
 toBS (JSONLine a) = toLazyByteString a
 
-class ToJSONLines hdr item where
-  toJSONLines :: (Foldable t) => hdr -> t item -> LBS.ByteString
+class ToJSONLines a where
+  toJSONLines :: a -> LBS.ByteString
 
-instance {-# OVERLAPPING #-} (A.ToJSON item) => ToJSONLines NoHeader item where
-  toJSONLines _ = toBS . jsonlBuilder
+instance (A.ToJSON item) => ToJSONLines (NoHeader item) where
+  toJSONLines (NoHeader items) = toBS . jsonlBuilder $ items
 
-instance {-# OVERLAPPABLE #-} (A.ToJSON hdr, A.ToJSON item) => ToJSONLines hdr item where
-  toJSONLines hdr items = toBS $ jsonLine hdr <> jsonlBuilder items
+instance (A.ToJSON hdr, A.ToJSON item) => ToJSONLines (WithHeader hdr item) where
+  toJSONLines (WithHeader hdr items) = toBS $ jsonLine hdr <> jsonlBuilder items
 
-class FromJSONLines hdr item where
-  fromJSONLines :: [LazyByteString] -> Either String (hdr, [item])
+class FromJSONLines a where
+  fromJSONLines :: [LazyByteString] -> Either String a
 
-instance {-# OVERLAPPING #-} (A.FromJSON item) => FromJSONLines NoHeader item where
-  fromJSONLines items = (NoHeader,) <$> traverse A.eitherDecode items
+instance (A.FromJSON item) => FromJSONLines (NoHeader item) where
+  fromJSONLines items = NoHeader <$> traverse A.eitherDecode items
 
-instance {-# OVERLAPPABLE #-} (A.FromJSON hdr, A.FromJSON item) => FromJSONLines hdr item where
-  fromJSONLines (hdr : items) = do
-    hdr' <- A.eitherDecode hdr
-    items' <- traverse A.eitherDecode items
-    pure (hdr', items')
+instance (A.FromJSON hdr, A.FromJSON item) => FromJSONLines (WithHeader hdr item) where
+  fromJSONLines (h : is) = do
+    hdr <- A.eitherDecode h
+    items <- traverse A.eitherDecode is
+    pure $ WithHeader hdr items
   fromJSONLines [] = Left "Empty file"

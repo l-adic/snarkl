@@ -10,11 +10,12 @@ module Snarkl.CLI.Compile
   )
 where
 
+import qualified Data.Set as Set
 import Control.Monad (unless)
 import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
 import Data.Foldable (Foldable (toList))
-import Data.JSONLines (ToJSONLines (toJSONLines))
+import Data.JSONLines (ToJSONLines (toJSONLines), WithHeader(..))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
@@ -85,14 +86,10 @@ compile CompileOpts {..} name comp = do
       TExpPkg nv in_vars e = compileCompToTexp comp
       (r1cs, cs) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
   let r1csFP = mkR1CSFilePath r1csOutput name
-  writeFileWithDir r1csFP $
-    toJSONLines
-      (r1csHeader r1cs)
-      (r1cs_clauses r1cs)
+  writeFileWithDir r1csFP . toJSONLines $ 
+    WithHeader (r1csHeader r1cs) (r1cs_clauses r1cs)
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let csFP = mkConstraintsFilePath constraintsOutput name
-  writeFileWithDir csFP $
-    toJSONLines
-      (constraintSystemHeader cs)
-      (cs_constraints $ unSimplifiedConstraintSystem cs)
+  writeFileWithDir csFP . toJSONLines $ 
+    WithHeader (constraintSystemHeader cs) (Set.toList $ cs_constraints $ unSimplifiedConstraintSystem cs)
   putStrLn $ "Wrote constraints to " <> csFP
