@@ -13,6 +13,7 @@ module Snarkl.Compile
   )
 where
 
+import Control.Arrow (Arrow (second))
 import Control.Lens (Iso', iso, view, (#), (^.))
 import Control.Monad.State
   ( State,
@@ -28,10 +29,11 @@ import Data.Sequence (pattern Empty, pattern (:<|))
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS.R1CS (R1CS)
-import Snarkl.Common (Op (..), UnOp (..), Var (Var), incVar)
+import Snarkl.Common (Assgn (Assgn), Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint
   ( Constraint (CMagic, CMult),
     ConstraintSystem (ConstraintSystem),
+    SimplifiedConstraintSystem (..),
     bind_of_var,
     bind_var,
     cadd,
@@ -40,7 +42,6 @@ import Snarkl.Constraint
     r1cs_of_cs,
     removeUnreachable,
     renumber_constraints,
-    solve,
   )
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
@@ -414,45 +415,41 @@ cs_of_exp out e = case e of
 data SimplParam
   = NoSimplify
   | Simplify
-  | SimplifyDataflow
+  | RemoveUnreachable
+  deriving (Eq)
 
 -- | Snarkl.Compile a list of arithmetic constraints to a rank-1 constraint
 -- system.  Takes as input the constraints, the input variables, and
 -- the output variables, and return the corresponding R1CS.
 compileConstraintsToR1CS ::
   (GaloisField a) =>
-  SimplParam ->
+  [SimplParam] ->
   ConstraintSystem a ->
-  R1CS a
-compileConstraintsToR1CS simpl cs =
+  (R1CS a, SimplifiedConstraintSystem a)
+compileConstraintsToR1CS simpls cs =
   let -- Simplify resulting constraints.
       cs_simpl =
-        if must_simplify simpl
-          then snd $ do_simplify False Map.empty cs
+        if must_simplify
+          then snd $ do_simplify False (Assgn Map.empty) cs
           else cs
-      cs_dataflow = if must_dataflow simpl then removeUnreachable cs_simpl else cs_simpl
+      cs_dataflow = if must_dataflow then removeUnreachable cs_simpl else cs_simpl
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
       -- their renumbered counterparts.
-      (_, cs') = renumber_constraints cs_dataflow
-      -- 'f' is a function mapping input bindings to witnesses.
+      (_, simplifiedCS) = second SimplifiedConstraintSystem $ renumber_constraints cs_dataflow
+   in -- 'f' is a function mapping input bindings to witnesses.
       -- NOTE: we assume the initial variable assignment passed to
       -- 'f' is the one derived by zipping the inputs together with
       -- the (renamed) input vars. of the R1CS produced by this
       -- function. Alternatively, we could 'Map.mapKeys renumber_f'
       -- before applying 'solve cs''.
-      f = solve cs'
-   in r1cs_of_cs cs' f
+      (r1cs_of_cs simplifiedCS, simplifiedCS)
   where
-    must_simplify :: SimplParam -> Bool
-    must_simplify NoSimplify = False
-    must_simplify Simplify = True
-    must_simplify SimplifyDataflow = True
+    must_simplify :: Bool
+    must_simplify = Simplify `elem` simpls
 
-    must_dataflow :: SimplParam -> Bool
-    must_dataflow NoSimplify = False
-    must_dataflow Simplify = False
-    must_dataflow SimplifyDataflow = True
+    must_dataflow :: Bool
+    must_dataflow = RemoveUnreachable `elem` simpls
 
 ------------------------------------------------------
 --
@@ -551,22 +548,20 @@ compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
 -- | Snarkl.Compile 'TExp's to 'R1CS'.
 compileTExpToR1CS ::
   (Typeable ty, GaloisField k) =>
-  SimplParam ->
+  [SimplParam] ->
   TExpPkg ty k ->
-  R1CS k
+  (R1CS k, SimplifiedConstraintSystem k)
 compileTExpToR1CS simpl = compileConstraintsToR1CS simpl . compileTexpToConstraints
 
 -- | Snarkl.Compile Snarkl computations to 'R1CS'.
 compileCompToR1CS ::
   (Typeable ty, GaloisField k) =>
-  SimplParam ->
+  [SimplParam] ->
   Comp ty k ->
-  R1CS k
+  (R1CS k, SimplifiedConstraintSystem k)
 compileCompToR1CS simpl = compileConstraintsToR1CS simpl . compileCompToConstraints
 
 --------------------------------------------------------------------------------
 
 _Var :: Iso' Variable Var
 _Var = iso (\(Variable v) -> Var v) (\(Var v) -> Variable v)
-
---------------------------------------------------------------------------------

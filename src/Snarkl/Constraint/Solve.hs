@@ -5,10 +5,8 @@ where
 
 import Data.Field.Galois (GaloisField)
 import qualified Data.Map as Map
-import Data.Maybe
-  ( isJust,
-  )
-import Snarkl.Common (Assgn, Var (..))
+import Data.Set (member)
+import Snarkl.Common (Assgn (Assgn), Var (..))
 import Snarkl.Constraint.Constraints
   ( ConstraintSystem (cs_in_vars, cs_num_vars, cs_out_vars),
   )
@@ -56,6 +54,9 @@ solve cs env =
                   ++ show cs
               )
   where
-    all_assigned vars0 assgn = all (is_mapped assgn) vars0
-    is_mapped assgn x = isJust (Map.lookup x assgn)
-    unassigned vars0 assgn = [x | x <- vars0, not $ is_mapped assgn x]
+    all_assigned vars0 (Assgn assgn) =
+      let known = Map.keysSet assgn
+       in all (`member` known) vars0
+    unassigned vars0 (Assgn assgn) =
+      let known = Map.keysSet assgn
+       in [x | x <- vars0, not $ x `member` known]

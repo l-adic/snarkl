@@ -9,10 +9,10 @@ module Snarkl.Toplevel
     -- * Convenience functions
     Result (..),
     execute,
+    wit_of_cs,
 
     -- * Re-exported modules
     module Snarkl.Language,
-    module Snarkl.Constraint,
     module Snarkl.Backend.R1CS,
     module Snarkl.Compile,
   )
@@ -23,14 +23,13 @@ import Data.List (intercalate)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
 import Snarkl.Backend.R1CS
-import Snarkl.Common (Assgn)
+import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Compile
-import Snarkl.Constraint
+import Snarkl.Constraint (ConstraintSystem (cs_in_vars, cs_num_vars, cs_out_vars), SimplifiedConstraintSystem (..), solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
 import Snarkl.Language
 import Text.PrettyPrint.Leijen.Text (Pretty (..), line, (<+>))
-import Prelude
 
 ----------------------------------------------------
 --
@@ -60,7 +59,7 @@ data Result k = Result
     result_constraints :: Int,
     result_result :: k,
     result_r1cs :: R1CS k,
-    result_witness :: Assgn k
+    result_witness :: Witness k
   }
   deriving (Show)
 
@@ -86,13 +85,13 @@ instance (Pretty k) => Pretty (Result k) where
 --   (3) Check whether 'w' satisfies the constraint system produced in (1).
 --   (4) Check whether the R1CS result matches the interpreter result.
 --   (5) Return the 'Result'.
-execute :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [k] -> Result k
+execute :: (Typeable ty, PrimeField k) => [SimplParam] -> Comp ty k -> [k] -> Result k
 execute simpl mf inputs =
   let TExpPkg nv in_vars e = compileCompToTexp mf
-      r1cs = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
+      (r1cs, constraintSystem) = compileTExpToR1CS simpl (TExpPkg nv in_vars e)
       [out_var] = r1cs_out_vars r1cs
-      wit = wit_of_r1cs inputs r1cs
-      out = case Map.lookup out_var wit of
+      wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs constraintSystem
+      out = case Map.lookup out_var m of
         Nothing ->
           failWith $
             ErrMsg
@@ -120,3 +119,27 @@ execute simpl mf inputs =
       nw = r1cs_num_vars r1cs
       ng = num_constraints r1cs
    in Result result nw ng out r1cs wit
+
+-- | For a given R1CS and inputs, calculate a satisfying assignment.
+wit_of_cs :: (GaloisField k) => [k] -> SimplifiedConstraintSystem k -> Witness k
+wit_of_cs inputs (SimplifiedConstraintSystem cs) =
+  let in_vars = cs_in_vars cs
+   in if length in_vars /= length inputs
+        then
+          failWith $
+            ErrMsg
+              ( "expected "
+                  ++ show (length in_vars)
+                  ++ " input(s)"
+                  ++ " but got "
+                  ++ show (length inputs)
+                  ++ " input(s)"
+              )
+        else
+          let inputAssignments = Assgn . Map.fromList $ zip in_vars inputs
+           in Witness
+                { witness_assgn = solve cs inputAssignments,
+                  witness_in_vars = in_vars,
+                  witness_out_vars = cs_out_vars cs,
+                  witness_num_vars = cs_num_vars cs
+                }

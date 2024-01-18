@@ -8,6 +8,7 @@ module Snarkl.Constraint.Constraints
     cadd,
     ConstraintSet,
     ConstraintSystem (..),
+    SimplifiedConstraintSystem (..),
     r1cs_of_cs,
     renumber_constraints,
     constraint_vars,
@@ -15,12 +16,14 @@ module Snarkl.Constraint.Constraints
 where
 
 import Control.Monad.State (State)
-import Data.Bifunctor (Bifunctor (first))
-import Data.Field.Galois (GaloisField, Prime)
+import qualified Data.Aeson as A
+import Data.Bifunctor (Bifunctor (first, second))
+import Data.Field.Galois (GaloisField (char, deg), Prime, PrimeField)
+import Data.JSONLines (FromJSONLines (fromJSONLines), ToJSONLines (toJSONLines), WithHeader (..))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Snarkl.Backend.R1CS (Poly (Poly), R1C (R1C), R1CS (R1CS), const_poly, var_poly)
-import Snarkl.Common (Assgn, Var (Var))
+import Snarkl.Common (Assgn (Assgn), ConstraintHeader (..), FieldElem (..), Var (Var))
 import Snarkl.Constraint.SimplMonad (SEnv)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
@@ -30,6 +33,12 @@ import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 
 newtype CoeffList k v = CoeffList {asList :: [(k, v)]}
   deriving (Eq)
+
+instance (PrimeField v) => A.ToJSON (CoeffList Var v) where
+  toJSON (CoeffList l) = A.toJSON $ map (second FieldElem) l
+
+instance (PrimeField v) => A.FromJSON (CoeffList Var v) where
+  parseJSON v = CoeffList . map (second unFieldElem) <$> A.parseJSON v
 
 -- COEFFLIST INVARIANT: no key appears more than once.  Upon duplicate
 -- insertion, insert field sum of the values.  Terms with 0 coeff. are
@@ -72,6 +81,46 @@ data Constraint a
   = CAdd !a !(CoeffList Var a)
   | CMult !(a, Var) !(a, Var) !(a, Maybe Var)
   | CMagic Var [Var] ([Var] -> State (SEnv a) Bool)
+
+instance (PrimeField a) => A.ToJSON (Constraint a) where
+  toJSON (CAdd a m) =
+    A.object
+      [ "tag" A..= ("CAdd" :: String),
+        "data"
+          A..= A.object
+            [ "a" A..= FieldElem a,
+              "m" A..= m
+            ]
+      ]
+  toJSON (CMult (c, x) (d, y) (e, mz)) =
+    A.object
+      [ "tag" A..= ("CMult" :: String),
+        "data"
+          A..= A.object
+            [ "cx" A..= (FieldElem c, x),
+              "dy" A..= (FieldElem d, y),
+              "ez" A..= (FieldElem e, mz)
+            ]
+      ]
+  toJSON (CMagic {}) = error "ToJSON (Constraint a): CMagic not implemented"
+
+instance (PrimeField a) => A.FromJSON (Constraint a) where
+  parseJSON =
+    A.withObject "Constraint" $ \v -> do
+      tag <- v A..: "tag"
+      case tag :: String of
+        "CAdd" -> do
+          d <- v A..: "data"
+          a <- d A..: "a"
+          m <- d A..: "m"
+          pure $ CAdd (unFieldElem a) m
+        "CMult" -> do
+          d <- v A..: "data"
+          cx <- d A..: "cx"
+          dy <- d A..: "dy"
+          ez <- d A..: "ez"
+          pure $ CMult (first unFieldElem cx) (first unFieldElem dy) (first unFieldElem ez)
+        _ -> error "FromJSON (Constraint a): unknown tag"
 
 -- | Smart constructor enforcing CoeffList invariant
 cadd :: (GaloisField a) => a -> [(Var, a)] -> Constraint a
@@ -165,14 +214,44 @@ instance (Show a) => Show (Constraint a) where
 -- Compilation to R1CS
 ----------------------------------------------------------------
 
+-- Contains no magic constraints, hence we can serialize them
+newtype SimplifiedConstraintSystem a = SimplifiedConstraintSystem
+  { unSimplifiedConstraintSystem :: ConstraintSystem a
+  }
+  deriving (Show, Eq)
+
+instance (PrimeField k) => ToJSONLines (SimplifiedConstraintSystem k) where
+  toJSONLines scs@(SimplifiedConstraintSystem (ConstraintSystem {..})) =
+    toJSONLines $ WithHeader (constraintSystemHeader scs) (Set.toList cs_constraints)
+    where
+      constraintSystemHeader (_ :: SimplifiedConstraintSystem a) =
+        ConstraintHeader
+          { field_characteristic = toInteger $ char (undefined :: a),
+            extension_degree = toInteger $ deg (undefined :: a),
+            n_constraints = Set.size cs_constraints,
+            n_variables = cs_num_vars,
+            input_variables = cs_in_vars,
+            output_variables = cs_out_vars
+          }
+
+instance (PrimeField k) => FromJSONLines (SimplifiedConstraintSystem k) where
+  fromJSONLines ls = do
+    WithHeader ConstraintHeader {..} cs <- fromJSONLines ls
+    pure $
+      SimplifiedConstraintSystem $
+        ConstraintSystem
+          { cs_constraints = Set.fromList cs,
+            cs_num_vars = fromIntegral n_variables,
+            cs_in_vars = input_variables,
+            cs_out_vars = output_variables
+          }
+
 r1cs_of_cs ::
   (GaloisField a) =>
   -- | Constraints
-  ConstraintSystem a ->
-  -- | Witness generator
-  (Assgn a -> Assgn a) ->
+  SimplifiedConstraintSystem a ->
   R1CS a
-r1cs_of_cs cs =
+r1cs_of_cs (SimplifiedConstraintSystem cs) =
   R1CS
     (go $ Set.toList $ cs_constraints cs)
     (cs_num_vars cs)
@@ -183,7 +262,7 @@ r1cs_of_cs cs =
     go (CAdd a m : cs') =
       R1C
         ( const_poly 1,
-          Poly $ Map.insert (Var (-1)) a $ Map.fromList (asList m),
+          Poly $ Assgn $ Map.insert (Var (-1)) a $ Map.fromList (asList m),
           const_poly 0
         )
         : go cs'

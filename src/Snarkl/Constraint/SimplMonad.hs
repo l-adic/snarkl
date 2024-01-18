@@ -9,14 +9,13 @@ module Snarkl.Constraint.SimplMonad
     bind_of_var,
     assgn_of_vars,
     SolveMode (..),
-    solve_mode_flag,
   )
 where
 
 import Control.Monad.State
 import Data.Field.Galois (GaloisField)
 import qualified Data.Map as Map
-import Snarkl.Common (Assgn, Var)
+import Snarkl.Common (Assgn (Assgn), Var)
 import qualified Snarkl.Constraint.UnionFind as UF
 
 ----------------------------------------------------------------
@@ -79,6 +78,7 @@ assgn_of_vars vars =
   do
     binds <- mapM bind_of_var vars
     return
+      $ Assgn
       $ Map.fromList
       $ concatMap
         ( \(x, ec) -> case ec of
@@ -86,12 +86,3 @@ assgn_of_vars vars =
             Right c -> [(x, c)]
         )
       $ zip vars binds
-
--- | Are we in solve mode?
-solve_mode_flag :: State (SEnv a) Bool
-solve_mode_flag =
-  do
-    env <- get
-    case solve_mode env of
-      UseMagic -> return True
-      JustSimplify -> return False

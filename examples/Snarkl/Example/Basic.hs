@@ -61,7 +61,7 @@ interp2' :: (GaloisField k) => k
 interp2' = comp_interp p2 [256]
 
 compile1 :: (GaloisField k) => R1CS k
-compile1 = compileCompToR1CS Simplify p1
+compile1 = fst $ compileCompToR1CS [Simplify] p1
 
 comp1 :: (GaloisField k, Typeable a) => Comp ('TSum 'TBool a) k
 comp1 = inl false

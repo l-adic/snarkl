@@ -52,6 +52,7 @@ prog1 =
 -- For example, the following code calculates the R1CS expression
 --   (n+e) + (n-1+e) + (n-2+e) + ... + (n-(n-1)+e)
 -- with e an fresh_input expression.
+prog2 :: forall a k. (GaloisField a) => Int -> State (Env k) (TExp 'TField a)
 prog2 n =
   do
     e <- fresh_input

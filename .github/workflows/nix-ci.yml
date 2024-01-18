@@ -18,7 +18,7 @@ jobs:
       uses: jaxxstorm/action-install-gh-release@v1.10.0
       with:
         repo: torsion-labs/arkworks-bridge
-        tag: v0.2.0
+        tag: v1.0.0-rc1
 
     - uses: cachix/install-nix-action@v24
       with:
