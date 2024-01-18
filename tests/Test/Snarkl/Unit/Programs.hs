@@ -16,9 +16,8 @@ import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
 import Snarkl.Field (F_BN128, P_BN128)
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
+import Snarkl.Syntax
 import Snarkl.Toplevel
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Prelude hiding
@@ -52,7 +51,7 @@ prog1 =
 -- For example, the following code calculates the R1CS expression
 --   (n+e) + (n-1+e) + (n-2+e) + ... + (n-(n-1)+e)
 -- with e an fresh_input expression.
-prog2 :: forall a k. (GaloisField a) => Int -> State (Env k) (TExp 'TField a)
+prog2 :: forall a k. (GaloisField a) => Int -> Comp 'TField a
 prog2 n =
   do
     e <- fresh_input

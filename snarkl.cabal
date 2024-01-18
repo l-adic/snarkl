@@ -53,9 +53,10 @@ library
     Snarkl.Language
     Snarkl.Language.Expr
     Snarkl.Language.LambdaExpr
-    Snarkl.Language.Syntax
     Snarkl.Language.SyntaxMonad
     Snarkl.Language.TExpr
+    Snarkl.Language.Type
+    Snarkl.Syntax
     Snarkl.Toplevel
 
   other-modules:
@@ -100,7 +101,6 @@ library
     , filepath
     , galois-field          >=1.0.4
     , hspec                 >=2.0
-    , jsonl                 >=0.1.4
     , lens
     , mtl                   >=2.2   && <2.3
     , optparse-applicative

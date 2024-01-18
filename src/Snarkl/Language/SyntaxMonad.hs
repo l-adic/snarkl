@@ -40,7 +40,7 @@ module Snarkl.Language.SyntaxMonad
     assert_true,
     is_bot,
     assert_bot,
-    -- | Misc. functions imported by 'Snarkl.Language.Syntax.hs'
+    -- | Misc. functions imported by 'Snarkl.Syntax.hs'
     get_addr,
     guard,
     add_objects,
@@ -61,13 +61,13 @@ import Snarkl.Language.TExpr
     TExp (TEAssert, TEBinop, TEBot, TESeq, TEUnop, TEVal, TEVar),
     TLoc (TLoc),
     TVar (TVar),
-    Ty (TArr, TBool, TProd, TUnit),
     Val (VFalse, VLoc, VTrue, VUnit),
     lastSeq,
     locOfTexp,
     teSeq,
     varOfTExp,
   )
+import Snarkl.Language.Type (Ty (TArr, TBool, TProd, TUnit))
 import Prelude hiding
   ( fromRational,
     negate,

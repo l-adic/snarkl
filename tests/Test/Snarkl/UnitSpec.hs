@@ -13,7 +13,7 @@ import Snarkl.Example.Peano
 import Snarkl.Example.Tree
 import Snarkl.Field
 import Snarkl.Language (Comp)
-import Snarkl.Language.Syntax hiding (negate)
+import Snarkl.Syntax hiding (negate)
 import Snarkl.Toplevel (Result (result_result), execute)
 import System.Exit (ExitCode (..))
 import Test.ArkworksBridge (CMD (RunR1CS), runCMD)

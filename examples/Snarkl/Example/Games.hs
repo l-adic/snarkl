@@ -11,9 +11,8 @@ import Data.Typeable
 import GHC.TypeLits (KnownNat, Nat)
 import Snarkl.Errors
 import Snarkl.Field (F_BN128)
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
+import Snarkl.Syntax
 import Snarkl.Toplevel
 import Prelude hiding
   ( fromRational,

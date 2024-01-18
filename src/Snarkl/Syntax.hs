@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RebindableSyntax #-}
 
-module Snarkl.Language.Syntax
+module Snarkl.Syntax
   ( Zippable,
     Derive,
     -- | Sums, products, recursive types
@@ -32,6 +32,9 @@ module Snarkl.Language.Syntax
     fromField,
     ifThenElse,
     negate,
+    true,
+    false,
+    unit,
     -- | Arrays
     arr,
     arr2,
@@ -59,6 +62,14 @@ module Snarkl.Language.Syntax
     curry,
     uncurry,
     apply,
+    Comp,
+    (>>=),
+    (>>),
+    return,
+    fresh_input,
+
+    -- * Snarkl.Language.Type
+    module Snarkl.Language.Type,
   )
 where
 
@@ -79,6 +90,7 @@ import Snarkl.Language.SyntaxMonad
     assert_false,
     assert_true,
     false,
+    fresh_input,
     fresh_var,
     fst_pair,
     get,
@@ -95,16 +107,16 @@ import Snarkl.Language.SyntaxMonad
     snd_pair,
     true,
     unit,
+    (>>),
     (>>=),
   )
 import Snarkl.Language.TExpr
-  ( Rep,
-    TExp (TEAbs, TEApp, TEBinop, TEBot, TEIf, TEUnop, TEVal, TEVar),
+  ( TExp (TEAbs, TEApp, TEBinop, TEBot, TEIf, TEUnop, TEVal, TEVar),
     TOp (TOp),
     TUnop (TUnop),
-    Ty (TArr, TBool, TField, TFun, TMu, TProd, TSum, TUnit),
     Val (VFalse, VField, VTrue, VUnit),
   )
+import Snarkl.Language.Type (Rep, Ty (TArr, TBool, TField, TFun, TMu, TProd, TSum, TUnit))
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
   ( curry,
@@ -340,7 +352,7 @@ case_sum f1 f2 e =
           le <- f1 e1
           re <- f2 e2
           -- NOTE: should not guard b here.
-          -- zip_vals ... must maintain Snarkl.Language.SyntaxMonad [INVARIANT]
+          -- zip_vals ... must maintain Snarkl.SyntaxMonad [INVARIANT]
           -- regarding the representation of nonbase-type expressions.
           zip_vals (not b) le re
 

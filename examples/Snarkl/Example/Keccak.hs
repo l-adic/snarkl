@@ -9,9 +9,8 @@ import Data.Bits hiding (xor)
 import Data.Field.Galois (GaloisField, Prime)
 import qualified Data.Map.Strict as Map
 import GHC.TypeLits (KnownNat)
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
 import Snarkl.Language.TExpr
+import Snarkl.Syntax
 import Snarkl.Toplevel
 import Prelude hiding
   ( fromRational,
