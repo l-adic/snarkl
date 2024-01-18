@@ -14,7 +14,8 @@ module Snarkl.Language
     -- * Snarkl.Language.SyntaxMonad
     Comp,
     Env (Env, input_vars, next_variable),
-    runState,
+    defaultEnv,
+    runComp,
 
     -- * Types
     module Snarkl.Language.Type,
@@ -25,7 +26,7 @@ import Data.Data (Typeable)
 import Data.Field.Galois (GaloisField)
 import Snarkl.Language.Expr (Exp (..), Variable (..), do_const_prop, var_of_exp)
 import Snarkl.Language.LambdaExpr (expOfLambdaExp)
-import Snarkl.Language.SyntaxMonad (Comp, Env (Env, input_vars, next_variable), runState)
+import Snarkl.Language.SyntaxMonad (Comp, Env (Env, input_vars, next_variable), defaultEnv, runComp)
 import Snarkl.Language.TExpr (TExp, booleanVarsOfTexp, lambdaExpOfTExp)
 import Snarkl.Language.Type
 

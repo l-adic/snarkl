@@ -84,8 +84,6 @@ import Snarkl.Common
 import Snarkl.Errors (ErrMsg (ErrMsg))
 import Snarkl.Language.SyntaxMonad
   ( Comp,
-    Env,
-    State (..),
     arr,
     assert_bot,
     assert_false,
@@ -100,10 +98,10 @@ import Snarkl.Language.SyntaxMonad
     is_bot,
     is_false,
     is_true,
+    lambda,
     pair,
     raise_err,
     return,
-    runState,
     set,
     snd_pair,
     true,
@@ -112,7 +110,7 @@ import Snarkl.Language.SyntaxMonad
     (>>=),
   )
 import Snarkl.Language.TExpr
-  ( TExp (TEAbs, TEApp, TEBinop, TEBot, TEIf, TEUnop, TEVal, TEVar),
+  ( TExp (TEApp, TEBinop, TEBot, TEIf, TEUnop, TEVal),
     TOp (TOp),
     TUnop (TUnop),
     Val (VFalse, VField, VTrue, VUnit),
@@ -221,7 +219,7 @@ set3 ::
     Int
   ) ->
   TExp ty k ->
-  State (Env k) (TExp 'TUnit k)
+  Comp 'TUnit k
 set3 (a, i, j, k) e = do
   a' <- get2 (a, i, j)
   set (a', k) e
@@ -235,12 +233,12 @@ set4 ::
     Int
   ) ->
   TExp ty k ->
-  State (Env k) (TExp 'TUnit k)
+  Comp 'TUnit k
 set4 (a, i, j, k, l) e = do
   a' <- get3 (a, i, j, k)
   set (a', l) e
 
-get2 :: (Typeable ty2, GaloisField k) => (TExp ('TArr ('TArr ty2)) k, Int, Int) -> State (Env k) (TExp ty2 k)
+get2 :: (Typeable ty2, GaloisField k) => (TExp ('TArr ('TArr ty2)) k, Int, Int) -> Comp ty2 k
 get2 (a, i, j) = do
   a' <- get (a, i)
   get (a', j)
@@ -252,7 +250,7 @@ get3 ::
     Int,
     Int
   ) ->
-  State (Env k) (TExp ty k)
+  Comp ty k
 get3 (a, i, j, k) = do
   a' <- get2 (a, i, j)
   get (a', k)
@@ -265,7 +263,7 @@ get4 ::
     Int,
     Int
   ) ->
-  State (Env k) (TExp ty k)
+  Comp ty k
 get4 (a, i, j, k, l) = do
   a' <- get3 (a, i, j, k)
   get (a', l)
@@ -755,25 +753,6 @@ times ::
   Comp 'TUnit k ->
   Comp 'TUnit k
 times n mf = forall [0 .. dec n] (const mf)
-
-lambda ::
-  (Typeable a) =>
-  (Typeable b) =>
-  (TExp a k -> Comp b k) ->
-  Comp ('TFun a b) k
-lambda f = do
-  _x <- fresh_var
-  case _x of
-    TEVar x ->
-      -- we need to inline the monadic computation to avoid having
-      -- bound variable escape there scope in assertions for (f _x)
-      State
-        ( \s ->
-            case runState (f _x) s of
-              Left err -> Left err
-              Right (res, s') -> Right (TEAbs x res, s')
-        )
-    _ -> error "impossible: lambda"
 
 curry ::
   (Typeable a) =>
