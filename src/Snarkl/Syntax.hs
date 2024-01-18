@@ -68,7 +68,8 @@ module Snarkl.Syntax
     return,
     fresh_input,
 
-    -- * Snarkl.Language.Type
+    -- * Other rexports
+    TExp,
     module Snarkl.Language.Type,
   )
 where
@@ -116,7 +117,7 @@ import Snarkl.Language.TExpr
     TUnop (TUnop),
     Val (VFalse, VField, VTrue, VUnit),
   )
-import Snarkl.Language.Type (Rep, Ty (TArr, TBool, TField, TFun, TMu, TProd, TSum, TUnit))
+import Snarkl.Language.Type
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding
   ( curry,
