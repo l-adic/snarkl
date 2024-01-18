@@ -6,4 +6,4 @@ import Snarkl.Toplevel (Comp, Ty (TField))
 import qualified Test.Snarkl.Unit.Programs as Programs
 
 main :: IO ()
-main = defaultMain "prog2" (Programs.prog2 10 :: Comp 'TField F_BN128)
+main = defaultMain "prog" (Programs.prog2 10 :: Comp 'TField F_BN128)
