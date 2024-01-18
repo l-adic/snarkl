@@ -8,12 +8,6 @@ module Harness where
 import Control.Monad (unless, (>>))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, Prime, PrimeField)
--- ConstraintSystem (..),
-
--- do_simplify,
-
--- lastSeq,
-
 import Data.JSONLines (ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
