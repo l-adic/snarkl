@@ -31,11 +31,13 @@
                 { 
                   lib = flake.packages."snarkl:lib:snarkl";
                   print = flake.packages."snarkl:exe:print-examples";
+                  benchmarks = flake.packages."snarkl:bench:criterion";
                   all = pkgs.symlinkJoin {
                     name = "all";
                     paths = with packages;
                       [ lib
                         print
+                        benchmarks
                       ];
                   };
                   default = packages.all;
