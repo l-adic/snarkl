@@ -8,12 +8,16 @@ module Harness where
 import Control.Monad (unless, (>>))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, Prime, PrimeField)
+import Data.JSONLines (ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable
 import GHC.IO.Exception
 import GHC.TypeLits (KnownNat)
+import Snarkl.CLI.Common (writeFileWithDir)
+import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Compile (SimplParam)
+import Snarkl.Constraint (ConstraintSystem (..), do_simplify)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.TExpr
   ( TExp (..),
@@ -21,20 +25,15 @@ import Snarkl.Language.TExpr
   )
 import Snarkl.Toplevel
   ( Comp,
-    ConstraintSystem (..),
     Result (..),
-    TExp (..),
+    TExp,
     TExpPkg (..),
     comp_interp,
     compileCompToR1CS,
     compileCompToTexp,
     compileTexpToConstraints,
-    do_simplify,
     execute,
-    lastSeq,
-    serializeR1CSAsJson,
-    serializeWitnessAsJson,
-    wit_of_r1cs,
+    wit_of_cs,
   )
 import System.IO (hFlush, hPrint, stderr, stdout)
 import Test.ArkworksBridge (CMD (CreateProof, CreateTrustedSetup, RunR1CS), runCMD)
@@ -75,7 +74,7 @@ test_simplify :: (Typeable ty, GaloisField k) => Comp ty k -> IO ()
 test_simplify mf =
   let texp_pkg = compileCompToTexp mf
       constrs = compileTexpToConstraints texp_pkg
-      (_, constrs') = do_simplify False Map.empty constrs
+      (_, constrs') = do_simplify False (Assgn Map.empty) constrs
    in hPrint stderr $
         show $
           Set.size $
@@ -115,7 +114,7 @@ test_proofgen simpl mf inputs =
 test_crypto :: (Typeable ty, PrimeField k) => SimplParam -> Comp ty k -> [Int] -> IO ()
 test_crypto simpl mf inputs =
   do
-    exit <- runCMD $ RunR1CS "./scripts" "test" simpl mf (map fromIntegral inputs)
+    exit <- runCMD $ RunR1CS "./scripts" "test" [simpl] mf (map fromIntegral inputs)
     case exit of
       ExitSuccess -> Prelude.return ()
       ExitFailure err -> failWith $ ErrMsg $ "test_full failed with " ++ show err
@@ -136,7 +135,7 @@ benchmark_comp :: (Typeable ty, PrimeField k) => (SimplParam, Comp ty k, [k], k)
 benchmark_comp (simpl, prog, inputs, res) =
   let print_ln = print_ln_to_file stdout
       print_ln_to_file h s = (Control.Monad.>>) (hPrint h s) (hFlush h)
-   in case execute simpl prog inputs of
+   in case execute [simpl] prog inputs of
         r@(Result True _ _ res' _ _) ->
           unless (res == res') $
             print_ln $
@@ -150,23 +149,23 @@ benchmark_comp (simpl, prog, inputs, res) =
           print_ln "error: witness failed to satisfy constraints"
 
 keygen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
-keygen_comp filePrefix simpl c _ = runCMD $ CreateTrustedSetup "scripts" filePrefix simpl c
+keygen_comp filePrefix simpl c _ = runCMD $ CreateTrustedSetup "scripts" filePrefix [simpl] c
 
 proofgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ExitCode
-proofgen_comp filePrefix simpl c inputs = runCMD $ CreateProof "scripts" filePrefix simpl c inputs
+proofgen_comp filePrefix simpl c inputs = runCMD $ CreateProof "scripts" filePrefix [simpl] c inputs
 
 r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
 r1csgen_comp filePrefix simpl c =
   do
-    let r1cs = compileCompToR1CS simpl c
+    let (r1cs, _) = compileCompToR1CS [simpl] c
         r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
-    LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
+    writeFileWithDir r1cs_file $ toJSONLines r1cs
 
 witgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
 witgen_comp filePrefix simpl c inputs = do
-  let r1cs = compileCompToR1CS simpl c
-      wit = wit_of_r1cs inputs r1cs
+  let (r1cs, cs) = compileCompToR1CS [simpl] c
+      wit = wit_of_cs inputs cs
       r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
       wits_file = "scripts/" ++ filePrefix ++ "-witness.jsonl"
-  LBS.writeFile r1cs_file (serializeR1CSAsJson r1cs)
-  LBS.writeFile wits_file (serializeWitnessAsJson r1cs wit)
+  writeFileWithDir r1cs_file $ toJSONLines r1cs
+  writeFileWithDir wits_file $ toJSONLines wit

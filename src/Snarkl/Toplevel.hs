@@ -105,20 +105,18 @@ execute simpl mf inputs =
       -- the input assignment (a subset of 'wit').
       -- Output the return value of 'e'.
       out_interp = comp_interp mf inputs
-      result =
-        ( if out_interp == out
-            then sat_r1cs wit r1cs
-            else
-              failWith $
-                ErrMsg $
-                  "interpreter result "
-                    ++ show out_interp
-                    ++ " differs from actual result "
-                    ++ show out
-        )
       nw = r1cs_num_vars r1cs
       ng = num_constraints r1cs
-   in Result result nw ng out r1cs wit
+      result = out_interp == out && sat_r1cs wit r1cs
+   in if result
+        then Result result nw ng out r1cs wit
+        else
+          failWith $
+            ErrMsg $
+              "interpreter result "
+                ++ show out_interp
+                ++ " differs from actual result "
+                ++ show out
 
 -- | For a given R1CS and inputs, calculate a satisfying assignment.
 wit_of_cs :: (GaloisField k) => [k] -> SimplifiedConstraintSystem k -> Witness k

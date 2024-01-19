@@ -5,9 +5,7 @@ module Snarkl.Example.Tree where
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
+import Snarkl.Syntax
 import Prelude hiding
   ( fromRational,
     negate,
@@ -69,7 +67,7 @@ map_tree ::
     Derive a1 k,
     GaloisField k
   ) =>
-  (TExp a k -> State (Env k) (TExp a1 k)) ->
+  (TExp a k -> Comp a1 k) ->
   TExp (TTree a) k ->
   Comp (TTree a1) k
 map_tree f t =

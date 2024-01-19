@@ -10,7 +10,9 @@ import qualified Data.Map as Map
 import GHC.TypeLits (KnownNat)
 import Snarkl.Field
 import Snarkl.Interp (interp)
-import Snarkl.Language.Syntax
+import Snarkl.Language (TExp, Ty (TField, TFun, TProd))
+import qualified Snarkl.Language.SyntaxMonad as SM
+import Snarkl.Syntax
   ( apply,
     curry,
     lambda,
@@ -19,8 +21,6 @@ import Snarkl.Language.Syntax
     (*),
     (+),
   )
-import qualified Snarkl.Language.SyntaxMonad as SM
-import Snarkl.Language.TExpr (TExp, Ty (TField, TFun, TProd))
 import Snarkl.Toplevel (comp_interp)
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Testable (property))

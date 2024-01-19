@@ -38,7 +38,7 @@ inputOptsParser =
     <$> option
       (eitherReader readEither)
       ( long "inputs"
-          <> help "an input value"
+          <> help "Enter the inputs as a list (variable assignments are implied by the order)"
       )
     <|> FromFile
       <$> strOption

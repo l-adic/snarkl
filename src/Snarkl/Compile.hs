@@ -46,14 +46,15 @@ import Snarkl.Constraint
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language
   ( Comp,
-    Env (Env, input_vars, next_variable),
+    Env (..),
     Exp (..),
     TExp,
     Variable (Variable),
     booleanVarsOfTexp,
+    defaultEnv,
     do_const_prop,
     expOfTExp,
-    runState,
+    runComp,
     var_of_exp,
   )
 import Text.PrettyPrint.Leijen.Text (Pretty (..))
@@ -488,16 +489,7 @@ compileCompToTexp mf =
           in_vars = sort $ input_vars rho
        in TExpPkg out in_vars e
   where
-    run mf0 =
-      runState
-        mf0
-        ( Env
-            0
-            0
-            []
-            Map.empty
-            Map.empty
-        )
+    run mf0 = runComp mf0 defaultEnv
 
 -- | Snarkl.Compile 'TExp's to constraint systems. Re-exported from 'Snarkl.Compile.Snarkl.Compile'.
 compileTexpToConstraints ::

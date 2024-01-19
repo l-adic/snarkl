@@ -7,9 +7,7 @@ import Data.Typeable (Typeable)
 import GHC.TypeLits (KnownNat)
 import Snarkl.Compile
 import Snarkl.Field (F_BN128)
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
+import Snarkl.Syntax
 import Snarkl.Toplevel
 import System.Exit (ExitCode)
 import Prelude hiding
@@ -69,7 +67,7 @@ comp1 = inl false
 comp2 :: (GaloisField k, Typeable a) => Comp ('TSum a 'TField) k
 comp2 = inr (fromField 0)
 
-test1 :: (GaloisField k) => State (Env k) (TExp 'TBool k)
+test1 :: (GaloisField k) => Comp 'TBool k
 test1 = do
   b <- fresh_input
   z <- if return b then comp1 else comp2

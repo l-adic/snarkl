@@ -7,13 +7,13 @@ module Snarkl.Language.SyntaxMonad
   ( -- | Computation monad
     Comp,
     CompResult,
-    runState,
+    runComp,
     return,
     (>>=),
     (>>),
     raise_err,
     Env (..),
-    State (..),
+    defaultEnv,
     -- | Return a fresh input variable.
     fresh_input,
     -- | Return a fresh variable.
@@ -40,7 +40,9 @@ module Snarkl.Language.SyntaxMonad
     assert_true,
     is_bot,
     assert_bot,
-    -- | Misc. functions imported by 'Snarkl.Language.Syntax.hs'
+    -- | Lambda
+    lambda,
+    -- | Misc. functions imported by 'Snarkl.Syntax.hs'
     get_addr,
     guard,
     add_objects,
@@ -58,16 +60,16 @@ import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Language.Expr (Variable (..))
 import Snarkl.Language.TExpr
   ( Loc,
-    TExp (TEAssert, TEBinop, TEBot, TESeq, TEUnop, TEVal, TEVar),
+    TExp (TEAbs, TEAssert, TEBinop, TEBot, TESeq, TEUnop, TEVal, TEVar),
     TLoc (TLoc),
     TVar (TVar),
-    Ty (TArr, TBool, TProd, TUnit),
     Val (VFalse, VLoc, VTrue, VUnit),
     lastSeq,
     locOfTexp,
     teSeq,
     varOfTExp,
   )
+import Snarkl.Language.Type (Ty (TArr, TBool, TFun, TProd, TUnit))
 import Prelude hiding
   ( fromRational,
     negate,
@@ -91,8 +93,8 @@ type CompResult s a = Either ErrMsg (a, s)
 
 newtype State s a = State (s -> CompResult s a)
 
-runState :: State s a -> s -> CompResult s a
-runState mf s = case mf of
+runComp :: State s a -> s -> CompResult s a
+runComp mf s = case mf of
   State f -> f s
 
 raise_err :: ErrMsg -> Comp ty k
@@ -110,9 +112,9 @@ raise_err msg = State (\_ -> Left msg)
 (>>=) mf g =
   State
     ( \s ->
-        case runState mf s of
+        case runComp mf s of
           Left err -> Left err
-          Right (e, s') -> case runState (g e) s' of
+          Right (e, s') -> case runComp (g e) s' of
             Left err -> Left err
             Right (e', s'') -> Right (e `teSeq` e', s'')
     )
@@ -171,6 +173,16 @@ data Env k = Env
     anal_map :: Map.Map Variable (AnalBind k) -- supporting simple constprop analyses
   }
   deriving (Show)
+
+defaultEnv :: Env k
+defaultEnv =
+  Env
+    { next_variable = 0,
+      next_loc = 0,
+      input_vars = [],
+      obj_map = Map.empty,
+      anal_map = Map.empty
+    }
 
 type Comp ty k = State (Env k) (TExp ty k)
 
@@ -287,9 +299,9 @@ get_addr (l, i) =
 guard ::
   (Typeable ty2) =>
   (GaloisField k) =>
-  (TExp ty k -> State (Env k) (TExp ty2 k)) ->
+  (TExp ty k -> Comp ty2 k) ->
   TExp ty k ->
-  State (Env k) (TExp ty2 k)
+  Comp ty2 k
 guard f e =
   do
     b <- is_bot e
@@ -303,7 +315,7 @@ guarded_get_addr ::
   (GaloisField k) =>
   TExp ty k ->
   Int ->
-  State (Env k) (TExp ty2 k)
+  Comp ty2 k
 guarded_get_addr e i =
   guard (\e0 -> get_addr (locOfTexp e0, i)) e
 
@@ -430,7 +442,7 @@ snd_pair e = guarded_get_addr e 1
  Auxiliary functions
 ------------------------------------------------}
 
-fresh_var :: State (Env k) (TExp ty a)
+fresh_var :: Comp ty a
 fresh_var =
   State
     ( \s ->
@@ -443,7 +455,7 @@ fresh_var =
               )
     )
 
-fresh_input :: State (Env k) (TExp ty a)
+fresh_input :: Comp ty a
 fresh_input =
   State
     ( \s ->
@@ -457,7 +469,7 @@ fresh_input =
               )
     )
 
-fresh_loc :: State (Env k) (TExp ty a)
+fresh_loc :: Comp ty a
 fresh_loc =
   State
     ( \s ->
@@ -565,3 +577,22 @@ is_bot e =
 assert_bot :: (GaloisField k) => TExp ty k -> Comp 'TUnit k
 assert_bot (TEVar (TVar x)) = add_statics [(x, AnalBot)]
 assert_bot e = raise_err $ ErrMsg $ "in assert_bot, expected " ++ show e ++ " a variable"
+
+lambda ::
+  (Typeable a) =>
+  (Typeable b) =>
+  (TExp a k -> Comp b k) ->
+  Comp ('TFun a b) k
+lambda f = do
+  _x <- fresh_var
+  case _x of
+    TEVar x ->
+      -- we need to inline the monadic computation to avoid having
+      -- bound variable escape there scope in assertions for (f _x)
+      State
+        ( \s ->
+            case runComp (f _x) s of
+              Left err -> Left err
+              Right (res, s') -> Right (TEAbs x res, s')
+        )
+    _ -> error "impossible: lambda"

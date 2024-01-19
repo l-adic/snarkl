@@ -5,13 +5,10 @@ module Snarkl.Example.Queue where
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
-import Snarkl.Compile
 import Snarkl.Example.List
 import Snarkl.Example.Stack
-import Snarkl.Language.Syntax
-import Snarkl.Language.SyntaxMonad
-import Snarkl.Language.TExpr
-import Snarkl.Toplevel
+import Snarkl.Language
+import Snarkl.Syntax
 import Prelude hiding
   ( fromRational,
     negate,
