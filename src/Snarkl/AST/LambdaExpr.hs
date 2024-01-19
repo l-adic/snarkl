@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Snarkl.Language.LambdaExpr
+module Snarkl.AST.LambdaExpr
   ( Exp (..),
     expOfLambdaExp,
   )
@@ -9,9 +9,9 @@ where
 import Control.Monad.Error.Class (throwError)
 import Data.Field.Galois (GaloisField)
 import Data.Kind (Type)
+import Snarkl.AST.Expr (Variable)
+import qualified Snarkl.AST.Expr as Core
 import Snarkl.Common (Op, UnOp)
-import Snarkl.Language.Expr (Variable)
-import qualified Snarkl.Language.Expr as Core
 
 data Exp :: Type -> Type where
   EVar :: Variable -> Exp a

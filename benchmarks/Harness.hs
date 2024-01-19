@@ -14,15 +14,15 @@ import qualified Data.Set as Set
 import Data.Typeable
 import GHC.IO.Exception
 import GHC.TypeLits (KnownNat)
+import Snarkl.AST.TExpr
+  ( TExp (..),
+    lastSeq,
+  )
 import Snarkl.CLI.Common (writeFileWithDir)
 import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Compile (SimplParam)
 import Snarkl.Constraint (ConstraintSystem (..), do_simplify)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language.TExpr
-  ( TExp (..),
-    lastSeq,
-  )
 import Snarkl.Toplevel
   ( Comp,
     Result (..),

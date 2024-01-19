@@ -20,12 +20,16 @@ import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
-import Snarkl.Backend.R1CS
+import Snarkl.AST (Comp)
 import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, writeFileWithDir)
 import Snarkl.Compile
+  ( SimplParam (RemoveUnreachable, Simplify),
+    TExpPkg (TExpPkg),
+    compileCompToTexp,
+    compileTExpToR1CS,
+  )
 import Snarkl.Constraint (ConstraintSystem (cs_constraints, cs_out_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
 
 data OptimizeOpts = OptimizeOpts

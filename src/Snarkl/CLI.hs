@@ -5,10 +5,10 @@ module Snarkl.CLI (defaultMain) where
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
 import Options.Applicative (command, execParser, fullDesc, header, helper, info, progDesc, subparser, (<**>))
+import Snarkl.AST
 import Snarkl.CLI.Compile (CompileOpts, compile, compileOptsParser)
 import Snarkl.CLI.GenWitness (GenWitnessOpts, genWitness, genWitnessOptsParser)
 import Snarkl.CLI.RunAll (RunAllOpts, runAll, runAllOptsParser)
-import Snarkl.Language
 
 data CMD
   = Compile CompileOpts

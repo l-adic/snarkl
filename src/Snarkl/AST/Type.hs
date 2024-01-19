@@ -1,5 +1,6 @@
-module Snarkl.Language.Type where
+module Snarkl.AST.Type where
 
+import Data.Nat (Nat)
 import Data.Typeable (Typeable)
 import Text.PrettyPrint.Leijen.Text (Pretty (pretty), parens, (<+>))
 
@@ -23,6 +24,7 @@ data Ty where
   TField :: Ty
   TBool :: Ty
   TArr :: Ty -> Ty
+  TVec :: Nat -> Ty -> Ty
   TProd :: Ty -> Ty -> Ty
   TSum :: Ty -> Ty -> Ty
   TMu :: TFunct -> Ty
@@ -51,6 +53,7 @@ instance Pretty Ty where
     TField -> "Field"
     TBool -> "Bool"
     TArr _ty -> "Array" <+> pretty _ty
+    TVec n _ty -> "Vec" <+> pretty (toInteger n) <+> pretty _ty
     TProd ty1 ty2 -> parens (pretty ty1 <+> "⨉" <+> pretty ty2)
     TSum ty1 ty2 -> parens (pretty ty1 <+> "+" <+> pretty ty2)
     TMu f -> "μ" <> parens (pretty f)

@@ -8,10 +8,10 @@ module Test.Snarkl.LambdaSpec where
 import Data.Field.Galois (GaloisField, Prime)
 import qualified Data.Map as Map
 import GHC.TypeLits (KnownNat)
+import Snarkl.AST (TExp, Ty (TField, TFun, TProd))
+import qualified Snarkl.AST.SyntaxMonad as SM
 import Snarkl.Field
 import Snarkl.Interp (interp)
-import Snarkl.Language (TExp, Ty (TField, TFun, TProd))
-import qualified Snarkl.Language.SyntaxMonad as SM
 import Snarkl.Syntax
   ( apply,
     curry,

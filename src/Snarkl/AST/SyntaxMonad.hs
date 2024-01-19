@@ -3,7 +3,7 @@
 
 {-# HLINT ignore "Use camelCase" #-}
 
-module Snarkl.Language.SyntaxMonad
+module Snarkl.AST.SyntaxMonad
   ( -- | Computation monad
     Comp,
     CompResult,
@@ -18,8 +18,6 @@ module Snarkl.Language.SyntaxMonad
     fresh_input,
     -- | Return a fresh variable.
     fresh_var,
-    -- | Return a fresh location.
-    fresh_loc,
     -- | Basic values
     unit,
     false,
@@ -46,19 +44,18 @@ module Snarkl.Language.SyntaxMonad
     get_addr,
     guard,
     add_objects,
+    te_assert,
   )
 where
 
 import Control.Monad (forM, replicateM)
 import Control.Monad.Supply (Supply, runSupply)
 import Control.Monad.Supply.Class (MonadSupply (fresh))
-import Data.Field.Galois (GaloisField)
 import qualified Data.Map.Strict as Map
 import Data.String (IsString (..))
 import Data.Typeable (Typeable)
-import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language.Expr (Variable (..))
-import Snarkl.Language.TExpr
+import Snarkl.AST.Expr (Variable (..))
+import Snarkl.AST.TExpr
   ( Loc,
     TExp (TEAbs, TEAssert, TEBinop, TEBot, TESeq, TEUnop, TEVal, TEVar),
     TLoc (TLoc),
@@ -69,7 +66,8 @@ import Snarkl.Language.TExpr
     teSeq,
     varOfTExp,
   )
-import Snarkl.Language.Type (Ty (TArr, TBool, TFun, TProd, TUnit))
+import Snarkl.AST.Type (Ty (TArr, TBool, TFun, TProd, TUnit))
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Prelude hiding
   ( fromRational,
     negate,
@@ -266,17 +264,6 @@ input_arr len =
           ( Map.fromList $ zipWith (\i v -> ((loc, i), ObjVar v)) [0 .. (len P.- 1)] vs,
             vs
           )
-    --       (Map.fromList $ zipWith (\(i, v) -> ((next_loc s, i), ObjVar v)) [0 .. (len vs P.- 1)] vs, vs)
-
-    --        ( forM [0 .. (len P.- 1)] \i ->
-    --                fresh P.>>= \v ->
-    --                  pure
-    --                    ( ( (next_loc s, i),
-    --                        ObjVar (Variable v)
-    --                      ),
-    --                      Variable v
-    --                    )
-    --            )
     new_vars :: Supply [Variable]
     new_vars = replicateM len (Variable <$> fresh)
 
@@ -298,7 +285,6 @@ get_addr (l, i) =
 
 guard ::
   (Typeable ty2) =>
-  (GaloisField k) =>
   (TExp ty k -> Comp ty2 k) ->
   TExp ty k ->
   Comp ty2 k
@@ -312,19 +298,18 @@ guard f e =
 
 guarded_get_addr ::
   (Typeable ty2) =>
-  (GaloisField k) =>
   TExp ty k ->
   Int ->
   Comp ty2 k
 guarded_get_addr e i =
   guard (\e0 -> get_addr (locOfTexp e0, i)) e
 
-get :: (Typeable ty) => (GaloisField k) => (TExp ('TArr ty) k, Int) -> Comp ty k
+get :: (Typeable ty) => (TExp ('TArr ty) k, Int) -> Comp ty k
 get (TEBot, _) = return TEBot
 get (a, i) = guarded_get_addr a i
 
 -- | Smart constructor for TEAssert
-te_assert :: (Typeable ty) => (GaloisField k) => TExp ty k -> TExp ty k -> Comp 'TUnit k
+te_assert :: (Typeable ty) => TExp ty k -> TExp ty k -> Comp 'TUnit k
 te_assert x@(TEVar _) e =
   do
     e_bot <- is_bot e
@@ -345,7 +330,6 @@ te_assert _ e =
 -- in the object map.
 set_addr ::
   (Typeable ty) =>
-  (GaloisField k) =>
   (TExp ('TArr ty) k, Int) ->
   TExp ty k ->
   Comp 'TUnit k
@@ -373,7 +357,7 @@ set_addr (TEVal (VLoc (TLoc l)), i) e =
 set_addr (e1, _) _ =
   raise_err $ ErrMsg ("expected " ++ show e1 ++ " a loc")
 
-set :: (Typeable ty, GaloisField k) => (TExp ('TArr ty) k, Int) -> TExp ty k -> Comp 'TUnit k
+set :: (Typeable ty) => (TExp ('TArr ty) k, Int) -> TExp ty k -> Comp 'TUnit k
 set (a, i) e = set_addr (a, i) e
 
 {-----------------------------------------------
@@ -382,8 +366,7 @@ set (a, i) e = set_addr (a, i) e
 
 pair ::
   ( Typeable ty1,
-    Typeable ty2,
-    GaloisField k
+    Typeable ty2
   ) =>
   TExp ty1 k ->
   TExp ty2 k ->
@@ -423,15 +406,13 @@ pair te1 te2 =
 
 fst_pair ::
   (Typeable ty1) =>
-  (GaloisField k) =>
   TExp ('TProd ty1 ty2) k ->
   Comp ty1 k
 fst_pair TEBot = return TEBot
 fst_pair e = guarded_get_addr e 0
 
 snd_pair ::
-  ( Typeable ty2,
-    GaloisField k
+  ( Typeable ty2
   ) =>
   TExp ('TProd ty1 ty2) k ->
   Comp ty2 k
@@ -506,7 +487,7 @@ add_statics binds =
     )
 
 -- | Does boolean expression 'e' resolve (statically) to 'b'?
-is_bool :: (GaloisField k) => TExp ty k -> Bool -> Comp 'TBool k
+is_bool :: TExp ty k -> Bool -> Comp 'TBool k
 is_bool (TEVal VFalse) False = return true
 is_bool (TEVal VTrue) True = return true
 is_bool e@(TEVar _) b =
@@ -523,24 +504,24 @@ is_bool e@(TEVar _) b =
     )
 is_bool _ _ = return false
 
-is_false :: (GaloisField k) => TExp ty k -> Comp 'TBool k
+is_false :: TExp ty k -> Comp 'TBool k
 is_false = flip is_bool False
 
-is_true :: (GaloisField k) => TExp ty k -> Comp 'TBool k
+is_true :: TExp ty k -> Comp 'TBool k
 is_true = flip is_bool True
 
 -- | Add binding 'x = b'.
-assert_bool :: (GaloisField k) => TExp ty k -> Bool -> Comp 'TUnit k
+assert_bool :: TExp ty k -> Bool -> Comp 'TUnit k
 assert_bool (TEVar (TVar x)) b = add_statics [(x, AnalBool b)]
 assert_bool e _ = raise_err $ ErrMsg $ "expected " ++ show e ++ " a variable"
 
-assert_false :: (GaloisField k) => TExp ty k -> Comp 'TUnit k
+assert_false :: TExp ty k -> Comp 'TUnit k
 assert_false = flip assert_bool False
 
-assert_true :: (GaloisField k) => TExp ty k -> Comp 'TUnit k
+assert_true :: TExp ty k -> Comp 'TUnit k
 assert_true = flip assert_bool True
 
-var_is_bot :: (GaloisField k) => TExp ty k -> Comp 'TBool k
+var_is_bot :: TExp ty k -> Comp 'TBool k
 var_is_bot e@(TEVar (TVar _)) =
   State
     ( \s ->
@@ -554,7 +535,7 @@ var_is_bot e@(TEVar (TVar _)) =
     )
 var_is_bot _ = return false
 
-is_bot :: (GaloisField k) => TExp ty k -> Comp 'TBool k
+is_bot :: TExp ty k -> Comp 'TBool k
 is_bot e =
   case e of
     e0@(TEVar _) -> var_is_bot e0
@@ -564,7 +545,7 @@ is_bot e =
     TEBot -> return true
     _ -> return false
   where
-    either_is_bot :: (GaloisField k) => TExp ty1 k -> TExp ty2 k -> Comp 'TBool k
+    either_is_bot :: TExp ty1 k -> TExp ty2 k -> Comp 'TBool k
     either_is_bot e10 e20 =
       do
         e1_bot <- is_bot e10
@@ -574,7 +555,7 @@ is_bot e =
           (_, TEVal VTrue) -> return true
           _ -> return false
 
-assert_bot :: (GaloisField k) => TExp ty k -> Comp 'TUnit k
+assert_bot :: TExp ty k -> Comp 'TUnit k
 assert_bot (TEVar (TVar x)) = add_statics [(x, AnalBot)]
 assert_bot e = raise_err $ ErrMsg $ "in assert_bot, expected " ++ show e ++ " a variable"
 

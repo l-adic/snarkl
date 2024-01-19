@@ -5,12 +5,12 @@ import Data.Field.Galois (GaloisField, PrimeField)
 import Data.JSONLines (ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
+import Snarkl.AST (Comp)
 import Snarkl.Backend.R1CS
 import Snarkl.Backend.R1CS.R1CS (witnessInputs)
 import Snarkl.CLI.Common (mkInputsFilePath, mkR1CSFilePath, mkWitnessFilePath)
 import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem))
 import Snarkl.Compile (SimplParam, compileCompToR1CS)
-import Snarkl.Language (Comp)
 import Snarkl.Toplevel (wit_of_cs)
 import qualified System.Exit as GHC
 import System.Process (createProcess, shell, waitForProcess)

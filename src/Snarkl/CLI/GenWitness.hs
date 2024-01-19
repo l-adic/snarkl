@@ -19,12 +19,16 @@ import qualified Data.Map as Map
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (Parser, eitherReader, help, long, option, showDefault, strOption, value)
+import Snarkl.AST (Comp)
 import Snarkl.Backend.R1CS
+  ( R1CS (r1cs_clauses),
+    Witness (Witness, witness_assgn),
+    sat_r1cs,
+  )
 import Snarkl.CLI.Common (mkConstraintsFilePath, mkR1CSFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
 import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language (Comp)
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
 import Text.Read (readEither)
 

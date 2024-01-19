@@ -5,6 +5,7 @@ module Test.Snarkl.UnitSpec where
 
 import Data.Field.Galois (PrimeField)
 import Data.Typeable (Typeable)
+import Snarkl.AST (Comp)
 import Snarkl.Compile
 import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
@@ -12,7 +13,6 @@ import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
 import Snarkl.Field
-import Snarkl.Language (Comp)
 import Snarkl.Syntax hiding (negate)
 import Snarkl.Toplevel (Result (result_result), execute)
 import System.Exit (ExitCode (..))

@@ -11,6 +11,7 @@ import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (Parser, help, long, showDefault, strOption, value)
+import Snarkl.AST (Comp)
 import Snarkl.Backend.R1CS (R1CS (r1cs_clauses, r1cs_out_vars), Witness (Witness, witness_assgn), sat_r1cs)
 import Snarkl.CLI.Common (mkR1CSFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
 import Snarkl.CLI.Compile (OptimizeOpts (removeUnreachable, simplify), optimizeOptsParser)
@@ -18,7 +19,6 @@ import Snarkl.CLI.GenWitness (InputOpts (Explicit, FromFile), inputOptsParser)
 import Snarkl.Common (Assgn (Assgn), unFieldElem)
 import Snarkl.Compile (SimplParam (RemoveUnreachable, Simplify), TExpPkg (TExpPkg), compileCompToTexp, compileTExpToR1CS)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language (Comp)
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
 
 data RunAllOpts = RunAllOpts

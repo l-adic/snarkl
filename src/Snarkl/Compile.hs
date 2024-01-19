@@ -28,6 +28,19 @@ import qualified Data.Map as Map
 import Data.Sequence (pattern Empty, pattern (:<|))
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Snarkl.AST
+  ( Comp,
+    Env (..),
+    Exp (..),
+    TExp,
+    Variable (Variable),
+    booleanVarsOfTexp,
+    defaultEnv,
+    do_const_prop,
+    expOfTExp,
+    runComp,
+    var_of_exp,
+  )
 import Snarkl.Backend.R1CS.R1CS (R1CS)
 import Snarkl.Common (Assgn (Assgn), Op (..), UnOp (..), Var (Var), incVar)
 import Snarkl.Constraint
@@ -44,19 +57,6 @@ import Snarkl.Constraint
     renumber_constraints,
   )
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language
-  ( Comp,
-    Env (..),
-    Exp (..),
-    TExp,
-    Variable (Variable),
-    booleanVarsOfTexp,
-    defaultEnv,
-    do_const_prop,
-    expOfTExp,
-    runComp,
-    var_of_exp,
-  )
 import Text.PrettyPrint.Leijen.Text (Pretty (..))
 
 ----------------------------------------------------------------

@@ -9,6 +9,7 @@
 module Test.Snarkl.Unit.Programs where
 
 import Data.Field.Galois (GaloisField, Prime)
+import Snarkl.AST.TExpr
 import Snarkl.Compile
 import Snarkl.Example.Keccak
 import Snarkl.Example.Lam
@@ -16,7 +17,6 @@ import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
 import Snarkl.Field (F_BN128, P_BN128)
-import Snarkl.Language.TExpr
 import Snarkl.Syntax
 import Snarkl.Toplevel
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)

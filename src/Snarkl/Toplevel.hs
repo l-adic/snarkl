@@ -12,7 +12,7 @@ module Snarkl.Toplevel
     wit_of_cs,
 
     -- * Re-exported modules
-    module Snarkl.Language,
+    module Snarkl.AST,
     module Snarkl.Backend.R1CS,
     module Snarkl.Compile,
   )
@@ -22,13 +22,13 @@ import Data.Field.Galois (GaloisField, PrimeField)
 import Data.List (intercalate)
 import qualified Data.Map as Map
 import Data.Typeable (Typeable)
+import Snarkl.AST
 import Snarkl.Backend.R1CS
 import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Compile
 import Snarkl.Constraint (ConstraintSystem (cs_in_vars, cs_num_vars, cs_out_vars), SimplifiedConstraintSystem (..), solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
-import Snarkl.Language
 import Text.PrettyPrint.Leijen.Text (Pretty (..), line, (<+>))
 
 ----------------------------------------------------
