@@ -1,13 +1,29 @@
 {-# LANGUAGE RebindableSyntax #-}
 
-module Snarkl.Modules.Vector where
+module Snarkl.Language.Vector
+  ( vec,
+    get,
+    get2,
+    set,
+    set2,
+    map,
+    foldl,
+    traverse,
+    traverse_,
+    concat,
+    chunk,
+    transpose,
+    all,
+    any,
+  )
+where
 
 import Data.Fin (Fin, universe)
 import Data.Nat (Nat)
 import Data.Type.Nat (Mult, SNatI, reflectToNum)
 import Data.Typeable (Proxy (Proxy), Typeable)
 import Snarkl.AST.TExpr (TExp (TEApp))
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
   ( Comp,
     Ty (TArr, TBool, TFun, TUnit, TVec),
     apply,
@@ -25,8 +41,8 @@ import Snarkl.Syntax
     (>>=),
     (||),
   )
-import qualified Snarkl.Syntax as Snarkl
-import Prelude hiding (foldl, return, traverse, (&&), (*), (>>=), (||))
+import qualified Snarkl.Language.Prelude as Snarkl
+import Prelude hiding (all, any, concat, foldl, map, return, traverse, (&&), (*), (>>=), (||))
 import qualified Prelude as P
 
 vec ::

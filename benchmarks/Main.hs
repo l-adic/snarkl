@@ -14,7 +14,7 @@ import qualified Snarkl.Example.Keccak as Keccak
 import qualified Snarkl.Example.List as List
 import qualified Snarkl.Example.Matrix as Matrix
 import Snarkl.Field (F_BN128, P_BN128)
-import Snarkl.Syntax (Comp, fromField)
+import Snarkl.Language.Prelude (Comp, fromField)
 
 mk_bgroup :: (Typeable ty) => String -> Comp ty F_BN128 -> [Int] -> F_BN128 -> Benchmark
 mk_bgroup nm mf inputs result =

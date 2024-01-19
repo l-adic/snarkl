@@ -14,8 +14,9 @@ module Snarkl.AST.SyntaxMonad
     raise_err,
     Env (..),
     defaultEnv,
-    -- | Return a fresh input variable.
-    fresh_input,
+    InputVariable (..),
+    -- | Return a fresh public input variable.
+    fresh_public_input,
     -- | Return a fresh variable.
     fresh_var,
     -- | Basic values
@@ -40,7 +41,7 @@ module Snarkl.AST.SyntaxMonad
     assert_bot,
     -- | Lambda
     lambda,
-    -- | Misc. functions imported by 'Snarkl.Syntax.hs'
+    -- | Misc. functions imported by 'Snarkl.Language.Prelude.hs'
     get_addr,
     guard,
     add_objects,
@@ -163,10 +164,15 @@ type ObjMap =
     )
     ObjBind -- maps to result r
 
+data InputVariable
+  = PublicInput Variable
+  | PrivateInput String Variable -- (unique) name, variable
+  deriving (Show, Eq, Ord)
+
 data Env k = Env
   { next_variable :: Int,
     next_loc :: Int,
-    input_vars :: [Variable],
+    input_vars :: [InputVariable],
     obj_map :: ObjMap,
     anal_map :: Map.Map Variable (AnalBind k) -- supporting simple constprop analyses
   }
@@ -251,7 +257,7 @@ input_arr len =
                 s
                   { next_variable = nextVar,
                     next_loc = loc P.+ 1,
-                    input_vars = vars ++ input_vars s,
+                    input_vars = map PublicInput vars <> input_vars s,
                     obj_map = binds `Map.union` obj_map s
                   }
               )
@@ -436,8 +442,8 @@ fresh_var =
               )
     )
 
-fresh_input :: Comp ty a
-fresh_input =
+fresh_public_input :: Comp ty a
+fresh_public_input =
   State
     ( \s ->
         let (v, nextVar) = runSupply (Variable <$> fresh) (next_variable s)
@@ -445,7 +451,7 @@ fresh_input =
               ( TEVar (TVar v),
                 s
                   { next_variable = nextVar,
-                    input_vars = v : input_vars s
+                    input_vars = PublicInput v : input_vars s
                   }
               )
     )

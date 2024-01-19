@@ -5,7 +5,7 @@ module Snarkl.Example.List where
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Prelude hiding
   ( negate,
     return,
@@ -198,7 +198,7 @@ list2 =
 list_comp3 :: (GaloisField k) => Comp 'TField k
 list_comp3 =
   do
-    b <- fresh_input
+    b <- fresh_public_input
     l <- nil
     l' <- cons (fromField 23) l
     l'' <- cons (fromField 33) l'
@@ -217,13 +217,13 @@ listN :: (Typeable a, Zippable a k, Derive a k, GaloisField k) => TExp 'TField k
 listN n = fixN 100 go n
   where
     go self n0 = do
-      x <- fresh_input
+      x <- fresh_public_input
       tl <- self (n0 - fromField 1)
       if return (eq n0 (fromField 0)) then nil else cons x tl
 
 test_listN :: (GaloisField k) => Comp 'TField k
 test_listN = do
-  n <- fresh_input
+  n <- fresh_public_input
   l1 <- listN n
   l2 <- map_list inc_elem l1
   last_list (fromField 99) l2

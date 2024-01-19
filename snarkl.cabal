@@ -56,8 +56,8 @@ library
     Snarkl.AST.SyntaxMonad
     Snarkl.AST.TExpr
     Snarkl.AST.Type
-    Snarkl.Modules.Vector
-    Snarkl.Syntax
+    Snarkl.Language.Vector
+    Snarkl.Language.Prelude
     Snarkl.Toplevel
 
   other-modules:

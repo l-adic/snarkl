@@ -7,7 +7,7 @@ import Data.Typeable (Typeable)
 import GHC.TypeLits (KnownNat)
 import Snarkl.Compile
 import Snarkl.Field (F_BN128)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Snarkl.Toplevel
 import System.Exit (ExitCode)
 import Prelude hiding
@@ -47,7 +47,7 @@ interp1 :: (GaloisField k) => k
 interp1 = comp_interp p1 []
 
 p2 = do
-  x <- fresh_input
+  x <- fresh_public_input
   return $ x + x
 
 desugar2 = compileCompToTexp p2
@@ -69,6 +69,6 @@ comp2 = inr (fromField 0)
 
 test1 :: (GaloisField k) => Comp 'TBool k
 test1 = do
-  b <- fresh_input
+  b <- fresh_public_input
   z <- if return b then comp1 else comp2
   case_sum return (const $ return false) z

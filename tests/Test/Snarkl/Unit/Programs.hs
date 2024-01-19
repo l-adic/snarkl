@@ -17,7 +17,7 @@ import Snarkl.Example.List
 import Snarkl.Example.Peano
 import Snarkl.Example.Tree
 import Snarkl.Field (F_BN128, P_BN128)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Snarkl.Toplevel
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Prelude hiding
@@ -37,9 +37,9 @@ import qualified Prelude as P
 -- | 1. A standalone "program" in the expression language
 prog1 =
   do
-    x <- fresh_input -- bool
-    y <- fresh_input -- int
-    z <- fresh_input -- bool
+    x <- fresh_public_input -- bool
+    y <- fresh_public_input -- int
+    z <- fresh_public_input -- bool
     u <- return $ y + fromField 2
     v <- if return z then return y else return y
     w <- if return x then return y else return y
@@ -50,11 +50,11 @@ prog1 =
 --
 -- For example, the following code calculates the R1CS expression
 --   (n+e) + (n-1+e) + (n-2+e) + ... + (n-(n-1)+e)
--- with e an fresh_input expression.
+-- with e an fresh_public_input expression.
 prog2 :: forall a k. (GaloisField a) => Int -> Comp 'TField a
 prog2 n =
   do
-    e <- fresh_input
+    e <- fresh_public_input
     let f i = exp_of_int i + e
     return $ bigsum n f
 
@@ -62,7 +62,7 @@ prog2 n =
 -- initialize slot 4 to e*e. return a[3]*a[4].
 prog3 =
   do
-    e <- fresh_input
+    e <- fresh_public_input
     a <- arr 5
     set (a, 3) e
     set (a, 4) (e * e)
@@ -73,7 +73,7 @@ prog3 =
 -- | 4. Identical to 3, except allocates larger array
 prog4 =
   do
-    e <- fresh_input
+    e <- fresh_public_input
     a <- arr 1000
     set (a, 3) e
     set (a, 4) (e * e)
@@ -88,7 +88,7 @@ pow n e = e * pow (dec n) e
 
 prog5 =
   do
-    e <- fresh_input
+    e <- fresh_public_input
     a <- arr 1000
     set (a, 3) e
     set (a, 4) (pow 100 e)
@@ -99,7 +99,7 @@ prog5 =
 -- | 6. 'times' test
 prog6 =
   do
-    e <- fresh_input
+    e <- fresh_public_input
     a <- arr 100
     times 1 (set (a, 3) e)
     x <- get (a, 3)
@@ -133,42 +133,42 @@ prog8 =
 -- | 9. 'and' test
 bool_prog9 =
   do
-    e1 <- fresh_input
-    e2 <- fresh_input
+    e1 <- fresh_public_input
+    e2 <- fresh_public_input
     return (e1 && e2)
 
 -- | 10. 'xor' test
 bool_prog10 =
   do
-    e1 <- fresh_input
-    e2 <- fresh_input
+    e1 <- fresh_public_input
+    e2 <- fresh_public_input
     return (e1 `xor` e2)
 
--- | 11. are unused fresh_input variables treated properly?
+-- | 11. are unused fresh_public_input variables treated properly?
 prog11 =
   do
-    _ <- fresh_input :: Comp ('TArr 'TField) F_BN128
-    b <- fresh_input
+    _ <- fresh_public_input :: Comp ('TArr 'TField) F_BN128
+    b <- fresh_public_input
     return b
 
 -- | 12. does boolean 'a' equal boolean 'b'?
 bool_prog12 =
   do
-    a <- fresh_input
-    b <- fresh_input
+    a <- fresh_public_input
+    b <- fresh_public_input
     return (a `beq` b)
 
 -- | 13. multiplicative identity
 prog13 =
   do
-    a <- fresh_input
+    a <- fresh_public_input
     return $ fromField 1 * a
 
 -- | 14. opt: 0x * 3y = out ~~> out=0
 prog14 =
   do
-    x <- fresh_input
-    y <- fresh_input
+    x <- fresh_public_input
+    y <- fresh_public_input
     return $ (fromField 0 * x) * (fromField 3 * y)
 
 -- | 15. exp_binop smart constructor: 3 - (2 - 1) = 2
@@ -176,7 +176,7 @@ prog15 =
   do
     return $ fromField 3 - (fromField 2 - fromField 1)
 
--- | 16. bool fresh_inputs test
+-- | 16. bool fresh_public_inputs test
 bool_prog16 =
   do
     a <- input_arr 100
@@ -198,7 +198,7 @@ bool_prog17 =
     set (a, 0) a'
     get2 (a, 0, 0)
 
--- | 18. fresh_input array test
+-- | 18. fresh_public_input array test
 bool_prog18 =
   do
     a <- input_arr3 2 2 2
@@ -207,8 +207,8 @@ bool_prog18 =
 -- | 19. products test
 bool_prog19 =
   do
-    x <- fresh_input
-    y <- fresh_input
+    x <- fresh_public_input
+    y <- fresh_public_input
     p <- pair x y
     c <- fst_pair p
     d <- snd_pair p
@@ -217,8 +217,8 @@ bool_prog19 =
 -- | 20. products test 2: snd (fst ((x,y),x)) && x == y && x
 bool_prog20 =
   do
-    x <- fresh_input
-    y <- fresh_input
+    x <- fresh_public_input
+    y <- fresh_public_input
     p <- pair x y
     q <- pair p x
     c <- fst_pair q
@@ -228,8 +228,8 @@ bool_prog20 =
 -- | 21. products test 3: snd (fst ((x,y),(y,x))) && x == y && x
 bool_prog21 =
   do
-    x <- fresh_input
-    y <- fresh_input
+    x <- fresh_public_input
+    y <- fresh_public_input
     p <- pair x y
     q <- pair y x
     u <- pair p q
@@ -240,8 +240,8 @@ bool_prog21 =
 -- | 22. sums test
 bool_prog22 =
   do
-    x1 <- fresh_input
-    x2 <- fresh_input
+    x1 <- fresh_public_input
+    x2 <- fresh_public_input
     x <- pair x1 x2
     y <- (inl x :: Comp (TSum (TProd TBool TBool) TBool) F_BN128)
     case_sum
@@ -252,8 +252,8 @@ bool_prog22 =
 -- | 23. sums test 2
 bool_prog23 =
   do
-    x1 <- fresh_input
-    x2 <- fresh_input
+    x1 <- fresh_public_input
+    x2 <- fresh_public_input
     x <- pair x1 x2
     y <-
       ( inr x ::
@@ -328,25 +328,25 @@ prog30 =
 -- | 31. div test
 prog31 =
   do
-    x <- fresh_input
-    y <- fresh_input
+    x <- fresh_public_input
+    y <- fresh_public_input
     return $ x / y
 
 -- | 32. zeq test
 bool_prog32 =
   do
-    x <- fresh_input
+    x <- fresh_public_input
     return $ zeq x
 
 -- | 33. eq test
 bool_prog33 =
   do
     x <-
-      fresh_input ::
+      fresh_public_input ::
         Comp
           TField
           F_BN128
-    y <- fresh_input
+    y <- fresh_public_input
     return $ x `eq` y
 
 -- | 34. beta test
@@ -358,7 +358,7 @@ prog35 = tree_test1
 -- | 36. sums test (ISSUE#7)
 prog36 :: Comp 'TField F_BN128
 prog36 = do
-  b1 <- fresh_input
+  b1 <- fresh_public_input
   x <- if return b1 then inl (fromField 2) else inr (fromField 3)
   case_sum (\n -> return $ n + fromField 5) (\m -> return $ m + fromField 7) x
 

@@ -7,7 +7,7 @@ import Data.Typeable
 import GHC.TypeLits (KnownNat)
 import Snarkl.Example.List
 import Snarkl.Example.Stack
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Prelude hiding
   ( fromRational,
     negate,
@@ -184,7 +184,7 @@ queueN :: (Typeable a, Zippable a k, Derive a k, GaloisField k) => TExp 'TField 
 queueN n = fixN 100 go n
   where
     go self n0 = do
-      x <- fresh_input
+      x <- fresh_public_input
       tl <- self (n0 - fromField 1)
       if return (eq n0 (fromField 0))
         then empty_queue
@@ -192,7 +192,7 @@ queueN n = fixN 100 go n
 
 test_queueN :: (GaloisField k) => Comp 'TField k
 test_queueN = do
-  n <- fresh_input
+  n <- fresh_public_input
   q1 <- queueN n
   q2 <- map_queue inc_elem q1
   last_queue q2 (fromField 105)

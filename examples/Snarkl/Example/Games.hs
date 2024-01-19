@@ -11,7 +11,7 @@ import Data.Typeable
 import GHC.TypeLits (KnownNat, Nat)
 import Snarkl.Errors
 import Snarkl.Field (F_BN128)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Snarkl.Toplevel (comp_interp)
 import Prelude hiding
   ( fromRational,
@@ -63,11 +63,11 @@ data Game :: Ty -> * -> * where
 decode :: (GaloisField k) => Game t k -> Comp t k
 decode (Single (Iso _ bld)) =
   do
-    x <- fresh_input
+    x <- fresh_public_input
     bld x
 decode (Split (Iso _ bld) g1 g2) =
   do
-    x <- fresh_input
+    x <- fresh_public_input
     e1 <- decode g1
     e2 <- decode g2
     s1 <- inl e1
@@ -185,7 +185,7 @@ prodLInputI =
   Iso
     snd_pair
     ( \b -> do
-        a <- fresh_input
+        a <- fresh_public_input
         pair a b
     )
 

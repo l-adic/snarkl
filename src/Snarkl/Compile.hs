@@ -32,6 +32,7 @@ import Snarkl.AST
   ( Comp,
     Env (..),
     Exp (..),
+    InputVariable,
     TExp,
     Variable (Variable),
     booleanVarsOfTexp,
@@ -462,15 +463,14 @@ compileConstraintsToR1CS simpls cs =
 data TExpPkg ty k = TExpPkg
   { -- | The number of free variables in the computation.
     out_variable :: Variable,
-    -- | The variables marked as inputs.
-    comp_input_variables :: [Variable],
+    -- | The variables marked as public inputs.
+    comp_public_input_variables :: [Variable],
+    -- | The variables marked as private inputs.
+    comp_private_input_variables :: Map.Map String Variable,
     -- | The resulting 'TExp'.
     comp_texp :: TExp ty k
   }
   deriving (Show)
-
-instance (Typeable ty, Pretty k) => Pretty (TExpPkg ty k) where
-  pretty (TExpPkg _ _ e) = pretty e
 
 deriving instance (Eq k) => Eq (TExpPkg ty k)
 
@@ -496,7 +496,7 @@ compileTexpToConstraints ::
   (Typeable ty, GaloisField k) =>
   TExpPkg ty k ->
   ConstraintSystem k
-compileTexpToConstraints (TExpPkg _out _in_vars te) =
+compileTexpToConstraints (TExpPkg _out _public_in_vars _private_in_vars te) =
   let out = _out ^. _Var
       in_vars = map (view _Var) _in_vars
       cenv_init = CEnv Set.empty (incVar out)

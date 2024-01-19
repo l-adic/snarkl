@@ -14,6 +14,7 @@ module Snarkl.AST
     -- * Snarkl.AST.SyntaxMonad
     Comp,
     Env (Env, input_vars, next_variable),
+    InputVariable (..),
     defaultEnv,
     runComp,
 
@@ -26,7 +27,7 @@ import Data.Data (Typeable)
 import Data.Field.Galois (GaloisField)
 import Snarkl.AST.Expr (Exp (..), Variable (..), do_const_prop, var_of_exp)
 import Snarkl.AST.LambdaExpr (expOfLambdaExp)
-import Snarkl.AST.SyntaxMonad (Comp, Env (Env, input_vars, next_variable), defaultEnv, runComp)
+import Snarkl.AST.SyntaxMonad (Comp, Env (Env, input_vars, next_variable), InputVariable (..), defaultEnv, runComp)
 import Snarkl.AST.TExpr (TExp, booleanVarsOfTexp, lambdaExpOfTExp)
 import Snarkl.AST.Type
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RebindableSyntax #-}
 
-module Snarkl.Syntax
+module Snarkl.Language.Prelude
   ( Zippable,
     Derive,
     -- | Sums, products, recursive types
@@ -68,7 +68,8 @@ module Snarkl.Syntax
     (>>=),
     (>>),
     return,
-    fresh_input,
+    fresh_public_input,
+    fresh_known_var,
     unsafe_cast,
 
     -- * Other rexports
@@ -87,7 +88,8 @@ import Snarkl.AST.SyntaxMonad
     assert_false,
     assert_true,
     false,
-    fresh_input,
+    fresh_known_var,
+    fresh_public_input,
     fresh_var,
     fst_pair,
     get,

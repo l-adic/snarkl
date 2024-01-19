@@ -236,11 +236,11 @@ Under the hood, `comp_interp` desugars the computation (e.g., `p1`) and interpre
 
 ## R1CS Inputs
 
-Snårkl computations may require inputs (`fresh_input`), in addition to function arguments. At the R1CS-level, inputs correspond to constraint variables that are instantiated by the user.
+Snårkl computations may require inputs (`fresh_public_input`), in addition to function arguments. At the R1CS-level, inputs correspond to constraint variables that are instantiated by the user.
 
 ```
 p2 = do
-  x <- fresh_input
+  x <- fresh_public_input
   return $ x + x
 ```
 

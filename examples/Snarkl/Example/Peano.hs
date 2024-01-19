@@ -4,7 +4,7 @@ module Snarkl.Example.Peano where
 
 import Data.Field.Galois (GaloisField, Prime)
 import GHC.TypeLits (KnownNat)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Prelude hiding
   ( fromRational,
     negate,
