@@ -154,3 +154,65 @@ instance A.FromJSON ConstraintHeader where
             input_variables,
             output_variables
           }
+
+data InputVar
+  = PublicInputVar Var
+  | PrivateInputVar String Var
+
+instance A.ToJSON InputVar where
+  toJSON (PublicInputVar v) =
+    A.object
+      [ "tag" A..= ("public" :: String),
+        "var" A..= v
+      ]
+  toJSON (PrivateInputVar name v) =
+    A.object
+      [ "tag" A..= ("private" :: String),
+        "name" A..= name,
+        "var" A..= v
+      ]
+
+instance A.FromJSON InputVar where
+  parseJSON = A.withObject "InputVar" $ \v -> do
+    tag <- v A..: "tag"
+    case tag of
+      ("public" :: String) -> PublicInputVar <$> v A..: "var"
+      ("private" :: String) -> PrivateInputVar <$> v A..: "name" <*> v A..: "var"
+      _ -> fail $ "unknown tag: " <> tag
+
+data InputAssignment k
+  = PublicInputAssignment Var k
+  | PrivateInputAssignment String Var k
+
+instance (PrimeField k) => A.ToJSON (InputAssignment k) where
+  toJSON (PublicInputAssignment v k) =
+    A.object
+      [ "tag" A..= ("public" :: String),
+        "var" A..= v,
+        "value" A..= FieldElem k
+      ]
+  toJSON (PrivateInputAssignment name v k) =
+    A.object
+      [ "tag" A..= ("private" :: String),
+        "name" A..= name,
+        "var" A..= v,
+        "value" A..= FieldElem k
+      ]
+
+instance (PrimeField k) => A.FromJSON (InputAssignment k) where
+  parseJSON = A.withObject "InputAssignment" $ \v -> do
+    tag <- v A..: "tag"
+    case tag of
+      ("public" :: String) -> PublicInputAssignment <$> v A..: "var" <*> (unFieldElem <$> v A..: "value")
+      ("private" :: String) -> PrivateInputAssignment <$> v A..: "name" <*> v A..: "var" <*> (unFieldElem <$> v A..: "value")
+      _ -> fail $ "unknown tag: " <> tag
+
+splitInputAssignments :: [InputAssignment k] -> ([k], Map.Map (String, Var) k)
+splitInputAssignments =
+  foldr
+    ( \ia (pubs, privs) ->
+        case ia of
+          PublicInputAssignment _ k -> (k : pubs, privs)
+          PrivateInputAssignment name v k -> (pubs, Map.insert (name, v) k privs)
+    )
+    ([], Map.empty)

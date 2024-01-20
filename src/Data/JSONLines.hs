@@ -50,6 +50,9 @@ class ToJSONLines a where
 instance (A.ToJSON item) => ToJSONLines (NoHeader item) where
   toJSONLines (NoHeader items) = toBS . jsonlBuilder $ items
 
+instance {-# OVERLAPPABLE #-} (A.ToJSON a) => ToJSONLines [a] where
+  toJSONLines = toJSONLines . NoHeader
+
 instance (A.ToJSON hdr, A.ToJSON item) => ToJSONLines (WithHeader hdr item) where
   toJSONLines (WithHeader hdr items) = toBS $ jsonLine hdr <> jsonlBuilder items
 
@@ -58,6 +61,9 @@ class FromJSONLines a where
 
 instance (A.FromJSON item) => FromJSONLines (NoHeader item) where
   fromJSONLines items = NoHeader <$> traverse A.eitherDecode items
+
+instance {-# OVERLAPPABLE #-} (A.FromJSON a) => FromJSONLines [a] where
+  fromJSONLines = fmap (\(NoHeader x) -> x) . fromJSONLines
 
 instance (A.FromJSON hdr, A.FromJSON item) => FromJSONLines (WithHeader hdr item) where
   fromJSONLines (h : is) = do

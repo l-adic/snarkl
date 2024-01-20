@@ -69,7 +69,7 @@ module Snarkl.Language.Prelude
     (>>),
     return,
     fresh_public_input,
-    fresh_known_var,
+    fresh_private_input,
     unsafe_cast,
 
     -- * Other rexports
@@ -88,7 +88,7 @@ import Snarkl.AST.SyntaxMonad
     assert_false,
     assert_true,
     false,
-    fresh_known_var,
+    fresh_private_input,
     fresh_public_input,
     fresh_var,
     fst_pair,

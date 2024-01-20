@@ -4,12 +4,10 @@
 module Snarkl.Compile
   ( TExpPkg (..),
     SimplParam (..),
-    compileConstraintsToR1CS,
     compileTExpToR1CS,
     compileCompToR1CS,
     compileCompToTexp,
     compileTexpToConstraints,
-    compileCompToConstraints,
   )
 where
 
@@ -32,7 +30,7 @@ import Snarkl.AST
   ( Comp,
     Env (..),
     Exp (..),
-    InputVariable,
+    InputVariable (..),
     TExp,
     Variable (Variable),
     booleanVarsOfTexp,
@@ -427,7 +425,7 @@ compileConstraintsToR1CS ::
   (GaloisField a) =>
   [SimplParam] ->
   ConstraintSystem a ->
-  (R1CS a, SimplifiedConstraintSystem a)
+  (R1CS a, SimplifiedConstraintSystem a, Var -> Var)
 compileConstraintsToR1CS simpls cs =
   let -- Simplify resulting constraints.
       cs_simpl =
@@ -438,14 +436,14 @@ compileConstraintsToR1CS simpls cs =
       -- Renumber constraint variables sequentially, from 0 to
       -- 'max_var'. 'renumber_f' is a function mapping variables to
       -- their renumbered counterparts.
-      (_, simplifiedCS) = second SimplifiedConstraintSystem $ renumber_constraints cs_dataflow
+      (relabler, simplifiedCS) = second SimplifiedConstraintSystem $ renumber_constraints cs_dataflow
    in -- 'f' is a function mapping input bindings to witnesses.
       -- NOTE: we assume the initial variable assignment passed to
       -- 'f' is the one derived by zipping the inputs together with
       -- the (renamed) input vars. of the R1CS produced by this
       -- function. Alternatively, we could 'Map.mapKeys renumber_f'
       -- before applying 'solve cs''.
-      (r1cs_of_cs simplifiedCS, simplifiedCS)
+      (r1cs_of_cs simplifiedCS, simplifiedCS, relabler)
   where
     must_simplify :: Bool
     must_simplify = Simplify `elem` simpls
@@ -474,6 +472,10 @@ data TExpPkg ty k = TExpPkg
 
 deriving instance (Eq k) => Eq (TExpPkg ty k)
 
+instance (Pretty k, Typeable ty) => Pretty (TExpPkg ty k) where
+  pretty (TExpPkg _ _ _ e) =
+    pretty e
+
 -- | Desugar a 'Comp'utation to a pair of:
 --   the total number of vars,
 --   the input vars,
@@ -485,9 +487,18 @@ compileCompToTexp mf =
   case run mf of
     Left err -> failWith err
     Right (e, rho) ->
-      let out = Variable (next_variable rho)
-          in_vars = sort $ input_vars rho
-       in TExpPkg out in_vars e
+      let (public, private) =
+            foldl
+              ( \(pub, priv) var ->
+                  case var of
+                    PublicInput v -> (v : pub, priv)
+                    PrivateInput name v -> (pub, Map.insert name v priv)
+              )
+              ([], Map.empty)
+              (input_vars rho)
+          out = Variable (next_variable rho)
+          in_vars = sort public
+       in TExpPkg out in_vars private e
   where
     run mf0 = runComp mf0 defaultEnv
 
@@ -498,13 +509,14 @@ compileTexpToConstraints ::
   ConstraintSystem k
 compileTexpToConstraints (TExpPkg _out _public_in_vars _private_in_vars te) =
   let out = _out ^. _Var
-      in_vars = map (view _Var) _in_vars
+      public_in_vars = map (view _Var) _public_in_vars
+      private_in_vars = fmap (view _Var) _private_in_vars
       cenv_init = CEnv Set.empty (incVar out)
       (constrs, _) = State.runState go cenv_init
       go = do
         let boolean_in_vars =
               Set.toList $
-                Set.fromList in_vars
+                Set.fromList (public_in_vars <> Map.elems private_in_vars)
                   `Set.intersection` Set.fromList (map (view _Var) $ booleanVarsOfTexp te)
             e0 = expOfTExp te
             e = do_const_prop e0
@@ -520,16 +532,9 @@ compileTexpToConstraints (TExpPkg _out _public_in_vars _private_in_vars te) =
           ConstraintSystem
             constraint_set
             num_constraint_vars
-            in_vars
+            public_in_vars
             [out]
    in constrs
-
--- | Snarkl.Compile Snarkl computations to constraint systems.
-compileCompToConstraints ::
-  (Typeable ty, GaloisField k) =>
-  Comp ty k ->
-  ConstraintSystem k
-compileCompToConstraints = compileTexpToConstraints . compileCompToTexp
 
 ------------------------------------------------------
 --
@@ -542,16 +547,21 @@ compileTExpToR1CS ::
   (Typeable ty, GaloisField k) =>
   [SimplParam] ->
   TExpPkg ty k ->
-  (R1CS k, SimplifiedConstraintSystem k)
-compileTExpToR1CS simpl = compileConstraintsToR1CS simpl . compileTexpToConstraints
+  (R1CS k, SimplifiedConstraintSystem k, Map.Map String Var)
+compileTExpToR1CS simpl texpPkg =
+  let (r1cs, scs, relabler) = compileConstraintsToR1CS simpl . compileTexpToConstraints $ texpPkg
+   in (r1cs, scs, relabler . view _Var <$> comp_private_input_variables texpPkg)
 
 -- | Snarkl.Compile Snarkl computations to 'R1CS'.
 compileCompToR1CS ::
   (Typeable ty, GaloisField k) =>
   [SimplParam] ->
   Comp ty k ->
-  (R1CS k, SimplifiedConstraintSystem k)
-compileCompToR1CS simpl = compileConstraintsToR1CS simpl . compileCompToConstraints
+  (R1CS k, SimplifiedConstraintSystem k, Map.Map String Var)
+compileCompToR1CS simpl comp =
+  let texpPkg = compileCompToTexp comp
+      (r1cs, scs, relabler) = compileConstraintsToR1CS simpl . compileTexpToConstraints $ texpPkg
+   in (r1cs, scs, relabler . view _Var <$> comp_private_input_variables texpPkg)
 
 --------------------------------------------------------------------------------
 

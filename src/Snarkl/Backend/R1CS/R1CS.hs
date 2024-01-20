@@ -49,7 +49,7 @@ instance (Pretty a) => Pretty (R1C a) where
 data R1CS a = R1CS
   { r1cs_clauses :: [R1C a],
     r1cs_num_vars :: Int,
-    r1cs_in_vars :: [Var],
+    r1cs_public_in_vars :: [Var],
     r1cs_out_vars :: [Var]
   }
   deriving (Show)
@@ -63,7 +63,7 @@ instance (PrimeField k) => ToJSONLines (R1CS k) where
             extension_degree = toInteger $ deg (undefined :: a),
             n_constraints = num_constraints cs,
             n_variables = r1cs_num_vars cs,
-            input_variables = r1cs_in_vars cs,
+            input_variables = r1cs_public_in_vars cs,
             output_variables = r1cs_out_vars cs
           }
 
@@ -74,7 +74,7 @@ instance (PrimeField k) => FromJSONLines (R1CS k) where
       R1CS
         { r1cs_clauses = cs,
           r1cs_num_vars = fromIntegral n_variables,
-          r1cs_in_vars = input_variables,
+          r1cs_public_in_vars = input_variables,
           r1cs_out_vars = output_variables
         }
 

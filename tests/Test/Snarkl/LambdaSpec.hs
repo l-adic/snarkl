@@ -48,7 +48,7 @@ spec = do
                   g a SM.>>= \k ->
                     apply k b
         property $ \a b ->
-          comp_interp @_ @F_BN128 prog1 [a, b] == comp_interp prog2 [a, b]
+          comp_interp @_ @F_BN128 prog1 [a, b] Map.empty == comp_interp prog2 [a, b] Map.empty
 
       it "uncurry . curry == id" $ do
         let f :: (GaloisField k) => TExp ('TProd 'TField 'TField) k -> SM.Comp 'TField k
@@ -71,4 +71,4 @@ spec = do
                 SM.fresh_public_input SM.>>= \b ->
                   pair a b SM.>>= \p ->
                     g p
-        property $ \a b -> comp_interp @_ @F_BN128 prog1 [a, b] == comp_interp prog2 [a, b]
+        property $ \a b -> comp_interp @_ @F_BN128 prog1 [a, b] Map.empty == comp_interp prog2 [a, b] Map.empty

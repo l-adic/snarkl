@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
+{-# HLINT ignore "Use if" #-}
 
 module Snarkl.AST.SyntaxMonad
   ( -- | Computation monad
@@ -15,8 +16,9 @@ module Snarkl.AST.SyntaxMonad
     Env (..),
     defaultEnv,
     InputVariable (..),
-    -- | Return a fresh public input variable.
+    -- | Return a fresh input variable.
     fresh_public_input,
+    fresh_private_input,
     -- | Return a fresh variable.
     fresh_var,
     -- | Basic values
@@ -455,6 +457,25 @@ fresh_public_input =
                   }
               )
     )
+
+fresh_private_input :: (Typeable ty) => String -> Comp ty a
+fresh_private_input name = do
+  v <- fresh_var
+  State
+    ( \s ->
+        Right
+          ( v,
+            s
+              { input_vars =
+                  -- rebindable syntax is on, so no ifThenElse syntax allowed
+                  case variableExists s of
+                    True -> error $ "variable already exists: " <> name
+                    False -> PrivateInput name (varOfTExp v) : input_vars s
+              }
+          )
+    )
+  where
+    variableExists = any (\(PrivateInput name' _) -> name == name') . input_vars
 
 fresh_loc :: Comp ty a
 fresh_loc =

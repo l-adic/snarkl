@@ -33,6 +33,12 @@ library
     Control.Monad.Supply
     Control.Monad.Supply.Class
     Data.JSONLines
+    Snarkl.AST
+    Snarkl.AST.Expr
+    Snarkl.AST.LambdaExpr
+    Snarkl.AST.SyntaxMonad
+    Snarkl.AST.TExpr
+    Snarkl.AST.Type
     Snarkl.Backend.R1CS
     Snarkl.Backend.R1CS.Poly
     Snarkl.Backend.R1CS.R1CS
@@ -50,14 +56,8 @@ library
     Snarkl.Errors
     Snarkl.Field
     Snarkl.Interp
-    Snarkl.AST
-    Snarkl.AST.Expr
-    Snarkl.AST.LambdaExpr
-    Snarkl.AST.SyntaxMonad
-    Snarkl.AST.TExpr
-    Snarkl.AST.Type
-    Snarkl.Language.Vector
     Snarkl.Language.Prelude
+    Snarkl.Language.Vector
     Snarkl.Toplevel
 
   other-modules:

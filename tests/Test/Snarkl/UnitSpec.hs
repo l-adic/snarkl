@@ -29,7 +29,7 @@ test_comp simpl mf args =
       ExitFailure _ -> Prelude.return $ Left exit_code
       ExitSuccess -> Prelude.return $ Right int_of_comp
   where
-    int_of_comp = result_result $ execute simpl mf args
+    int_of_comp = result_result $ execute simpl mf args mempty
 
 spec :: Spec
 spec = do

@@ -22,7 +22,7 @@ data CMD k where
 
 runCMD :: (PrimeField k) => CMD k -> IO GHC.ExitCode
 runCMD (CreateTrustedSetup rootDir name simpl c) = do
-  let (r1cs, _) = compileCompToR1CS simpl c
+  let (r1cs, _, _) = compileCompToR1CS simpl c
       r1csFilePath = mkR1CSFilePath rootDir name
   LBS.writeFile r1csFilePath $ toJSONLines r1cs
   let cmd =
@@ -36,8 +36,8 @@ runCMD (CreateTrustedSetup rootDir name simpl c) = do
   (_, _, _, hdl) <- createProcess $ shell cmd
   waitForProcess hdl
 runCMD (CreateProof rootDir name simpl c inputs) = do
-  let (r1cs, simplifiedCS) = compileCompToR1CS simpl c
-      witness = wit_of_cs inputs simplifiedCS
+  let (r1cs, simplifiedCS, _) = compileCompToR1CS simpl c
+      witness = wit_of_cs inputs Map.empty simplifiedCS
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
   LBS.writeFile r1csFilePath $ toJSONLines r1cs
@@ -53,8 +53,8 @@ runCMD (CreateProof rootDir name simpl c inputs) = do
   (_, _, _, hdl) <- createProcess $ shell cmd
   waitForProcess hdl
 runCMD (RunR1CS rootDir name simpl c inputs) = do
-  let (r1cs, simplifiedCS) = compileCompToR1CS simpl c
-      wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs simplifiedCS
+  let (r1cs, simplifiedCS, _) = compileCompToR1CS simpl c
+      wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs Map.empty simplifiedCS
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
       inputsFilePath = mkInputsFilePath rootDir name
