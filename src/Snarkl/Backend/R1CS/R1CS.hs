@@ -16,7 +16,7 @@ import Data.JSONLines (FromJSONLines (fromJSONLines), ToJSONLines (toJSONLines),
 import qualified Data.Map as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
-import Text.PrettyPrint.Leijen.Text (Pretty (..), (<+>))
+import Text.PrettyPrint.Leijen.Text (Pretty (..), vsep, (<+>))
 
 ----------------------------------------------------------------
 --                Rank-1 Constraint Systems                   --
@@ -68,7 +68,7 @@ instance (PrimeField k) => ToJSONLines (R1CS k) where
           }
 
 instance (Pretty a) => Pretty (R1CS a) where
-  pretty (R1CS {..}) = pretty r1cs_clauses
+  pretty (R1CS {..}) = vsep (pretty <$> r1cs_clauses)
 
 instance (PrimeField k) => FromJSONLines (R1CS k) where
   fromJSONLines ls = do

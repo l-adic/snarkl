@@ -26,7 +26,6 @@ import Snarkl.Common (Assgn (Assgn), splitInputAssignments)
 import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Toplevel (comp_interp, compileCompToR1CS, wit_of_cs)
-import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
 data GenWitnessOpts = GenWitnessOpts
   { constraintsInput :: FilePath,
@@ -80,7 +79,6 @@ genWitness GenWitnessOpts {..} name comp = do
     let inputAssignments = either (failWith . ErrMsg) id eInput
     pure $ splitInputAssignments inputAssignments
   let out_interp = comp_interp comp pubInputs (Map.mapKeys fst privInputs)
-  print $ "out_interp: " <> show out_interp
   let witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs pubInputs (Map.mapKeys snd privInputs) constraints
       out = case Map.lookup out_var m of
         Nothing ->
@@ -92,7 +90,6 @@ genWitness GenWitnessOpts {..} name comp = do
                   ++ show witness
               )
         Just out_val -> out_val
-  print $ "out: " <> show out
   unless (out_interp == out) $
     failWith $
       ErrMsg $
@@ -105,9 +102,6 @@ genWitness GenWitnessOpts {..} name comp = do
   --  eConstraints <- fromJSONLines <$> readFileLines r1csFP
   --  either (failWith . ErrMsg) pure eConstraints
   let satisfies = sat_r1cs witness r1cs
-  print $ "sat_r1cs: " <> show satisfies
-  print $ pretty witness
-  print $ pretty r1cs
   unless satisfies $
     failWith $
       ErrMsg $

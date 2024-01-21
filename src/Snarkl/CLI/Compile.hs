@@ -98,7 +98,7 @@ compile CompileOpts {..} name comp = do
           ]
       texpPkg = compileCompToTexp comp
 
-      (r1cs, scs, privateInputMap) = trace (show $ pretty texpPkg) $ compileTExpToR1CS simpl texpPkg
+      (r1cs, scs, privateInputMap) = compileTExpToR1CS simpl texpPkg
       publicInputs = map PublicInputVar . cs_public_in_vars . unSimplifiedConstraintSystem $ scs
       privateInputs = map (uncurry PrivateInputVar) $ Map.toList privateInputMap
   let r1csFP = mkR1CSFilePath r1csOutput name

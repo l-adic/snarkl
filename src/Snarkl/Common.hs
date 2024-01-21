@@ -8,7 +8,7 @@ import Data.Field.Galois (PrimeField (fromP))
 import Data.Foldable (toList)
 import Data.JSONLines (FromJSONLines (fromJSONLines), NoHeader (..), ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
-import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty), vsep, (<+>))
 
 newtype Var = Var Int deriving (Eq, Ord, Show)
 
@@ -32,7 +32,7 @@ incVar (Var i) = Var (i + 1)
 newtype Assgn a = Assgn (Map.Map Var a) deriving (Show, Eq, Functor)
 
 instance (Pretty a) => Pretty (Assgn a) where
-  pretty (Assgn m) = pretty $ Map.toList m
+  pretty (Assgn m) = vsep $ map (\(var, val) -> pretty var <+> ":=" <+> pretty val) $ Map.toList m
 
 instance (PrimeField a) => A.ToJSON (Assgn a) where
   toJSON (Assgn m) =

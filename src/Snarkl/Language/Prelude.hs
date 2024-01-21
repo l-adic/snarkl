@@ -819,5 +819,5 @@ assert e = do
   v1 <- fresh_var
   _ <- te_assert v1 e
   v2 <- fresh_var
-  _ <- te_assert v1 true
+  _ <- te_assert v2 true
   te_assert v1 v2
