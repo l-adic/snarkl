@@ -473,7 +473,13 @@ fresh_private_input name = do
           )
     )
   where
-    variableExists = any (\(PrivateInput name' _) -> name == name') . input_vars
+    variableExists =
+      any
+        ( \case
+            PrivateInput name' _ -> name == name'
+            _ -> False
+        )
+        . input_vars
 
 fresh_loc :: Comp ty a
 fresh_loc =
