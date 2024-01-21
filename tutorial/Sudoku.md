@@ -21,6 +21,7 @@ The following import statements and language extensions are required:
 ```haskell
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas -fno-warn-unused-do-bind #-}
 
@@ -29,9 +30,9 @@ The following import statements and language extensions are required:
 module Snarkl.Example.Sudoku where
 
 import Data.Field.Galois (GaloisField)
-import Data.Fin (Fin, universe, weakenLeft, weakenRight)
-import Data.Type.Nat (FromGHC, Nat3, Nat6, Nat9, reify)
-import Data.Typeable (Proxy (Proxy), Typeable)
+import Data.Proxy (Proxy(..))
+import Data.Fin (Fin, universe, weakenLeft)
+import Data.Type.Nat (Nat3, Nat6, Nat9, reify)
 import Snarkl.Language.Prelude
 import Snarkl.Language.Vector as Vec
 import Prelude hiding
@@ -64,15 +65,31 @@ type Board = 'TVec Nat9 ('TVec Nat9 'TField)
 
 type SudokuSet = 'TVec Nat9 'TField
 
+-- | Smart constructor to build the set [1..9]
 mkSudokuSet :: (GaloisField k) => Comp SudokuSet k
 mkSudokuSet = do
-  ss <- Vec.vec (Proxy @Nat9)
+  ss <- Vec.vec
   forall (universe @Nat9) $ \i ->
     Vec.set (ss, i) (fromField $ 1 P.+ fromIntegral i)
   return ss
+
+-- | Check that a number belongs to the valid range of numbers,
+-- e.g. [1 .. 9]
+isInSudokuSet ::
+  TExp SudokuSet k ->
+  TExp 'TField k ->
+  Comp 'TBool k
+isInSudokuSet sudokuSet a = do
+  bs <- Vec.vec
+  forall (universe @Nat9) $ \i -> do
+    si <- Vec.get (sudokuSet, i)
+    Vec.set (bs, i) (eq si a)
+  Vec.any bs
+
 ```
 
 Here we are intializing a `SudokuSet`, with the numbers `[1..9]`. For an explanation of the `GaloisField` constraint, see the [note on fields]().
+We also give a function that can check membership in this set by brute force.
 
 ## Validating the Board
 
@@ -85,120 +102,150 @@ As for point `(1)`, we will perform this validation at the time the input is pre
 
 
 ```haskell
--- | Make sure that no number is repeated in the list. Earlier
+-- | Make sure that no number is repeated in the set. Earlier
 -- checks that the numbers are in the valid range imply the set
 -- is valid
-isPermutation
+isPermutation ::
   Eq k =>
   TExp ('TVec Nat9 'TField) k ->
   Comp 'TBool k
 isPermutation as = do
-  -- The check that 'as ! 0' has no duplicates in previous
-  -- elements is vaccuous.
+  -- 'bs ! i == true' iff 'bs ! i' has appeared previously
+  bs <- Vec.vec
+  -- the check that the first element has no prior repeats
+  -- is vaccuously true.
   forall (drop 1 $ universe @Nat9) $ \i -> do
     a <- Vec.get (as, i)
-    let js = take (fromIntegral i) (universe @Nat9)
-    forall js $ \j -> do
-      b <- Vec.get (as, j)
-      assert (not $ eq a b)
+    let js = take (fromIntegral i) $ universe @Nat9
+    reify (fromIntegral $ length js) $ \(_ :: Proxy m) -> do 
+      -- 'iChecks ! j' := 'as ! i == as ! j' `
+      iChecks <- Vec.vec @m
+      forall js $ \j -> do
+        b <- Vec.get (as, j)
+        Vec.set (iChecks, fromIntegral j) (eq a b)
+      bi <- Vec.any iChecks
+      Vec.set (bs, i) bi
+  -- assert that we didn't get any matches
+  Vec.any bs >>= (return . not)
 ```
 
+We could have used the function `assert` from `Snarkl.Language.Prelude` to simplify this function:
 
-
-
-```haskell
-validPuzzle ::
-  (GaloisField k) =>
-  [Int] ->
-  Comp 'TBool k
-validPuzzle blanks = do
-  input <- Vec.vec (Proxy @(FromGHC 81))
-  sudokuSet <- mkSudokuSet
-  forall (universe @(FromGHC 81)) $ \i -> do
-    vi <- fresh_public_input
-    Vec.set (input, fromIntegral i) vi
-    -- Check to see if this index corresponds to a private input.
-    -- If it is, give it the assignment from the puzzle's solution 
-    -- which is provided during witness generation.
-    case fromIntegral i `elem` blanks of
-      True -> do
-        privInput <- fresh_private_input ("x" <> show i)
-        isValidInput <- isInSudokuSet sudokuSet privInput
-        fresh_var >>= \v -> do
-          te_assert v isValidInput
-          assert_true v
-        Vec.set (input, fromIntegral i) privInput
-      False -> return unit
-  p <- Vec.chunk @Nat9 @Nat9 input
-  rowsValid <- do
-    rowsValid <- Vec.traverse isValidSet p
-    Vec.all rowsValid
-  colsValid <- do
-    pt <- Vec.transpose p
-    validCols <- Vec.traverse isValidSet pt
-    Vec.all validCols
-  boxesValid <- do
-    bs <- asBoxes p
-    validateBoxes bs
-  return $ rowsValid && colsValid && boxesValid
-  where
-
-
--- | Make sure that no number is repeated in the set. Earlier
--- checks that the numbers are in the valid range imply the set
--- is valid
-isValidList ::
+~~~ haskell ignore
+isPermutation ::
   Eq k =>
   TExp ('TVec Nat9 'TField) k ->
-  Comp 'TBool k
-isValidList as = do
-  bs <- Vec.vec (Proxy @Nat9)
+  Comp 'TUnit k
+isPermutation as = do
+  -- 'bs ! i == true' iff 'bs ! i' has appeared previously
+  bs <- Vec.vec
+  -- that the first element has no prior repeats is vaccuously true.
   forall (drop 1 $ universe @Nat9) $ \i -> do
     a <- Vec.get (as, i)
     let js = take (fromIntegral i) $ universe @Nat9
     reify (fromIntegral $ length js) $ \pj -> do
+      -- 'iChecks ! j' := 'as ! i == as ! j' `
       iChecks <- Vec.vec pj
       forall js $ \j -> do
         b <- Vec.get (as, j)
-        Vec.set (iChecks, fromIntegral j) (not $ eq a b)
-      bi <- Vec.all iChecks
-      Vec.set (bs, i) bi
-  Vec.all bs
+        assert (a `neq` b)
+~~~
 
--- | Check that the number belongs to the valid range of numbers,
--- e.g. {1 .. 9}
-isInSudokuSet ::
-  TExp SudokuSet k ->
-  TExp 'TField k ->
-  Comp 'TBool k
-isInSudokuSet sudokuSet a = do
-  bs <- Vec.vec (Proxy @Nat9)
-  forall (universe @Nat9) $ \i -> do
-    si <- Vec.get (sudokuSet, i)
-    Vec.set (bs, i) (eq si a)
-  Vec.any bs
+The cost of doing this is the return type of this function is now `TUnit` as some kind of side effect has been introduced.
+This would likely lead to a lower variable/constraint count as you no longer need the additional `any` folds.
 
--- | Treat the 9x9 sudoku board as a 3x3 grid where every element
--- of the grid is a 3x3 square.
-asBoxes ::
-  (Typeable ty) =>
-  TExp ('TVec Nat9 ('TVec Nat9 ty)) k ->
-  Comp ('TVec Nat3 ('TVec Nat3 ('TVec Nat3 ('TVec Nat3 ty)))) k
-asBoxes as = Vec.traverse Vec.chunk as >>= Vec.chunk
 
+## Validating the Boxes
+
+We now need some similar code in order to treat the 3x3 boxes. We can use `Vector.chunk` to break up the 2d array into
+smaller boxes. `Vector.chunk` uses the size types and type inference to take care of the details. 
+
+```haskell
+-- | A 'Box' is a 3x3 grid that must be completed with a permutation of [1..9]
+type Box = 'TVec Nat3 ('TVec Nat3 'TField)
+
+-- | 'BoxGrid' is a view of the board as a 3x3 grid of 'Box'es
+type BoxGrid = 'TVec Nat3 ('TVec Nat3 Box)
+
+mkBoxes :: TExp Board k -> Comp BoxGrid k
+mkBoxes as = Vec.traverse Vec.chunk as >>= Vec.chunk
+```
+
+We can then traverse the grid of boxes, using our `isPermutation` function on each box:
+
+```haskell
 -- | Vaidate a 3x3 square, i.e. the numbers in the square form a valid set.
-validateBoxes ::
+validBoxes ::
   Eq k =>
-  TExp ('TVec Nat3 ('TVec Nat3 ('TVec Nat3 ('TVec Nat3 'TField)))) k ->
+  TExp BoxGrid k ->
   Comp 'TBool k
-validateBoxes as = do
-  bs <- Vec.vec (Proxy @Nat9)
+validBoxes as = do
+  bs <- Vec.vec
   forall2 (universe @Nat3, universe @Nat3) $ \i j -> do
     box <- Vec.get2 (as, i, j)
     b <- Vec.concat @Nat3 @Nat3 box
-    validBox <- isValidSet b
+    validBox <- isPermutation b
     let idx :: Fin Nat9
-        idx = 3 P.* weakenLeft (Proxy @Nat6) i P.+ weakenRight (Proxy @Nat6) j
+        -- we have to (safely) coerce the arithmetic to take place in for numbers less than 9
+        idx = 3 P.* weakenLeft (Proxy @Nat6) i P.+ weakenLeft (Proxy @Nat6) j
     Vec.set (bs, idx) validBox
   Vec.all bs
+```
+
+
+## Getting Input
+
+We want our sudoku verifier code to be reusable for any sudoku puzzle. We can do this by accepting public input
+for all 81 squares and allowing the value `0` to represent a blank square. Since this input is public, validation
+that the input belongs to the set `[0 .. 9]` is not required in Snarkl.
+
+In order to give the solution for a concrete puzzle, we need to allow the prover to override the input variables
+initialized with `0` with their own private input. Since this input is private, we want to validate that it
+belongs to the specified `SudokuSet` in Snarkl.
+
+
+```haskell
+mkBoard
+  :: GaloisField k =>
+  TExp SudokuSet k ->
+  [(Int, Int)] ->
+  -- ^ The list of blank squares in (row,col) format
+  Comp Board k
+mkBoard ss blanks = do
+  board <- Vec.inputVec2
+  forall (universe @Nat9) $ \i -> 
+    forall (universe @Nat9) $ \j -> 
+      case elem (fromIntegral i, fromIntegral j) blanks of 
+        False -> return unit
+        True -> do 
+          knownValue <- fresh_private_input ("x_" <> show (i,j))
+          isInSudokuSet ss knownValue >>= assert
+          Vec.set2 (board, i, j) knownValue
+  return board
+```
+
+
+## Finishing Up
+
+We now have all the pieces to write the top level validator. To create the verifier, we pass in the indices
+for the blank squares that the prover will provide. We then simply create the board and run each of our
+validation criteria over that board.
+
+```haskell
+validPuzzle ::
+  (GaloisField k) =>
+  [(Int,Int)] -> 
+  -- ^ The list of blank squares in (row,col) format
+  Comp 'TBool k
+validPuzzle blanks = do
+  ss <- mkSudokuSet
+  board <- mkBoard ss blanks
+  rowsValid <- do
+    rowsValid <- Vec.traverse isPermutation board
+    Vec.all rowsValid
+  colsValid <- do
+    validCols <- Vec.transpose board >>= Vec.traverse isPermutation
+    Vec.all validCols
+  boxesValid <- mkBoxes board >>= validBoxes
+  return $ rowsValid && colsValid && boxesValid
 ```

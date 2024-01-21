@@ -3,6 +3,9 @@
 
 module Snarkl.Language.Vector
   ( vec,
+    vec2,
+    inputVec,
+    inputVec2,
     get,
     get2,
     set,
@@ -47,13 +50,45 @@ import Prelude hiding (all, any, concat, foldl, map, return, traverse, (&&), (*)
 import qualified Prelude as P
 
 vec ::
-  forall (n :: Nat) proxy (ty :: Ty) k.
+  forall (n :: Nat) (ty :: Ty) k.
   (SNatI n) =>
-  proxy n ->
   Comp ('TVec n ty) k
-vec _ = do
+vec = do
   let n = reflectToNum (Proxy @n)
   a <- arr n
+  return $ unsafe_cast a
+
+inputVec ::
+  forall (n :: Nat) (ty :: Ty) k.
+  (SNatI n) =>
+  Comp ('TVec n ty) k
+inputVec = do
+  let n = reflectToNum (Proxy @n)
+  a <- Snarkl.input_arr n
+  return $ unsafe_cast a
+
+vec2 ::
+  forall (n :: Nat) (m :: Nat) (ty :: Ty) k.
+  (SNatI n) =>
+  (SNatI m) =>
+  (Typeable ty) =>
+  Comp ('TVec n ('TVec m ty)) k
+vec2 = do
+  let n = reflectToNum (Proxy @n)
+      m = reflectToNum (Proxy @m)
+  a <- Snarkl.arr2 @ty n m
+  return $ unsafe_cast a
+
+inputVec2 ::
+  forall (n :: Nat) (m :: Nat) (ty :: Ty) k.
+  (SNatI n) =>
+  (SNatI m) =>
+  (Typeable ty) =>
+  Comp ('TVec n ('TVec m ty)) k
+inputVec2 = do
+  let n = reflectToNum (Proxy @n)
+      m = reflectToNum (Proxy @m)
+  a <- Snarkl.input_arr2 @ty n m
   return $ unsafe_cast a
 
 get ::
@@ -101,7 +136,7 @@ map ::
   TExp ('TVec n a) k ->
   Comp ('TVec n b) k
 map f a = do
-  b <- vec (Proxy @n)
+  b <- vec
   _ <- forall (universe @n) $ \i -> do
     ai <- get (a, i)
     bi <- apply f ai
@@ -136,7 +171,7 @@ traverse ::
   TExp ('TVec n a) k ->
   Comp ('TVec n b) k
 traverse f as = do
-  bs <- vec (Proxy @n)
+  bs <- vec
   _ <- forall (universe @n) $ \i -> do
     ai <- get (as, i)
     bi <- f ai
