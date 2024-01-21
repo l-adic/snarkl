@@ -19,40 +19,28 @@ The following import statements and language extensions are required:
 
 
 ```haskell
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas -fno-warn-unused-do-bind #-}
 
 {-# HLINT ignore "Use if" #-}
 
-module Snarkl.Example.Sudoku where
+module Sudoku where
+
+
+import Prelude (Bool(..), Eq, Int, fromIntegral, fromInteger, show, (.), ($), (<>))
+import qualified Prelude as P
 
 import Data.Field.Galois (GaloisField)
+import Data.List (drop, elem, length, take)
 import Data.Proxy (Proxy(..))
 import Data.Fin (Fin, universe, weakenLeft)
 import Data.Type.Nat (Nat3, Nat6, Nat9, reify)
 import Snarkl.Language.Prelude
 import Snarkl.Language.Vector as Vec
-import Prelude hiding
-  ( all,
-    concat,
-    fromRational,
-    negate,
-    not,
-    return,
-    traverse,
-    (&&),
-    (*),
-    (+),
-    (-),
-    (/),
-    (>>),
-    (>>=),
-    (||),
-  )
-import qualified Prelude as P
 ```
 
 Everything is straightforward with the exception of the `RebindableSyntax` extension and the related `HLint` pragma `ignore "Use if"`. See the [note on rebindable syntax]() for an explanation.
@@ -128,32 +116,6 @@ isPermutation as = do
   -- assert that we didn't get any matches
   Vec.any bs >>= (return . not)
 ```
-
-We could have used the function `assert` from `Snarkl.Language.Prelude` to simplify this function:
-
-``` haskell ignore
-isPermutation ::
-  Eq k =>
-  TExp ('TVec Nat9 'TField) k ->
-  Comp 'TUnit k
-isPermutation as = do
-  -- 'bs ! i == true' iff 'bs ! i' has appeared previously
-  bs <- Vec.vec
-  -- that the first element has no prior repeats is vaccuously true.
-  forall (drop 1 $ universe @Nat9) $ \i -> do
-    a <- Vec.get (as, i)
-    let js = take (fromIntegral i) $ universe @Nat9
-    reify (fromIntegral $ length js) $ \pj -> do
-      -- 'iChecks ! j' := 'as ! i == as ! j' `
-      iChecks <- Vec.vec pj
-      forall js $ \j -> do
-        b <- Vec.get (as, j)
-        assert (a `neq` b)
-```
-
-The cost of doing this is the return type of this function is now `TUnit` as some kind of side effect has been introduced.
-This would likely lead to a lower variable/constraint count as you no longer need the additional `any` folds.
-
 
 ## Validating the Boxes
 
@@ -232,116 +194,12 @@ for the blank squares that the prover will provide. We then simply create the bo
 validation criteria over that board.
 
 ```haskell
-validPuzzle ::
+validatePuzzle ::
   (GaloisField k) =>
   [(Int,Int)] -> 
   -- ^ The list of blank squares in (row,col) format
   Comp 'TBool k
-validPuzzle blanks = do
-  ss <- mkSudokuSet
-  board <- mkBoard ss blanks
-  rowsValid <- do
-    rowsValid <- Vec.traverse isPermutation board
-    Vec.all rowsValid
-  colsValid <- do
-    validCols <- Vec.transpose board >>= Vec.traverse isPermutation
-    Vec.all validCols
-  boxesValid <- mkBoxes board >>= validBoxes
-  return $ rowsValid && colsValid && boxesValid
-```
-
-
-## Full Program
-
-```haskell ignore
-Here is the program in full:
-
-type Board = 'TVec Nat9 ('TVec Nat9 'TField) 
-
-type SudokuSet = 'TVec Nat9 'TField
-
--- | Smart constructor to build the set [1..9]
-mkSudokuSet :: (GaloisField k) => Comp SudokuSet k
-mkSudokuSet = do
-  ss <- Vec.vec
-  forall (universe @Nat9) $ \i ->
-    Vec.set (ss, i) (fromField $ 1 P.+ fromIntegral i)
-  return ss
-
--- | Check that a number belongs to the valid range of numbers,
--- e.g. [1 .. 9]
-isInSudokuSet ::
-  TExp SudokuSet k ->
-  TExp 'TField k ->
-  Comp 'TBool k
-isInSudokuSet sudokuSet a = do
-  bs <- Vec.vec
-  forall (universe @Nat9) $ \i -> do
-    si <- Vec.get (sudokuSet, i)
-    Vec.set (bs, i) (eq si a)
-  Vec.any bs
-
-
--- | Make sure that no number is repeated in the set. Earlier
--- checks that the numbers are in the valid range imply the set
--- is valid
-isPermutation ::
-  Eq k =>
-  TExp ('TVec Nat9 'TField) k ->
-  Comp 'TBool k
-isPermutation as = do
-  -- 'bs ! i == true' iff 'bs ! i' has appeared previously
-  bs <- Vec.vec
-  -- the check that the first element has no prior repeats
-  -- is vaccuously true.
-  forall (drop 1 $ universe @Nat9) $ \i -> do
-    a <- Vec.get (as, i)
-    let js = take (fromIntegral i) $ universe @Nat9
-    reify (fromIntegral $ length js) $ \(_ :: Proxy m) -> do 
-      -- 'iChecks ! j' := 'as ! i == as ! j' `
-      iChecks <- Vec.vec @m
-      forall js $ \j -> do
-        b <- Vec.get (as, j)
-        Vec.set (iChecks, fromIntegral j) (eq a b)
-      bi <- Vec.any iChecks
-      Vec.set (bs, i) bi
-  -- assert that we didn't get any matches
-  Vec.any bs >>= (return . not)
-
--- | A 'Box' is a 3x3 grid that must be completed with a permutation of [1..9]
-type Box = 'TVec Nat3 ('TVec Nat3 'TField)
-
--- | 'BoxGrid' is a view of the board as a 3x3 grid of 'Box'es
-type BoxGrid = 'TVec Nat3 ('TVec Nat3 Box)
-
-mkBoxes :: TExp Board k -> Comp BoxGrid k
-mkBoxes as = Vec.traverse Vec.chunk as >>= Vec.chunk
-
-
-mkBoard
-  :: GaloisField k =>
-  TExp SudokuSet k ->
-  [(Int, Int)] ->
-  -- ^ The list of blank squares in (row,col) format
-  Comp Board k
-mkBoard ss blanks = do
-  board <- Vec.inputVec2
-  forall (universe @Nat9) $ \i -> 
-    forall (universe @Nat9) $ \j -> 
-      case elem (fromIntegral i, fromIntegral j) blanks of 
-        False -> return unit
-        True -> do 
-          knownValue <- fresh_private_input ("x_" <> show (i,j))
-          isInSudokuSet ss knownValue >>= assert
-          Vec.set2 (board, i, j) knownValue
-  return board
-
-validPuzzle ::
-  (GaloisField k) =>
-  [(Int,Int)] -> 
-  -- ^ The list of blank squares in (row,col) format
-  Comp 'TBool k
-validPuzzle blanks = do
+validatePuzzle blanks = do
   ss <- mkSudokuSet
   board <- mkBoard ss blanks
   rowsValid <- do
