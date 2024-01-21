@@ -1,3 +1,4 @@
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RebindableSyntax #-}
 
 module Snarkl.Language.Vector
@@ -46,14 +47,13 @@ import Prelude hiding (all, any, concat, foldl, map, return, traverse, (&&), (*)
 import qualified Prelude as P
 
 vec ::
-  forall (n :: Nat) proxy ty k.
+  forall (n :: Nat) proxy (ty :: Ty) k.
   (SNatI n) =>
-  (Typeable ty) =>
   proxy n ->
   Comp ('TVec n ty) k
 vec _ = do
   let n = reflectToNum (Proxy @n)
-  a :: TExp ('TArr ty) k <- arr n
+  a <- arr n
   return $ unsafe_cast a
 
 get ::
@@ -97,7 +97,6 @@ map ::
   (SNatI n) =>
   (Typeable a) =>
   (Typeable b) =>
-  (Typeable n) =>
   TExp ('TFun a b) k ->
   TExp ('TVec n a) k ->
   Comp ('TVec n b) k
@@ -133,7 +132,6 @@ traverse ::
   (SNatI n) =>
   (Typeable a) =>
   (Typeable b) =>
-  (Typeable n) =>
   (TExp a k -> Comp b k) ->
   TExp ('TVec n a) k ->
   Comp ('TVec n b) k

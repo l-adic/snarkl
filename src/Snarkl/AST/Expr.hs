@@ -133,11 +133,11 @@ do_const_prop :: (GaloisField a) => Exp a -> Exp a
 do_const_prop e = evalState (const_prop e) Map.empty
 
 instance (Pretty a) => Pretty (Exp a) where
-  pretty (EVar x) = "var_" <> pretty x
+  pretty (EVar x) = "exp_var_" <> pretty x
   pretty (EVal c) = pretty c
   pretty (EUnop op e1) = pretty op <> parens (pretty e1)
   pretty (EBinop op es) =
-    foldl (\a b -> a <+> pretty op <+> pretty b) mempty es
+    hsep $ punctuate (" " <> pretty op <> " ") $ map pretty (toList es)
   pretty (EIf b e1 e2) =
     "if" <+> pretty b <+> "then" <+> pretty e1 <+> "else" <+> pretty e2
   pretty (EAssert e1 e2) = pretty e1 <+> ":=" <+> pretty e2

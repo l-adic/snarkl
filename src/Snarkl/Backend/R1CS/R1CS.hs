@@ -67,6 +67,9 @@ instance (PrimeField k) => ToJSONLines (R1CS k) where
             output_variables = r1cs_out_vars cs
           }
 
+instance (Pretty a) => Pretty (R1CS a) where
+  pretty (R1CS {..}) = pretty r1cs_clauses
+
 instance (PrimeField k) => FromJSONLines (R1CS k) where
   fromJSONLines ls = do
     WithHeader ConstraintHeader {..} cs <- fromJSONLines ls
@@ -85,6 +88,10 @@ data Witness k = Witness
     witness_num_vars :: Int
   }
   deriving (Show)
+
+instance (Pretty k) => Pretty (Witness k) where
+  pretty (Witness {..}) =
+    pretty witness_assgn
 
 instance Functor Witness where
   fmap f w = w {witness_assgn = fmap f (witness_assgn w)}

@@ -24,12 +24,15 @@ instance A.FromJSON Var where
     return $ Var (i - 1)
 
 instance Pretty Var where
-  pretty (Var i) = "x_" <> pretty i
+  pretty (Var i) = "x_" <> pretty (i + 1)
 
 incVar :: Var -> Var
 incVar (Var i) = Var (i + 1)
 
 newtype Assgn a = Assgn (Map.Map Var a) deriving (Show, Eq, Functor)
+
+instance (Pretty a) => Pretty (Assgn a) where
+  pretty (Assgn m) = pretty $ Map.toList m
 
 instance (PrimeField a) => A.ToJSON (Assgn a) where
   toJSON (Assgn m) =

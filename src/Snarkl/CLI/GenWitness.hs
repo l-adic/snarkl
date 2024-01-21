@@ -21,11 +21,12 @@ import Snarkl.Backend.R1CS
     Witness (Witness, witness_assgn),
     sat_r1cs,
   )
-import Snarkl.CLI.Common (mkAssignmentsFilePath, mkConstraintsFilePath, mkR1CSFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
+import Snarkl.CLI.Common (mkAssignmentsFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
 import Snarkl.Common (Assgn (Assgn), splitInputAssignments)
 import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Toplevel (comp_interp, wit_of_cs)
+import Snarkl.Toplevel (comp_interp, compileCompToR1CS, wit_of_cs)
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
 data GenWitnessOpts = GenWitnessOpts
   { constraintsInput :: FilePath,
@@ -70,10 +71,7 @@ genWitness ::
   IO ()
 genWitness GenWitnessOpts {..} name comp = do
   --  parse the constraints file
-  constraints <- do
-    let csFP = mkConstraintsFilePath constraintsInput name
-    eConstraints <- fromJSONLines <$> readFileLines csFP
-    either (failWith . ErrMsg) pure eConstraints
+  let (r1cs, constraints, _) = compileCompToR1CS [] comp
   let [out_var] = cs_out_vars (unSimplifiedConstraintSystem constraints)
   -- parse the inputs, either from cli or from file
   (pubInputs, privInputs) <- do
@@ -82,7 +80,8 @@ genWitness GenWitnessOpts {..} name comp = do
     let inputAssignments = either (failWith . ErrMsg) id eInput
     pure $ splitInputAssignments inputAssignments
   let out_interp = comp_interp comp pubInputs (Map.mapKeys fst privInputs)
-      witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs pubInputs (Map.mapKeys snd privInputs) constraints
+  print $ "out_interp: " <> show out_interp
+  let witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs pubInputs (Map.mapKeys snd privInputs) constraints
       out = case Map.lookup out_var m of
         Nothing ->
           failWith $
@@ -93,6 +92,7 @@ genWitness GenWitnessOpts {..} name comp = do
                   ++ show witness
               )
         Just out_val -> out_val
+  print $ "out: " <> show out
   unless (out_interp == out) $
     failWith $
       ErrMsg $
@@ -100,11 +100,15 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ show out_interp
           ++ " differs from actual result "
           ++ show out
-  r1cs <- do
-    let r1csFP = mkR1CSFilePath r1csInput name
-    eConstraints <- fromJSONLines <$> readFileLines r1csFP
-    either (failWith . ErrMsg) pure eConstraints
-  unless (sat_r1cs witness r1cs) $
+  -- r1cs <- do
+  --  let r1csFP = mkR1CSFilePath r1csInput name
+  --  eConstraints <- fromJSONLines <$> readFileLines r1csFP
+  --  either (failWith . ErrMsg) pure eConstraints
+  let satisfies = sat_r1cs witness r1cs
+  print $ "sat_r1cs: " <> show satisfies
+  print $ pretty witness
+  print $ pretty r1cs
+  unless satisfies $
     failWith $
       ErrMsg $
         "witness failed to satisfy R1CS\n  "

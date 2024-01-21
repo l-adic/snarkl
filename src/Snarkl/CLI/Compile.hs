@@ -19,6 +19,7 @@ import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Debug.Trace (trace)
 import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
 import Snarkl.AST (Comp, InputVariable (PrivateInput))
 import Snarkl.CLI.Common (mkConstraintsFilePath, mkInputsFilePath, mkR1CSFilePath, writeFileWithDir)
@@ -32,6 +33,7 @@ import Snarkl.Compile
 import Snarkl.Constraint (ConstraintSystem (cs_constraints, cs_out_vars, cs_public_in_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Toplevel (comp_interp, wit_of_cs)
+import Text.PrettyPrint.Leijen.Text (Pretty (pretty))
 
 data OptimizeOpts = OptimizeOpts
   { simplify :: Bool,
@@ -95,15 +97,13 @@ compile CompileOpts {..} name comp = do
             if removeUnreachable optimizeOpts then Just RemoveUnreachable else Nothing
           ]
       texpPkg = compileCompToTexp comp
-      (r1cs, scs, privateInputMap) = compileTExpToR1CS simpl texpPkg
+
+      (r1cs, scs, privateInputMap) = trace (show $ pretty texpPkg) $ compileTExpToR1CS simpl texpPkg
       publicInputs = map PublicInputVar . cs_public_in_vars . unSimplifiedConstraintSystem $ scs
       privateInputs = map (uncurry PrivateInputVar) $ Map.toList privateInputMap
   let r1csFP = mkR1CSFilePath r1csOutput name
   writeFileWithDir r1csFP $ toJSONLines r1cs
   putStrLn $ "Wrote R1CS to " <> r1csFP
-  let csFP = mkConstraintsFilePath constraintsOutput name
-  writeFileWithDir csFP $ toJSONLines scs
-  putStrLn $ "Wrote constraints to " <> csFP
   let inputsFP = mkInputsFilePath inputsOutput name
   writeFileWithDir inputsFP $ toJSONLines (publicInputs <> privateInputs)
   putStrLn $ "Wrote inputs to " <> inputsFP

@@ -32,7 +32,7 @@ import Text.PrettyPrint.Leijen.Text (Pretty (pretty), line, parens, (<+>))
 newtype TVar (ty :: Ty) = TVar Variable deriving (Eq, Show)
 
 instance Pretty (TVar ty) where
-  pretty (TVar x) = "var_" <> pretty x
+  pretty (TVar x) = "texp_var_" <> pretty x
 
 varIsBoolean :: (Typeable ty) => TVar ty -> Bool
 varIsBoolean x =
@@ -154,7 +154,7 @@ lambdaExpOfTExp te = case te of
 -- | Smart constructor for 'TESeq'.  Simplify 'TESeq te1 te2' to 'te2'
 -- whenever the normal form of 'te1' (with seq's reassociated right)
 -- is *not* equal 'TEAssert _ _'.
-teSeq :: (Typeable ty1) => TExp ty1 a -> TExp ty2 a -> TExp ty2 a
+teSeq :: TExp ty1 a -> TExp ty2 a -> TExp ty2 a
 teSeq te1 te2 = case (te1, te2) of
   (TEAssert _ _, _) -> TESeq te1 te2
   (TESeq tx ty, _) -> teSeq tx (teSeq ty te2)

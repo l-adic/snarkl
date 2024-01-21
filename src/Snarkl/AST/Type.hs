@@ -38,6 +38,8 @@ deriving instance Typeable 'TBool
 
 deriving instance Typeable 'TArr
 
+deriving instance Typeable 'TVec
+
 deriving instance Typeable 'TProd
 
 deriving instance Typeable 'TSum

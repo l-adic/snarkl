@@ -106,7 +106,6 @@ raise_err msg = State (\_ -> Left msg)
 -- of the results of 'mf', 'g' (not just whatever 'g' returns)
 (>>=) ::
   forall (ty1 :: Ty) (ty2 :: Ty) s a.
-  (Typeable ty1) =>
   State s (TExp ty1 a) ->
   (TExp ty1 a -> State s (TExp ty2 a)) ->
   State s (TExp ty2 a)
@@ -122,7 +121,6 @@ raise_err msg = State (\_ -> Left msg)
 
 (>>) ::
   forall (ty1 :: Ty) (ty2 :: Ty) s a.
-  (Typeable ty1) =>
   State s (TExp ty1 a) ->
   State s (TExp ty2 a) ->
   State s (TExp ty2 a)
@@ -458,7 +456,7 @@ fresh_public_input =
               )
     )
 
-fresh_private_input :: (Typeable ty) => String -> Comp ty a
+fresh_private_input :: String -> Comp ty a
 fresh_private_input name = do
   v <- fresh_var
   State

@@ -265,11 +265,11 @@ encode_linear out xs =
 
 cs_of_exp :: (GaloisField a) => Var -> Exp a -> State (CEnv a) ()
 cs_of_exp out e = case e of
-  EVar x ->
+  EVar x -> do
     ensure_equal (out, view _Var x)
-  EVal c ->
+  EVal c -> do
     ensure_const (out, c)
-  EUnop op (EVar x) ->
+  EUnop op (EVar x) -> do
     encode_unop op (view _Var x, out)
   EUnop op e1 ->
     do
@@ -380,7 +380,8 @@ cs_of_exp out e = case e of
                 encode_labels labels
 
   -- Encoding: out = b*e1 + (1-b)e2
-  EIf b e1 e2 -> cs_of_exp out e0
+  EIf b e1 e2 -> do
+    cs_of_exp out e0
     where
       e0 =
         EBinop
@@ -408,7 +409,7 @@ cs_of_exp out e = case e of
         do
           cs_of_exp garbage_var e1
           go garbage_var le'
-  EUnit ->
+  EUnit -> do
     -- NOTE: [[ EUnit ]]_{out} = [[ EVal zero ]]_{out}.
     cs_of_exp out (EVal 0)
 

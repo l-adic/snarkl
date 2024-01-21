@@ -36,7 +36,7 @@ module Snarkl.Language.Prelude
     true,
     false,
     unit,
-    te_assert,
+    assert,
     -- | Arrays
     arr,
     arr2,
@@ -70,6 +70,7 @@ module Snarkl.Language.Prelude
     return,
     fresh_public_input,
     fresh_private_input,
+    fresh_var,
     unsafe_cast,
 
     -- * Other rexports
@@ -356,7 +357,6 @@ case_sum ::
   forall ty1 ty2 ty k.
   ( Typeable ty1,
     Typeable ty2,
-    Typeable ty,
     Zippable ty k,
     Eq k
   ) =>
@@ -433,9 +433,7 @@ instance
       inl v1
 
 instance
-  ( Typeable f,
-    Typeable (Rep f ('TMu f)),
-    Derive (Rep f ('TMu f)) k
+  ( Derive (Rep f ('TMu f)) k
   ) =>
   Derive ('TMu f) k
   where
@@ -570,9 +568,7 @@ instance
         return $ unrep_sum p'
 
 instance
-  ( Typeable f,
-    Typeable (Rep f ('TMu f)),
-    Zippable (Rep f ('TMu f)) k,
+  ( Zippable (Rep f ('TMu f)) k,
     Derive (Rep f ('TMu f)) k
   ) =>
   Zippable ('TMu f) k
@@ -709,8 +705,7 @@ ifThenElse_aux b e1 e2
         _ -> TEIf b e1 e2
 
 ifThenElse ::
-  ( Zippable ty k,
-    Typeable ty
+  ( Zippable ty k
   ) =>
   Comp 'TBool k ->
   Comp ty k ->
@@ -743,7 +738,6 @@ iter n f e = g n f e
     g m f' e' = f' m $ g (dec m) f' e'
 
 iterM ::
-  (Typeable ty) =>
   Int ->
   (Int -> TExp ty k -> Comp ty k) ->
   TExp ty k ->
@@ -814,3 +808,16 @@ uncurry f p = do
 
 apply :: (Typeable a, Typeable b) => TExp ('TFun a b) k -> TExp a k -> Comp b k
 apply f x = return $ TEApp f x
+
+-- TODO: This is unessarily confusing, I would think you would
+-- be able to just use te_assert on v1 to assign it both the value of the expression
+-- and the constant true value, but this doesn't seem to work. Should investigate
+assert ::
+  TExp 'TBool k ->
+  Comp 'TUnit k
+assert e = do
+  v1 <- fresh_var
+  _ <- te_assert v1 e
+  v2 <- fresh_var
+  _ <- te_assert v1 true
+  te_assert v1 v2
