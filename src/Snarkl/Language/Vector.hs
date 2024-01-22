@@ -13,6 +13,9 @@ module Snarkl.Language.Vector
     map,
     foldl,
     traverse,
+    traverseWithIndex,
+    traverse2,
+    traverseWithIndex2,
     traverse_,
     concat,
     chunk,
@@ -176,6 +179,56 @@ traverse f as = do
     ai <- get (as, i)
     bi <- f ai
     set (bs, i) bi
+  return bs
+
+traverseWithIndex ::
+  forall a b (n :: Nat) k.
+  (SNatI n) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  (Fin n -> TExp a k -> Comp b k) ->
+  TExp ('TVec n a) k ->
+  Comp ('TVec n b) k
+traverseWithIndex f as = do
+  bs <- vec
+  _ <- forall (universe @n) $ \i -> do
+    ai <- get (as, i)
+    bi <- f i ai
+    set (bs, i) bi
+  return bs
+
+traverse2 ::
+  forall a b (n :: Nat) (m :: Nat) k.
+  (SNatI n) =>
+  (SNatI m) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  (TExp a k -> Comp b k) ->
+  TExp ('TVec n ('TVec m a)) k ->
+  Comp ('TVec n ('TVec m b)) k
+traverse2 f as = do
+  bs <- vec2
+  _ <- forall2 (universe @n, universe @m) $ \i j -> do
+    ai <- get2 (as, i, j)
+    bi <- f ai
+    set2 (bs, i, j) bi
+  return bs
+
+traverseWithIndex2 ::
+  forall a b (n :: Nat) (m :: Nat) k.
+  (SNatI n) =>
+  (SNatI m) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  (Fin n -> Fin m -> TExp a k -> Comp b k) ->
+  TExp ('TVec n ('TVec m a)) k ->
+  Comp ('TVec n ('TVec m b)) k
+traverseWithIndex2 f as = do
+  bs <- vec2
+  _ <- forall2 (universe @n, universe @m) $ \i j -> do
+    ai <- get2 (as, i, j)
+    bi <- f i j ai
+    set2 (bs, i, j) bi
   return bs
 
 traverse_ ::

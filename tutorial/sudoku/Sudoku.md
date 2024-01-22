@@ -11,8 +11,6 @@ The sudoku verifier is a useful example because it demonstrates some advanced fe
 2. As we are using vectors, all sizes are statically known and the vector types are size indexed. This requires using features of the [fin](https://hackage.haskell.org/package/fin-0.3) package to manage things like position indexing.
 3. There are private inputs supplied during witness generation which are not solved for during program execution. As the verifier program only verifies, the puzzle solution must be found "out of band" and supplied as private input.
 
-This example is written as a literate haskell file (i.e. this is code). You can execute the main function via `cabal run exe:sudoku` and you will be presented with a CLI tool to manage the r1cs and witness generation.
-
 ## Setup
 
 The following import statements and language extensions are required:
@@ -22,7 +20,7 @@ The following import statements and language extensions are required:
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications, TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas -fno-warn-unused-do-bind #-}
 
@@ -30,15 +28,16 @@ The following import statements and language extensions are required:
 
 module Sudoku where
 
+import Debug.Trace (trace)
 
-import Prelude (Bool(..), Eq, Int, fromIntegral, fromInteger, show, (.), ($), (<>))
+import Prelude (Eq, fromIntegral, fromInteger, show, ($), (<>), (==), otherwise)
 import qualified Prelude as P
 
 import Data.Field.Galois (GaloisField)
-import Data.List (drop, elem, length, take)
+import Data.List (length, take)
 import Data.Proxy (Proxy(..))
-import Data.Fin (Fin, universe, weakenLeft)
-import Data.Type.Nat (Nat3, Nat6, Nat9, reify)
+import Data.Fin (universe)
+import Data.Type.Nat (FromGHC, Nat3, Nat9, reify)
 import Snarkl.Language.Prelude
 import Snarkl.Language.Vector as Vec
 ```
@@ -68,12 +67,9 @@ isInSudokuSet ::
   TExp 'TField k ->
   Comp 'TBool k
 isInSudokuSet sudokuSet a = do
-  bs <- Vec.vec
-  forall (universe @Nat9) $ \i -> do
-    si <- Vec.get (sudokuSet, i)
-    Vec.set (bs, i) (eq si a)
-  Vec.any bs
-
+  f <- lambda $ \b -> 
+    return $ a `eq` b
+  Vec.map f sudokuSet >>= Vec.any
 ```
 
 Here we are intializing a `SudokuSet`, with the numbers `[1..9]`. For an explanation of the `GaloisField` constraint, see the [note on fields]().
@@ -95,26 +91,25 @@ As for point `(1)`, we will perform this validation at the time the input is pre
 -- is valid
 isPermutation ::
   Eq k =>
+  TExp SudokuSet k ->
   TExp ('TVec Nat9 'TField) k ->
   Comp 'TBool k
-isPermutation as = do
-  -- 'bs ! i == true' iff 'bs ! i' has appeared previously
-  bs <- Vec.vec
-  -- the check that the first element has no prior repeats
-  -- is vaccuously true.
-  forall (drop 1 $ universe @Nat9) $ \i -> do
-    a <- Vec.get (as, i)
-    let js = take (fromIntegral i) $ universe @Nat9
-    reify (fromIntegral $ length js) $ \(_ :: Proxy m) -> do 
-      -- 'iChecks ! j' := 'as ! i == as ! j' `
-      iChecks <- Vec.vec @m
-      forall js $ \j -> do
-        b <- Vec.get (as, j)
-        Vec.set (iChecks, fromIntegral j) (eq a b)
-      bi <- Vec.any iChecks
-      Vec.set (bs, i) bi
-  -- assert that we didn't get any matches
-  Vec.any bs >>= (return . not)
+isPermutation ss as = do
+  Vec.traverseWithIndex f as >>= Vec.all
+    where
+      f i ai 
+        | i == 0 = isInSudokuSet ss ai
+        | otherwise = do 
+            isValidNumber <- isInSudokuSet ss ai
+            let js = take (fromIntegral i) $ universe @Nat9
+            reify (fromIntegral $ length js) $ \(_ :: Proxy m) ->  do 
+              -- 'iChecks ! j' := 'as ! i == as ! j' `
+              iChecks <- Vec.vec @m
+              forall js $ \j -> do
+                aj <- Vec.get (as, j)
+                Vec.set (iChecks, fromIntegral j) (eq ai aj)
+              existsDuplicate <- Vec.any iChecks
+              return $ isValidNumber && not existsDuplicate
 ```
 
 ## Validating the Boxes
@@ -138,20 +133,14 @@ We can then traverse the grid of boxes, using our `isPermutation` function on ea
 ```haskell
 -- | Vaidate a 3x3 square, i.e. the numbers in the square form a valid set.
 validBoxes ::
+  forall k. 
   Eq k =>
+  TExp SudokuSet k ->
   TExp BoxGrid k ->
   Comp 'TBool k
-validBoxes as = do
-  bs <- Vec.vec
-  forall2 (universe @Nat3, universe @Nat3) $ \i j -> do
-    box <- Vec.get2 (as, i, j)
-    b <- Vec.concat @Nat3 @Nat3 box
-    validBox <- isPermutation b
-    let idx :: Fin Nat9
-        -- we have to (safely) coerce the arithmetic to take place in for numbers less than 9
-        idx = 3 P.* weakenLeft (Proxy @Nat6) i P.+ weakenLeft (Proxy @Nat6) j
-    Vec.set (bs, idx) validBox
-  Vec.all bs
+validBoxes ss as = 
+  let isValidBox box = Vec.concat box >>= isPermutation ss
+  in Vec.traverse2 isValidBox as >>= Vec.concat >>= Vec.all
 ```
 
 
@@ -169,21 +158,17 @@ belongs to the specified `SudokuSet` in Snarkl.
 ```haskell
 mkBoard
   :: GaloisField k =>
-  TExp SudokuSet k ->
-  [(Int, Int)] ->
-  -- ^ The list of blank squares in (row,col) format
   Comp Board k
-mkBoard ss blanks = do
-  board <- Vec.inputVec2
-  forall (universe @Nat9) $ \i -> 
-    forall (universe @Nat9) $ \j -> 
-      case elem (fromIntegral i, fromIntegral j) blanks of 
-        False -> return unit
-        True -> do 
-          knownValue <- fresh_private_input ("x_" <> show (i,j))
-          isInSudokuSet ss knownValue >>= assert
-          Vec.set2 (board, i, j) knownValue
-  return board
+mkBoard = do
+  inputs <- Vec.inputVec @(FromGHC 81)
+  inputBoard <- Vec.chunk @Nat9 @Nat9 inputs
+  let f n m input = do
+        if return $ input `eq` fromField 0
+             then fresh_private_input $ mkVarName n m
+             else return input
+  Vec.traverseWithIndex2 f inputBoard
+  where
+    mkVarName i j = "x_" <> show (i,j)
 ```
 
 
@@ -196,19 +181,16 @@ validation criteria over that board.
 ```haskell
 validatePuzzle ::
   (GaloisField k) =>
-  [(Int,Int)] -> 
-  -- ^ The list of blank squares in (row,col) format
   Comp 'TBool k
-validatePuzzle blanks = do
+validatePuzzle = do
   ss <- mkSudokuSet
-  board <- mkBoard ss blanks
+  board <- mkBoard
   rowsValid <- do
-    rowsValid <- Vec.traverse isPermutation board
+    rowsValid <- Vec.traverse (isPermutation ss) board
     Vec.all rowsValid
   colsValid <- do
-    validCols <- Vec.transpose board >>= Vec.traverse isPermutation
+    validCols <- Vec.transpose board >>= Vec.traverse (isPermutation ss)
     Vec.all validCols
-  boxesValid <- mkBoxes board >>= validBoxes
+  boxesValid <- mkBoxes board >>= trace "validBoxes" (validBoxes ss)
   return $ rowsValid && colsValid && boxesValid
-
 ```
