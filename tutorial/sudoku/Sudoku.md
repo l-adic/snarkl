@@ -28,8 +28,6 @@ The following import statements and language extensions are required:
 
 module Sudoku where
 
-import Debug.Trace (trace)
-
 import Prelude (Eq, fromIntegral, fromInteger, show, ($), (<>), (==), otherwise)
 import qualified Prelude as P
 
@@ -37,9 +35,10 @@ import Data.Field.Galois (GaloisField)
 import Data.List (length, take)
 import Data.Proxy (Proxy(..))
 import Data.Fin (universe)
-import Data.Type.Nat (FromGHC, Nat3, Nat9, reify)
+import Data.Type.Nat (Nat3, Nat9, SNatI, reify)
 import Snarkl.Language.Prelude
 import Snarkl.Language.Vector as Vec
+import Snarkl.Language.Matrix as Matrix
 ```
 
 Everything is straightforward with the exception of the `RebindableSyntax` extension and the related `HLint` pragma `ignore "Use if"`. See the [note on rebindable syntax]() for an explanation.
@@ -48,7 +47,7 @@ We use the following definition for a `Board` and `SudokuSet`
 
 ```haskell
 -- The outer indices run over the columns, each element corresponds to a row.
-type Board = 'TVec Nat9 ('TVec Nat9 'TField) 
+type Board = Matrix.Matrix Nat9 Nat9 'TField
 
 type SudokuSet = 'TVec Nat9 'TField
 
@@ -66,10 +65,11 @@ isInSudokuSet ::
   TExp SudokuSet k ->
   TExp 'TField k ->
   Comp 'TBool k
-isInSudokuSet sudokuSet a = do
-  f <- lambda $ \b -> 
-    return $ a `eq` b
-  Vec.map f sudokuSet >>= Vec.any
+isInSudokuSet sudokuSet a = do 
+  f <- lambda $ \acc ->
+         lambda $ \b -> 
+          return $ acc || (a `eq` b)
+  Vec.foldl f false sudokuSet
 ```
 
 Here we are intializing a `SudokuSet`, with the numbers `[1..9]`. For an explanation of the `GaloisField` constraint, see the [note on fields]().
@@ -80,7 +80,7 @@ We also give a function that can check membership in this set by brute force.
 According to the validation criterion above, we need to check that each row and column is 
 a permutation of the numbers `[1..9]`. It is enough to iterate over the elements and check:
 1. Is the element in the valid range?
-2. Has the element appeared previously in the list.
+2. Has the element appeared previously in the list?
 
 As for point `(1)`, we will perform this validation at the time the input is presented, so we can focus on `(2)`:
 
@@ -90,9 +90,11 @@ As for point `(1)`, we will perform this validation at the time the input is pre
 -- checks that the numbers are in the valid range imply the set
 -- is valid
 isPermutation ::
+  forall n k.
+  SNatI n => 
   Eq k =>
   TExp SudokuSet k ->
-  TExp ('TVec Nat9 'TField) k ->
+  TExp ('TVec n 'TField) k ->
   Comp 'TBool k
 isPermutation ss as = do
   Vec.traverseWithIndex f as >>= Vec.all
@@ -101,7 +103,7 @@ isPermutation ss as = do
         | i == 0 = isInSudokuSet ss ai
         | otherwise = do 
             isValidNumber <- isInSudokuSet ss ai
-            let js = take (fromIntegral i) $ universe @Nat9
+            let js = take (fromIntegral i) $ universe @n
             reify (fromIntegral $ length js) $ \(_ :: Proxy m) ->  do 
               -- 'iChecks ! j' := 'as ! i == as ! j' `
               iChecks <- Vec.vec @m
@@ -114,33 +116,33 @@ isPermutation ss as = do
 
 ## Validating the Boxes
 
-We now need some similar code in order to treat the 3x3 boxes. We can use `Vector.chunk` to break up the 2d array into
-smaller boxes. `Vector.chunk` uses the size types and type inference to take care of the details. 
+We need some similar code in order to treat the 3x3 boxes. We can use `Vector.chunk` to break up the board into
+smaller boxes. `Vector.chunk` uses the size types and type inference to take care of the details:
 
 ```haskell
 -- | A 'Box' is a 3x3 grid that must be completed with a permutation of [1..9]
-type Box = 'TVec Nat3 ('TVec Nat3 'TField)
+type Box = Matrix.Matrix Nat3 Nat3 'TField
 
 -- | 'BoxGrid' is a view of the board as a 3x3 grid of 'Box'es
-type BoxGrid = 'TVec Nat3 ('TVec Nat3 Box)
+type BoxGrid = Matrix.Matrix Nat3 Nat3 Box
 
 mkBoxes :: TExp Board k -> Comp BoxGrid k
 mkBoxes as = Vec.traverse Vec.chunk as >>= Vec.chunk
 ```
 
-We can then traverse the grid of boxes, using our `isPermutation` function on each box:
+We can then traverse the grid of boxes using our `isPermutation` function on each box:
 
 ```haskell
 -- | Vaidate a 3x3 square, i.e. the numbers in the square form a valid set.
-validBoxes ::
+validateBoxes ::
   forall k. 
   Eq k =>
   TExp SudokuSet k ->
   TExp BoxGrid k ->
   Comp 'TBool k
-validBoxes ss as = 
+validateBoxes ss as = 
   let isValidBox box = Vec.concat box >>= isPermutation ss
-  in Vec.traverse2 isValidBox as >>= Vec.concat >>= Vec.all
+  in Matrix.traverse isValidBox as >>= Matrix.all
 ```
 
 
@@ -160,13 +162,12 @@ mkBoard
   :: GaloisField k =>
   Comp Board k
 mkBoard = do
-  inputs <- Vec.inputVec @(FromGHC 81)
-  inputBoard <- Vec.chunk @Nat9 @Nat9 inputs
+  inputBoard <- Matrix.inputMatrix @Nat9 @Nat9
   let f n m input = do
         if return $ input `eq` fromField 0
              then fresh_private_input $ mkVarName n m
              else return input
-  Vec.traverseWithIndex2 f inputBoard
+  Matrix.traverseWithIndex f inputBoard
   where
     mkVarName i j = "x_" <> show (i,j)
 ```
@@ -174,7 +175,7 @@ mkBoard = do
 
 ## Finishing Up
 
-We now have all the pieces to write the top level validator. To create the verifier, we pass in the indices
+We now have all the pieces to write the top level validator. We pass in the indices
 for the blank squares that the prover will provide. We then simply create the board and run each of our
 validation criteria over that board.
 
@@ -185,12 +186,8 @@ validatePuzzle ::
 validatePuzzle = do
   ss <- mkSudokuSet
   board <- mkBoard
-  rowsValid <- do
-    rowsValid <- Vec.traverse (isPermutation ss) board
-    Vec.all rowsValid
-  colsValid <- do
-    validCols <- Vec.transpose board >>= Vec.traverse (isPermutation ss)
-    Vec.all validCols
-  boxesValid <- mkBoxes board >>= trace "validBoxes" (validBoxes ss)
+  rowsValid <- Vec.traverse (isPermutation ss) board >>= Vec.all
+  colsValid <- Vec.transpose board >>= Vec.traverse (isPermutation ss) >>= Vec.all
+  boxesValid <- mkBoxes board >>= validateBoxes ss
   return $ rowsValid && colsValid && boxesValid
 ```

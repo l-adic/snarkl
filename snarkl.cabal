@@ -57,6 +57,7 @@ library
     Snarkl.Field
     Snarkl.Interp
     Snarkl.Language.Prelude
+    Snarkl.Language.Matrix
     Snarkl.Language.Vector
     Snarkl.Toplevel
 

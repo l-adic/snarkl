@@ -16,10 +16,10 @@ import qualified Data.Map as Map
 
 
 main :: IO ()
-main = do 
-    print $ comp_interp validatePuzzle inputs solutionMap
+main = defaultMain "sudoku" (validatePuzzle @F_BN128)
+    
 
-
+{-
 
 inputs :: [F_BN128]
 inputs = 
@@ -119,3 +119,5 @@ solutionMap = Map.fromList $
     ("x_(8,7)", 7),
     ("x_(8,8)", 3)
    ]
+
+-}

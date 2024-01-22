@@ -3,19 +3,13 @@
 
 module Snarkl.Language.Vector
   ( vec,
-    vec2,
     inputVec,
-    inputVec2,
     get,
-    get2,
     set,
-    set2,
     map,
     foldl,
     traverse,
     traverseWithIndex,
-    traverse2,
-    traverseWithIndex2,
     traverse_,
     concat,
     chunk,
@@ -70,30 +64,6 @@ inputVec = do
   a <- Snarkl.input_arr n
   return $ unsafe_cast a
 
-vec2 ::
-  forall (n :: Nat) (m :: Nat) (ty :: Ty) k.
-  (SNatI n) =>
-  (SNatI m) =>
-  (Typeable ty) =>
-  Comp ('TVec n ('TVec m ty)) k
-vec2 = do
-  let n = reflectToNum (Proxy @n)
-      m = reflectToNum (Proxy @m)
-  a <- Snarkl.arr2 @ty n m
-  return $ unsafe_cast a
-
-inputVec2 ::
-  forall (n :: Nat) (m :: Nat) (ty :: Ty) k.
-  (SNatI n) =>
-  (SNatI m) =>
-  (Typeable ty) =>
-  Comp ('TVec n ('TVec m ty)) k
-inputVec2 = do
-  let n = reflectToNum (Proxy @n)
-      m = reflectToNum (Proxy @m)
-  a <- Snarkl.input_arr2 @ty n m
-  return $ unsafe_cast a
-
 get ::
   (Typeable ty) =>
   (SNatI n) =>
@@ -101,15 +71,6 @@ get ::
   Comp ty k
 get (a, i) =
   Snarkl.get (unsafe_cast a, fromIntegral i)
-
-get2 ::
-  (Typeable ty) =>
-  (SNatI n) =>
-  (SNatI m) =>
-  (TExp ('TVec n ('TVec m ty)) k, Fin n, Fin m) ->
-  Comp ty k
-get2 (a, i, j) =
-  Snarkl.get2 (unsafe_cast a, fromIntegral i, fromIntegral j)
 
 set ::
   (Typeable ty) =>
@@ -119,16 +80,6 @@ set ::
   Comp 'TUnit k
 set (a, i) e =
   Snarkl.set (unsafe_cast a, fromIntegral i) e
-
-set2 ::
-  (Typeable ty) =>
-  (SNatI n) =>
-  (SNatI m) =>
-  (TExp ('TVec n ('TVec m ty)) k, Fin n, Fin m) ->
-  TExp ty k ->
-  Comp 'TUnit k
-set2 (a, i, j) e =
-  Snarkl.set2 (unsafe_cast a, fromIntegral i, fromIntegral j) e
 
 map ::
   forall a b (n :: Nat) k.
@@ -195,40 +146,6 @@ traverseWithIndex f as = do
     ai <- get (as, i)
     bi <- f i ai
     set (bs, i) bi
-  return bs
-
-traverse2 ::
-  forall a b (n :: Nat) (m :: Nat) k.
-  (SNatI n) =>
-  (SNatI m) =>
-  (Typeable a) =>
-  (Typeable b) =>
-  (TExp a k -> Comp b k) ->
-  TExp ('TVec n ('TVec m a)) k ->
-  Comp ('TVec n ('TVec m b)) k
-traverse2 f as = do
-  bs <- vec2
-  _ <- forall2 (universe @n, universe @m) $ \i j -> do
-    ai <- get2 (as, i, j)
-    bi <- f ai
-    set2 (bs, i, j) bi
-  return bs
-
-traverseWithIndex2 ::
-  forall a b (n :: Nat) (m :: Nat) k.
-  (SNatI n) =>
-  (SNatI m) =>
-  (Typeable a) =>
-  (Typeable b) =>
-  (Fin n -> Fin m -> TExp a k -> Comp b k) ->
-  TExp ('TVec n ('TVec m a)) k ->
-  Comp ('TVec n ('TVec m b)) k
-traverseWithIndex2 f as = do
-  bs <- vec2
-  _ <- forall2 (universe @n, universe @m) $ \i j -> do
-    ai <- get2 (as, i, j)
-    bi <- f i j ai
-    set2 (bs, i, j) bi
   return bs
 
 traverse_ ::
