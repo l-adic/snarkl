@@ -1,33 +1,39 @@
-cabal-version:      3.0
-name:               tutorial
-version:            0.1.0.0
+cabal-version:   3.0
+name:            tutorial
+version:         0.1.0.0
+
 -- synopsis:
 -- description:
-license:            BSD-2-Clause
-license-file:       LICENSE
-author:             Martin Allen
-maintainer:         martyall@protonmail.com
+license:         BSD-2-Clause
+license-file:    LICENSE
+author:          Martin Allen
+maintainer:      martyall@protonmail.com
+
 -- copyright:
-build-type:         Simple
-extra-doc-files:    CHANGELOG.md
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+  ghc-options: -Wall
 
 executable sudoku
-    import:           warnings
-    exposed-modules:  Sudoku
-    -- other-modules:
-    -- other-extensions:
-    build-depends:    base ^>=4.15.1.0,
-                      containers,
-                      fin,
-                      galois-field,
-                      snarkl
-    hs-source-dirs:   sudoku
-    main-is:          Main.lhs
-    other-modules:   Sudoku
-    default-language: Haskell2010
-    build-tool-depends:  markdown-unlit:markdown-unlit
-    ghc-options:         -pgmL markdown-unlit -Wall
+  import:             warnings
+  exposed-modules:    Sudoku
+
+  -- other-modules:
+  -- other-extensions:
+  build-depends:
+    , base          ^>=4.15.1.0
+    , containers
+    , fin
+    , galois-field
+    , snarkl
+
+  hs-source-dirs:     sudoku
+  main-is:            Main.lhs
+  other-modules:      Sudoku
+  default-language:   Haskell2010
+  build-tool-depends: markdown-unlit:markdown-unlit
+  ghc-options:        -pgmL markdown-unlit -Wall

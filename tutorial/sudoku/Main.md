@@ -11,8 +11,6 @@ We will need an example
 import Sudoku (validatePuzzle)
 import Snarkl.Field (F_BN128)
 import Snarkl.CLI (defaultMain)
-import Snarkl.Toplevel (comp_interp)
-import qualified Data.Map as Map
 
 
 main :: IO ()
