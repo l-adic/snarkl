@@ -82,9 +82,6 @@ a permutation of the numbers `[1..9]`. It is enough to iterate over the elements
 1. Is the element in the valid range?
 2. Has the element appeared previously in the list?
 
-As for point `(1)`, we will perform this validation at the time the input is presented, so we can focus on `(2)`:
-
-
 ```haskell
 -- | Make sure that no number is repeated in the set. Earlier
 -- checks that the numbers are in the valid range imply the set
@@ -191,3 +188,5 @@ validatePuzzle = do
   boxesValid <- mkBoxes board >>= validateBoxes ss
   return $ rowsValid && colsValid && boxesValid
 ```
+
+At this point we can either embed this computation in a larger program, or we can generate a standalone CLI to manage the r1cs and witness generation. To see how to use the CLI, [continue on with the tutorial](./Main.md)

@@ -2,7 +2,7 @@
 
 This tutorial contains the following examples
 
-- [sudoku]() (advanced)
+- [sudoku](./sudoku/Sudoku.md) (advanced)
 
 ## Notes
 
@@ -31,3 +31,7 @@ The constraint `GaloisField k` appears regularly throughout the codebase and in 
 
 For `PrimeField`  the serialzation format is the same as `Natural` or `Integer`. At the time of writing this tutorial, there is no canonical serialization 
 for `GaloisField` as this would require speciying the basis order.
+
+### arkworks-bridge
+
+Snarkl is used to arithmetize programs, ultimately compiling programs to an r1cs and solve for a witness. It cannot do other necessary steps in generating zk snarks, such as creating a trusted setup, generating proofs, or verifying them. For these steps you can use [arkworks-bridge](https://github.com/torsion-labs/arkworks-bridge) which is designed to pick up where Snarkl leaves off.
