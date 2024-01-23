@@ -1,8 +1,9 @@
+-- Copy/pasted more or less from https://wiki.haskell.org/Sudoku#Simple_solver
 module Solver (solvePuzzle) where
 
-import Data.Array.IO
-import Data.IORef
-import Data.List
+import Data.Array.IO (IOArray, getElems, newArray, readArray, writeArray)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.List (union, (\\))
 
 solvePuzzle :: [[Int]] -> IO ([Int])
 solvePuzzle inputs = do
