@@ -41,7 +41,7 @@ import Snarkl.Language.Vector as Vec
 import Snarkl.Language.Matrix as Matrix
 ```
 
-Everything is straightforward with the exception of the `RebindableSyntax` extension and the related `HLint` pragma `ignore "Use if"`. See the [note on rebindable syntax]() for an explanation.
+Everything is straightforward with the exception of the `RebindableSyntax` extension and the related `HLint` pragma `ignore "Use if"`. See the [note on rebindable syntax](../README.md#rebindablesyntax-extension-etc) for an explanation.
 
 We use the following definition for a `Board` and `SudokuSet` 
 
@@ -72,7 +72,7 @@ isInSudokuSet sudokuSet a = do
   Vec.foldl f false sudokuSet
 ```
 
-Here we are intializing a `SudokuSet`, with the numbers `[1..9]`. For an explanation of the `GaloisField` constraint, see the [note on fields]().
+Here we are intializing a `SudokuSet`, with the numbers `[1..9]`. For an explanation of the `GaloisField` constraint, see the [note on Galois fields](../README.md#galois-fields).
 We also give a function that can check membership in this set by brute force.
 
 ## Validating the Board
@@ -113,8 +113,7 @@ isPermutation ss as = do
 
 ## Validating the Boxes
 
-We need some similar code in order to treat the 3x3 boxes. We can use `Vector.chunk` to break up the board into
-smaller boxes. `Vector.chunk` uses the size types and type inference to take care of the details:
+We need some similar code in order to treat the 3x3 boxes. We can use `Vector.chunk` to break up the board into smaller boxes. `Vector.chunk` uses the size types and type inference to take care of the details:
 
 ```haskell
 -- | A 'Box' is a 3x3 grid that must be completed with a permutation of [1..9]
@@ -149,9 +148,7 @@ We want our sudoku verifier code to be reusable for any sudoku puzzle. We can do
 for all 81 squares and allowing the value `0` to represent a blank square. Since this input is public, validation
 that the input belongs to the set `[0 .. 9]` is not required in Snarkl.
 
-In order to give the solution for a concrete puzzle, we need to allow the prover to override the input variables
-initialized with `0` with their own private input. Since this input is private, we want to validate that it
-belongs to the specified `SudokuSet` in Snarkl.
+In order to give the solution for a concrete puzzle, we need to allow the prover to override the input variables initialized with `0` with their own private input. Since this input is private, we want to validate that it belongs to the specified `SudokuSet` in Snarkl.
 
 
 ```haskell
@@ -172,9 +169,7 @@ mkBoard = do
 
 ## Finishing Up
 
-We now have all the pieces to write the top level validator. We pass in the indices
-for the blank squares that the prover will provide. We then simply create the board and run each of our
-validation criteria over that board.
+We now have all the pieces to write the top level validator. We pass in the indices for the blank squares that the prover will provide. We then simply create the board and run each of our validation criteria over that board.
 
 ```haskell
 validatePuzzle ::
