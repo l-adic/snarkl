@@ -48,5 +48,5 @@ executable sudoku
   main-is:            Main.lhs
   other-modules:      Sudoku
   default-language:   Haskell2010
-  build-tool-depends: markdown-unlit:markdown-unlit
+ --  build-tool-depends: markdown-unlit:markdown-unlit
   ghc-options:        -pgmL markdown-unlit -Wall
