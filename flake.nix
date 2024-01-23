@@ -57,6 +57,7 @@
                       haskellPackages.hspec-discover
                       haskellPackages.graphmod
                       haskellPackages.hlint
+                      haskellPackages.markdown-unlit
                     ];
                   };
                };
