@@ -1,4 +1,4 @@
-# Example: Sudoku Verifier
+# Sudoku Verifier
 
 We are going to walk through the classic ZK example of the [soduku](https://en.wikipedia.org/wiki/Sudoku) verifier. In this example, we write a program which can verify that a proposed solution is the valid solution to a given sudoku puzzle. A valid solution means that:
 
@@ -10,6 +10,8 @@ The sudoku verifier is a useful example because it demonstrates some advanced fe
 1. Language constructs like function definitions (e.g. `lambda`s) and vector operations (e.g. `map`, `fold`, `traverse`)
 2. As we are using vectors, all sizes are statically known and the vector types are size indexed. This requires using features of the [fin](https://hackage.haskell.org/package/fin-0.3) package to manage things like position indexing.
 3. There are private inputs supplied during witness generation which are not solved for during program execution. As the verifier program only verifies, the puzzle solution must be found "out of band" and supplied as private input.
+
+Snarkl contains methods to triviall convert any program into a standalone CLI application to manage r1cs and witness generation. We will demonstrate how to do this for this example.
 
 ## Setup
 
