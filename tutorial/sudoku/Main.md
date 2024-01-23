@@ -6,31 +6,37 @@ We will need an example
 
 ```haskell
 
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications, FlexibleContexts #-}
 
 import Sudoku (validatePuzzle)
 import Snarkl.Field (F_BN128)
 import Snarkl.CLI (defaultMain)
+import Solver (solvePuzzle)
+
+import Control.Monad
+import Data.List
+import Data.Array.IO
 
 
 main :: IO ()
-main = defaultMain "sudoku" (validatePuzzle @F_BN128)
+main = solvePuzzle inputs >>= print
+ -- defaultMain "sudoku" (validatePuzzle @F_BN128)
     
 
+inputs :: [[Int]]
+inputs = 
+  [[ 0, 6, 0, 1, 0, 4, 0, 5, 0],
+   [ 0, 0, 8, 3, 0, 5, 6, 0, 0],
+   [ 2, 0, 0, 0, 0, 0, 0, 0, 1],
+   [ 8, 0, 0, 4, 0, 7, 0, 0, 6],
+   [ 0, 0, 6, 0, 0, 0, 3, 0, 0],
+   [ 7, 0, 0, 9, 0, 1, 0, 0, 4],
+   [ 5, 0, 0, 0, 0, 0, 0, 0, 2],
+   [ 0, 0, 7, 2, 0, 6, 9, 0, 0],
+   [ 0, 4, 0, 5, 0, 8, 0, 7, 0]
+   ]
 {-
 
-inputs :: [F_BN128]
-inputs = 
-  [0, 6, 0, 1, 0, 4, 0, 5, 0,
-   0, 0, 8, 3, 0, 5, 6, 0, 0,
-   2, 0, 0, 0, 0, 0, 0, 0, 1,
-   8, 0, 0, 4, 0, 7, 0, 0, 6,
-   0, 0, 6, 0, 0, 0, 3, 0, 0,
-   7, 0, 0, 9, 0, 1, 0, 0, 4,
-   5, 0, 0, 0, 0, 0, 0, 0, 2,
-   0, 0, 7, 2, 0, 6, 9, 0, 0,
-   0, 4, 0, 5, 0, 8, 0, 7, 0
-   ]
 
 
 solutionMap :: Map.Map String F_BN128
