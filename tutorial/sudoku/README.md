@@ -3,8 +3,8 @@
 ## Contents
 
 ### Modules
-- `Sudoku`: A Snarkl program which verifies solutions to any sudoku puzzle
-- `Main`: A CLI tool to compile the verifier to an r1cs or generate a witness.
+- [Sudoku](./Sudoku.md): A Snarkl program which verifies solutions to any sudoku puzzle
+- [Main](./Main.md): A CLI tool to compile the verifier to an r1cs or generate a witness.
 
 ### Solver
 There is a [sudoku solver](./solver/Main.hs) executable contained in this tutorial that is meant to work with the verifier.
