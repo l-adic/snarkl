@@ -175,6 +175,16 @@ instance A.ToJSON InputVar where
         "var" A..= v
       ]
 
+splitInputVars :: [InputVar] -> ([Var], Map.Map String Var)
+splitInputVars =
+  foldr
+    ( \iv (pubs, privs) ->
+        case iv of
+          PublicInputVar v -> (v : pubs, privs)
+          PrivateInputVar name v -> (pubs, Map.insert name v privs)
+    )
+    ([], Map.empty)
+
 instance A.FromJSON InputVar where
   parseJSON = A.withObject "InputVar" $ \v -> do
     tag <- v A..: "tag"
@@ -186,6 +196,10 @@ instance A.FromJSON InputVar where
 data InputAssignment k
   = PublicInputAssignment Var k
   | PrivateInputAssignment String Var k
+
+instance Functor InputAssignment where
+  fmap f (PublicInputAssignment v k) = PublicInputAssignment v (f k)
+  fmap f (PrivateInputAssignment name v k) = PrivateInputAssignment name v (f k)
 
 instance (PrimeField k) => A.ToJSON (InputAssignment k) where
   toJSON (PublicInputAssignment v k) =

@@ -18,24 +18,35 @@ extra-doc-files: CHANGELOG.md
 common warnings
   ghc-options: -Wall
 
-executable sudoku
-  import:             warnings
-  exposed-modules:    Sudoku
+executable sudoku-solver
+  import:           warnings
 
   -- other-modules:
   -- other-extensions:
+  build-depends:
+    , array
+    , base          ^>=4.15.1.0
+    , containers
+    , galois-field
+    , snarkl
+
+  hs-source-dirs:   sudoku/solver
+  main-is:          Main.hs
+  default-language: Haskell2010
+  ghc-options:      -Weror -Wall
+
+executable sudoku
+  import:             warnings
   build-depends:
     , base          ^>=4.15.1.0
     , containers
     , fin
     , galois-field
     , snarkl
-    , array
 
   hs-source-dirs:     sudoku
   main-is:            Main.lhs
   other-modules:      Sudoku
-                      Solver
   default-language:   Haskell2010
   build-tool-depends: markdown-unlit:markdown-unlit
   ghc-options:        -pgmL markdown-unlit -Wall
