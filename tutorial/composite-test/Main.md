@@ -71,9 +71,11 @@ We can run the program by supplying the public and private input:
 ```haskell
 runCompositeTest :: 
   PrimeField k =>
-  k -> -- ^ public input n
-  (k,k) -- ^ private input (a,b)
-  -> Result k
+  k ->
+  -- ^ public input n
+  (k,k) ->
+  -- ^ private input (a,b)
+  Result k
 runCompositeTest n (a,b) = 
   execute [] compositeTest [n] (Map.fromList [("a", a), ("b", b)])
 
@@ -85,6 +87,8 @@ main = print $ pretty $ runCompositeTest @F_BN128 10 (2,5)
   the program, which in this case is none.
 - Notice that the private input arguments must be named with the same names which introduced
   the variables.
+
+For an explaination on the `PrimeField` constraint, see the note on [Galois Fields](../README.md#galois-fields).
 
 The definition of `Result k` is given as
 
