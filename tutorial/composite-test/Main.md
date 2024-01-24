@@ -75,7 +75,7 @@ runCompositeTest ::
   (k,k) -- ^ private input (a,b)
   -> Result k
 runCompositeTest n (a,b) = 
-  execute [Simplify] compositeTest [n] (Map.fromList [("a", a), ("b", b)])
+  execute [] compositeTest [n] (Map.fromList [("a", a), ("b", b)])
 
 main :: IO ()
 main = print $ pretty $ runCompositeTest @F_BN128 10 (2,5)
