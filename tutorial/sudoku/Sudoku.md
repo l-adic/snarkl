@@ -39,8 +39,10 @@ import Data.Proxy (Proxy(..))
 import Data.Fin (universe)
 import Data.Type.Nat (Nat3, Nat9, SNatI, reify)
 import Snarkl.Language.Prelude
-import Snarkl.Language.Vector as Vec
-import Snarkl.Language.Matrix as Matrix
+import Snarkl.Language.Vector (Vector)
+import qualified Snarkl.Language.Vector as Vec
+import Snarkl.Language.Matrix (Matrix)
+import qualified Snarkl.Language.Matrix as Matrix
 ```
 
 Everything is straightforward with the exception of the `RebindableSyntax` extension and the related `HLint` pragma `ignore "Use if"`. See the [note on rebindable syntax](../README.md#rebindablesyntax-extension-etc) for an explanation.
@@ -49,9 +51,9 @@ We use the following definition for a `Board` and `SudokuSet`
 
 ```haskell
 -- The outer indices run over the columns, each element corresponds to a row.
-type Board = Matrix.Matrix Nat9 Nat9 'TField
+type Board = Matrix Nat9 Nat9 'TField
 
-type SudokuSet = 'TVec Nat9 'TField
+type SudokuSet = Vector Nat9 'TField
 
 -- | Smart constructor to build the set [1..9]
 mkSudokuSet :: (GaloisField k) => Comp SudokuSet k
@@ -74,8 +76,12 @@ isInSudokuSet sudokuSet a = do
   Vec.foldl f false sudokuSet
 ```
 
-Here we are intializing a `SudokuSet`, with the numbers `[1..9]`. For an explanation of the `GaloisField` constraint, see the [note on Galois fields](../README.md#galois-fields).
-We also give a function that can check membership in this set by brute force.
+Here we are intializing a `SudokuSet`, with the numbers `[1..9]`, and give a function that can check membership in this set by brute force.
+
+For an explanation of the `GaloisField` constraint, see the [note on Galois fields](../README.md#galois-fields).
+
+For an explaination on why `'TField` and `'TBool` (as well as other primitive types) use "tick marks", see [this note](../README.md/#types-with-tick-marks)
+
 
 ## Validating the Board
 
@@ -93,7 +99,7 @@ isPermutation ::
   SNatI n => 
   Eq k =>
   TExp SudokuSet k ->
-  TExp ('TVec n 'TField) k ->
+  TExp (Vector n 'TField) k ->
   Comp 'TBool k
 isPermutation ss as = do
   Vec.traverseWithIndex f as >>= Vec.all

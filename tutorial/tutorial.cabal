@@ -16,7 +16,7 @@ extra-doc-files: CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-  ghc-options: -Wall
+  ghc-options: -Wall -Werror
 
 executable sudoku-solver
   import:           warnings
@@ -33,7 +33,6 @@ executable sudoku-solver
   hs-source-dirs:   sudoku/solver
   main-is:          Main.hs
   default-language: Haskell2010
-  ghc-options:      -Weror -Wall
 
 executable sudoku
   import:             warnings
@@ -49,7 +48,7 @@ executable sudoku
   other-modules:      Sudoku
   default-language:   Haskell2010
  --  build-tool-depends: markdown-unlit:markdown-unlit
-  ghc-options:        -pgmL markdown-unlit -Wall
+  ghc-options:        -pgmL markdown-unlit
 
 executable composite-test
   import:             warnings
@@ -64,4 +63,4 @@ executable composite-test
   main-is:            Main.lhs
   default-language:   Haskell2010
  --  build-tool-depends: markdown-unlit:markdown-unlit
-  ghc-options:        -pgmL markdown-unlit -Wall
+  ghc-options:        -pgmL markdown-unlit

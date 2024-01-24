@@ -5,6 +5,8 @@ This tutorial contains the following examples
 - [composite-test](./composite-test/README.md) (easy)
 - [sudoku](./sudoku/Sudoku.md) (advanced)
 
+For other examples of user defined data types and some programs, you can check out the Snarkl [examples](../examples/Snarkl/Example/) folder.
+
 ## Notes
 
 ### RebindableSyntax Extension etc.
@@ -22,6 +24,12 @@ In short, most Snarkl programs will use the following intro pragmas to keep you 
 
 {-# HLINT ignore "Use if" #-}
 ```
+
+### Types With "Tick Marks"
+
+You will see types throughout Snarkl that start with a "tick mark", e.g. `'TField`, `'TBool` etc. This is an unfortunate implementation detail that is related to how Snarkl uses the `DataKinds` language extension. At the time of writing this tutorial, there is no excellent way to deal with this -- even if we were to introduce type aliases to get around them, the originals with tick marks would still appear in compiler error messages.
+
+Certain types like `Vector` and `Matrix` have their own type aliases for sanity sake. Other user defined types also have them.
 
 ### Galois Fields
 

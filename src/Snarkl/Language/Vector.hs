@@ -2,7 +2,8 @@
 {-# LANGUAGE RebindableSyntax #-}
 
 module Snarkl.Language.Vector
-  ( vec,
+  ( Vector,
+    vec,
     inputVec,
     get,
     set,
@@ -46,10 +47,12 @@ import qualified Snarkl.Language.Prelude as Snarkl
 import Prelude hiding (all, any, concat, foldl, map, return, traverse, (&&), (*), (>>=), (||))
 import qualified Prelude as P
 
+type Vector = 'TVec
+
 vec ::
   forall (n :: Nat) (ty :: Ty) k.
   (SNatI n) =>
-  Comp ('TVec n ty) k
+  Comp (Vector n ty) k
 vec = do
   let n = reflectToNum (Proxy @n)
   a <- arr n
@@ -58,7 +61,7 @@ vec = do
 inputVec ::
   forall (n :: Nat) (ty :: Ty) k.
   (SNatI n) =>
-  Comp ('TVec n ty) k
+  Comp (Vector n ty) k
 inputVec = do
   let n = reflectToNum (Proxy @n)
   a <- Snarkl.input_arr n
@@ -67,7 +70,7 @@ inputVec = do
 get ::
   (Typeable ty) =>
   (SNatI n) =>
-  (TExp ('TVec n ty) k, Fin n) ->
+  (TExp (Vector n ty) k, Fin n) ->
   Comp ty k
 get (a, i) =
   Snarkl.get (unsafe_cast a, fromIntegral i)
@@ -75,7 +78,7 @@ get (a, i) =
 set ::
   (Typeable ty) =>
   (SNatI n) =>
-  (TExp ('TVec n ty) k, Fin n) ->
+  (TExp (Vector n ty) k, Fin n) ->
   TExp ty k ->
   Comp 'TUnit k
 set (a, i) e =
@@ -87,8 +90,8 @@ map ::
   (Typeable a) =>
   (Typeable b) =>
   TExp ('TFun a b) k ->
-  TExp ('TVec n a) k ->
-  Comp ('TVec n b) k
+  TExp (Vector n a) k ->
+  Comp (Vector n b) k
 map f a = do
   b <- vec
   _ <- forall (universe @n) $ \i -> do
@@ -104,7 +107,7 @@ foldl ::
   (Typeable b) =>
   TExp ('TFun b ('TFun a b)) k ->
   TExp b k ->
-  TExp ('TVec n a) k ->
+  TExp (Vector n a) k ->
   Comp b k
 foldl f b0 as = do
   go (universe @n) b0
@@ -122,8 +125,8 @@ traverse ::
   (Typeable a) =>
   (Typeable b) =>
   (TExp a k -> Comp b k) ->
-  TExp ('TVec n a) k ->
-  Comp ('TVec n b) k
+  TExp (Vector n a) k ->
+  Comp (Vector n b) k
 traverse f as = do
   bs <- vec
   _ <- forall (universe @n) $ \i -> do
@@ -138,8 +141,8 @@ traverseWithIndex ::
   (Typeable a) =>
   (Typeable b) =>
   (Fin n -> TExp a k -> Comp b k) ->
-  TExp ('TVec n a) k ->
-  Comp ('TVec n b) k
+  TExp (Vector n a) k ->
+  Comp (Vector n b) k
 traverseWithIndex f as = do
   bs <- vec
   _ <- forall (universe @n) $ \i -> do
@@ -153,7 +156,7 @@ traverse_ ::
   (SNatI n) =>
   (Typeable a) =>
   (TExp a k -> Comp 'TUnit k) ->
-  TExp ('TVec n a) k ->
+  TExp (Vector n a) k ->
   Comp 'TUnit k
 traverse_ f as = do
   forall (universe @n) $ \i -> do
@@ -165,8 +168,8 @@ concat ::
   (SNatI n) =>
   (SNatI m) =>
   (Typeable a) =>
-  TExp ('TVec n ('TVec m a)) k ->
-  Comp ('TVec (Mult n m) a) k
+  TExp (Vector n (Vector m a)) k ->
+  Comp (Vector (Mult n m) a) k
 concat asV = do
   let n = reflectToNum (Proxy @n)
       m = reflectToNum (Proxy @m)
@@ -183,8 +186,8 @@ chunk ::
   (Typeable ty) =>
   (SNatI n) =>
   (SNatI m) =>
-  TExp ('TVec (Mult n m) ty) k ->
-  Comp ('TVec n ('TVec m ty)) k
+  TExp (Vector (Mult n m) ty) k ->
+  Comp (Vector n (Vector m ty)) k
 chunk asV = do
   let n = reflectToNum (Proxy @n)
       m = reflectToNum (Proxy @m)
@@ -203,8 +206,8 @@ transpose ::
   (Typeable ty) =>
   (SNatI n) =>
   (SNatI m) =>
-  TExp ('TVec n ('TVec m ty)) k ->
-  Comp ('TVec m ('TVec n ty)) k
+  TExp (Vector n (Vector m ty)) k ->
+  Comp (Vector m (Vector n ty)) k
 transpose asV = do
   let n = reflectToNum (Proxy @n)
       m = reflectToNum (Proxy @m)
@@ -219,7 +222,7 @@ transpose asV = do
 
 all ::
   (SNatI n) =>
-  TExp ('TVec n 'TBool) k ->
+  TExp (Vector n 'TBool) k ->
   Comp 'TBool k
 all as = do
   f <- lambda $ \acc ->
@@ -229,7 +232,7 @@ all as = do
 
 any ::
   (SNatI n) =>
-  TExp ('TVec n 'TBool) k ->
+  TExp (Vector n 'TBool) k ->
   Comp 'TBool k
 any as = do
   f <- lambda $ \acc ->

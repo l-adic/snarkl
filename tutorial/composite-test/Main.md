@@ -49,6 +49,8 @@ verifyFactors ::
 verifyFactors a b n = (a * b) `eq` n
 ```
 
+For an explaination on why `'TField` and `'TBool` (as well as other primitive types) use "tick marks", see [this note](../README.md/#types-with-tick-marks)
+
 ## Building the Program
 
 At the top level we need to gather input then verify. 
