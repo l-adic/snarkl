@@ -5,13 +5,11 @@ version:         0.1.0.0
 -- synopsis:
 -- description:
 license:         BSD-2-Clause
-license-file:    LICENSE
 author:          Martin Allen
 maintainer:      martyall@protonmail.com
 
 -- copyright:
 build-type:      Simple
-extra-doc-files: CHANGELOG.md
 
 -- extra-source-files:
 

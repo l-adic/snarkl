@@ -29,7 +29,7 @@ import Data.Field.Galois (PrimeField)
 import qualified Data.Map as Map
 import Snarkl.Field (F_BN128)
 import Snarkl.Language.Prelude
-import Snarkl.Toplevel (Result(..), SimplParam(Simplify), execute)
+import Snarkl.Toplevel (Result(..), execute)
 import Text.PrettyPrint.Leijen.Text (Pretty (..))
 ```
 
