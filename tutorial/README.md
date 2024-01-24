@@ -2,7 +2,7 @@
 
 This tutorial contains the following examples
 
-- [composite-test](./composite-test/README.md) (easy)
+- [composite-test](./composite-test/Main.md) (easy)
 - [sudoku](./sudoku/Sudoku.md) (advanced)
 
 For other examples of user defined data types and some programs, you can check out the Snarkl [examples](../examples/Snarkl/Example/) folder.
