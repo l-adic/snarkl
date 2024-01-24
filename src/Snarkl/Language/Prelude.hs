@@ -36,7 +36,6 @@ module Snarkl.Language.Prelude
     true,
     false,
     unit,
-    assert,
     -- | Arrays
     arr,
     arr2,
@@ -105,7 +104,6 @@ import Snarkl.AST.SyntaxMonad
     return,
     set,
     snd_pair,
-    te_assert,
     true,
     unit,
     (>>),
@@ -808,16 +806,3 @@ uncurry f p = do
 
 apply :: (Typeable a, Typeable b) => TExp ('TFun a b) k -> TExp a k -> Comp b k
 apply f x = return $ TEApp f x
-
--- TODO: This is unessarily confusing, I would think you would
--- be able to just use te_assert on v1 to assign it both the value of the expression
--- and the constant true value, but this doesn't seem to work. Should investigate
-assert ::
-  TExp 'TBool k ->
-  Comp 'TUnit k
-assert e = do
-  v1 <- fresh_var
-  _ <- te_assert v1 e
-  v2 <- fresh_var
-  _ <- te_assert v2 true
-  te_assert v1 v2

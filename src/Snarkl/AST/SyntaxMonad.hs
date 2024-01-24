@@ -44,10 +44,7 @@ module Snarkl.AST.SyntaxMonad
     -- | Lambda
     lambda,
     -- | Misc. functions imported by 'Snarkl.Language.Prelude.hs'
-    get_addr,
     guard,
-    add_objects,
-    te_assert,
   )
 where
 
