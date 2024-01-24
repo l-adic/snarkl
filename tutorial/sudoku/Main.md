@@ -21,7 +21,25 @@ In this case you can run
 > cabal run exe:sudoku -- --help
 ```
 
-to see the help menu. For our purposes, you will only need the `compile` and `solve` commands. 
+to see the help menu. You should see something like the following output:
+
+```
+Compiling the program sudoku to a ZK-SNARK
+
+Usage: sudoku COMMAND
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  compile                  Compile the program to an r1cs and constraint system
+  solve                    Generate a witness for the program
+  run-all                  Compile the program to an r1cs and generate a witness
+                           (useful for testing)
+```
+
+
+For our purposes, you will only need the `compile` and `solve` commands. 
 
 ## Generating the R1CS
 

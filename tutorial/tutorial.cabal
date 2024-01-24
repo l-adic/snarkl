@@ -50,3 +50,18 @@ executable sudoku
   default-language:   Haskell2010
  --  build-tool-depends: markdown-unlit:markdown-unlit
   ghc-options:        -pgmL markdown-unlit -Wall
+
+executable composite-test
+  import:             warnings
+  build-depends:
+    , base          ^>=4.15.1.0
+    , containers
+    , galois-field
+    , snarkl
+    , wl-pprint-text
+
+  hs-source-dirs:     composite-test
+  main-is:            Main.lhs
+  default-language:   Haskell2010
+ --  build-tool-depends: markdown-unlit:markdown-unlit
+  ghc-options:        -pgmL markdown-unlit -Wall

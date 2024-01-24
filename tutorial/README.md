@@ -2,6 +2,7 @@
 
 This tutorial contains the following examples
 
+- [composite-test](./composite-test/README.md) (easy)
 - [sudoku](./sudoku/Sudoku.md) (advanced)
 
 ## Notes

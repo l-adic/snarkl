@@ -37,7 +37,7 @@ import Snarkl.Compile
 import Snarkl.Constraint (ConstraintSystem (cs_num_vars, cs_out_vars, cs_public_in_vars), SimplifiedConstraintSystem (..), solve)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Interp (interp)
-import Text.PrettyPrint.Leijen.Text (Pretty (..), line, (<+>))
+import Text.PrettyPrint.Leijen.Text (Pretty (..), indent, line, (<+>))
 
 ----------------------------------------------------
 --
@@ -105,14 +105,16 @@ data Result k = Result
   deriving (Show)
 
 instance (Pretty k) => Pretty (Result k) where
-  pretty (Result sat vars constraints result _ _) =
+  pretty (Result sat vars constraints result r1cs witness) =
     mconcat $
       intercalate
         [line]
-        [ ["sat" <+> ":=" <+> pretty sat],
-          ["vars" <+> ":=" <+> pretty vars],
-          ["constraints" <+> ":=" <+> pretty constraints],
-          ["result" <+> ":=" <+> pretty result]
+        [ ["system is satisfied" <+> "=" <+> pretty sat],
+          ["number of vars" <+> "=" <+> pretty vars],
+          ["number of constraints" <+> "=" <+> pretty constraints],
+          ["result" <+> "=" <+> pretty result],
+          ["r1cs" <+> ":" <> line <> indent 4 (pretty r1cs)],
+          ["witness" <+> ":" <> line <> indent 4 (pretty witness)]
         ]
 
 --------------------------------------------------

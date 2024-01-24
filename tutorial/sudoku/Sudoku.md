@@ -9,9 +9,9 @@ We are going to walk through the classic ZK example of the [soduku](https://en.w
 The sudoku verifier is a useful example because it demonstrates some advanced features of Snarkl such as:
 1. Language constructs like function definitions (e.g. `lambda`s) and vector operations (e.g. `map`, `fold`, `traverse`)
 2. As we are using vectors, all sizes are statically known and the vector types are size indexed. This requires using features of the [fin](https://hackage.haskell.org/package/fin-0.3) package to manage things like position indexing.
-3. There are private inputs supplied during witness generation which are not solved for during program execution. As the verifier program only verifies, the puzzle solution must be found "out of band" and supplied as private input.
+3. There are private inputs supplied during witness generation which are not solved for during program execution. As the verifier program only verifies, the puzzle solution must be found "out of band".
 
-Snarkl contains methods to triviall convert any program into a standalone CLI application to manage r1cs and witness generation. We will demonstrate how to do this for this example.
+We will also show how to use this program as a standalone CLI application -- Snarkl provides a simple way to 
 
 ## Setup
 
