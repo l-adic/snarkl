@@ -205,6 +205,7 @@ data InputAssignment k
   = PublicInputAssignment Var k
   | PrivateInputAssignment String Var k
   | OutputAssignment Var k
+  deriving (Show)
 
 instance Functor InputAssignment where
   fmap f (PublicInputAssignment v k) = PublicInputAssignment v (f k)

@@ -294,7 +294,7 @@ spec = do
       it "36-1" $ test_comp @F_BN128 [Simplify] prog36 [0] `shouldReturn` Right 10
       it "36-2" $ test_comp @F_BN128 [Simplify] prog36 [1] `shouldReturn` Right 7
 
-  describe "Keccak Tests" $ do
-    describe "keccak" $ do
-      it "keccak-2" $ test_comp @F_BN128 [Simplify] (keccak1 2) (fromIntegral <$> input_vals) `shouldReturn` Right 1
-      it "keccak-2" $ test_comp @F_BN128 [Simplify] (keccak1 5) (fromIntegral <$> input_vals) `shouldReturn` Right 1
+    describe "Keccak Tests" $ do
+      describe "keccak" $ do
+        it "keccak-2" $ test_comp @F_BN128 [Simplify] (keccak1 2) (fromIntegral <$> input_vals) `shouldReturn` Right 1
+        it "keccak-2" $ test_comp @F_BN128 [Simplify] (keccak1 5) (fromIntegral <$> input_vals) `shouldReturn` Right 1

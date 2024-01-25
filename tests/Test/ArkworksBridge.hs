@@ -4,14 +4,17 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Field.Galois (GaloisField, PrimeField)
 import Data.JSONLines (ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
+import Data.Maybe (fromJust)
 import Data.Typeable (Typeable)
+import Debug.Trace (trace)
 import Snarkl.AST (Comp)
 import Snarkl.Backend.R1CS
 import Snarkl.Backend.R1CS.R1CS (witnessInputs)
 import Snarkl.CLI.Common (mkInputsFilePath, mkR1CSFilePath, mkWitnessFilePath)
-import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem))
+import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem), InputAssignment (OutputAssignment, PublicInputAssignment), Var (Var))
 import Snarkl.Compile (SimplParam, compileCompToR1CS)
-import Snarkl.Constraint (ConstraintSystem (cs_public_in_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
+import Snarkl.Constraint (ConstraintSystem (cs_out_vars, cs_public_in_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
+import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
 import Snarkl.Toplevel (wit_of_cs)
 import qualified System.Exit as GHC
 import System.Process (createProcess, shell, waitForProcess)
@@ -56,13 +59,28 @@ runCMD (CreateProof rootDir name simpl c inputs) = do
   waitForProcess hdl
 runCMD (RunR1CS rootDir name simpl c inputs) = do
   let (r1cs, simplifiedCS, _) = compileCompToR1CS simpl c
+      [out] = cs_out_vars (unSimplifiedConstraintSystem simplifiedCS)
       wit@(Witness {witness_assgn = Assgn m}) = wit_of_cs inputs Map.empty simplifiedCS
-      r1csFilePath = mkR1CSFilePath rootDir name
+      outVal = case Map.lookup out m of
+        Nothing ->
+          failWith $
+            ErrMsg
+              ( "output variable "
+                  ++ show out
+                  ++ "not mapped, in\n  "
+                  ++ show wit
+              )
+        Just v -> v
+  let r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name
       inputsFilePath = mkInputsFilePath rootDir name
   LBS.writeFile r1csFilePath $ toJSONLines r1cs
   LBS.writeFile witsFilePath $ toJSONLines wit
-  LBS.writeFile inputsFilePath $ toJSONLines $ witnessInputs wit
+  let is =
+        let ls = trace (show outVal) $ Map.toList $ Map.delete out m
+         in -- TODO (fix this hack)
+            zipWith PublicInputAssignment (Var <$> [1 ..]) inputs <> [OutputAssignment out outVal]
+  LBS.writeFile inputsFilePath $ toJSONLines is
   let cmd =
         mkCommand
           "run-r1cs"
