@@ -7,11 +7,12 @@
 module Snarkl.Example.Games where
 
 import Data.Field.Galois (GaloisField, Prime)
+import qualified Data.Map as Map
 import Data.Typeable
 import GHC.TypeLits (KnownNat, Nat)
 import Snarkl.Errors
 import Snarkl.Field (F_BN128)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Snarkl.Toplevel (comp_interp)
 import Prelude hiding
   ( fromRational,
@@ -63,11 +64,11 @@ data Game :: Ty -> * -> * where
 decode :: (GaloisField k) => Game t k -> Comp t k
 decode (Single (Iso _ bld)) =
   do
-    x <- fresh_input
+    x <- fresh_public_input
     bld x
 decode (Split (Iso _ bld) g1 g2) =
   do
-    x <- fresh_input
+    x <- fresh_public_input
     e1 <- decode g1
     e2 <- decode g2
     s1 <- inl e1
@@ -125,10 +126,10 @@ basic_test =
     case_sum return return s
 
 t1 :: F_BN128
-t1 = comp_interp basic_test [0, 23, 88] -- 23
+t1 = comp_interp basic_test [0, 23, 88] Map.empty -- 23
 
 t2 :: F_BN128
-t2 = comp_interp basic_test [1, 23, 88] -- 88
+t2 = comp_interp basic_test [1, 23, 88] Map.empty -- 88
 
 (+>) ::
   ( Typeable t,
@@ -185,7 +186,7 @@ prodLInputI =
   Iso
     snd_pair
     ( \b -> do
-        a <- fresh_input
+        a <- fresh_public_input
         pair a b
     )
 
@@ -264,7 +265,7 @@ basic_test2 =
     fst_pair p
 
 t3 :: F_BN128
-t3 = comp_interp basic_test2 [88, 23] -- fst (23, 88) = 23
+t3 = comp_interp basic_test2 [88, 23] Map.empty -- fst (23, 88) = 23
 
 basic_game3 :: (GaloisField k) => Game ('TProd ('TProd 'TField 'TField) 'TField) k
 basic_game3 =
@@ -280,7 +281,7 @@ basic_test3 =
     snd_pair p2
 
 t4 :: F_BN128
-t4 = comp_interp basic_test3 [0, 1, 2]
+t4 = comp_interp basic_test3 [0, 1, 2] Map.empty
 
 {---------------------------------------------------------
   Generic Games

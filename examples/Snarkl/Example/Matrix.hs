@@ -4,7 +4,7 @@ module Snarkl.Example.Matrix where
 
 import Data.Field.Galois (GaloisField, Prime)
 import GHC.TypeLits (KnownNat)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Snarkl.Toplevel (comp_interp)
 import Prelude hiding
   ( fromRational,

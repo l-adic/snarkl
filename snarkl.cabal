@@ -33,6 +33,12 @@ library
     Control.Monad.Supply
     Control.Monad.Supply.Class
     Data.JSONLines
+    Snarkl.AST
+    Snarkl.AST.Expr
+    Snarkl.AST.LambdaExpr
+    Snarkl.AST.SyntaxMonad
+    Snarkl.AST.TExpr
+    Snarkl.AST.Type
     Snarkl.Backend.R1CS
     Snarkl.Backend.R1CS.Poly
     Snarkl.Backend.R1CS.R1CS
@@ -50,13 +56,9 @@ library
     Snarkl.Errors
     Snarkl.Field
     Snarkl.Interp
-    Snarkl.Language
-    Snarkl.Language.Expr
-    Snarkl.Language.LambdaExpr
-    Snarkl.Language.SyntaxMonad
-    Snarkl.Language.TExpr
-    Snarkl.Language.Type
-    Snarkl.Syntax
+    Snarkl.Language.Matrix
+    Snarkl.Language.Prelude
+    Snarkl.Language.Vector
     Snarkl.Toplevel
 
   other-modules:
@@ -99,6 +101,7 @@ library
     , containers            >=0.5   && <0.7
     , directory
     , filepath
+    , fin
     , galois-field          >=1.0.4
     , hspec                 >=2.0
     , lens

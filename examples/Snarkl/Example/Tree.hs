@@ -5,7 +5,7 @@ module Snarkl.Example.Tree where
 import Data.Field.Galois (GaloisField, Prime)
 import Data.Typeable
 import GHC.TypeLits (KnownNat)
-import Snarkl.Syntax
+import Snarkl.Language.Prelude
 import Prelude hiding
   ( fromRational,
     negate,
@@ -90,7 +90,7 @@ map_tree f t =
 
 tree1 :: (GaloisField k) => Comp (TTree 'TField) k
 tree1 = do
-  b <- fresh_input
+  b <- fresh_public_input
   l1 <- leaf
   l2 <- leaf
   t1' <- if return b then node (fromField 77) l1 l2 else leaf

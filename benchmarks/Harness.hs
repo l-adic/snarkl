@@ -14,15 +14,15 @@ import qualified Data.Set as Set
 import Data.Typeable
 import GHC.IO.Exception
 import GHC.TypeLits (KnownNat)
+import Snarkl.AST.TExpr
+  ( TExp (..),
+    lastSeq,
+  )
 import Snarkl.CLI.Common (writeFileWithDir)
 import Snarkl.Common (Assgn (Assgn))
 import Snarkl.Compile (SimplParam)
 import Snarkl.Constraint (ConstraintSystem (..), do_simplify)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language.TExpr
-  ( TExp (..),
-    lastSeq,
-  )
 import Snarkl.Toplevel
   ( Comp,
     Result (..),
@@ -41,7 +41,7 @@ import Test.ArkworksBridge (CMD (CreateProof, CreateTrustedSetup, RunR1CS), runC
 -- Just interpret.
 test_interp :: (Typeable ty, GaloisField k) => Comp ty k -> [Int] -> k
 test_interp mf inputs =
-  comp_interp mf (map fromIntegral inputs)
+  comp_interp mf (map fromIntegral inputs) mempty
 
 -- Just elaborate to TExp.
 test_texp :: (Typeable ty) => Comp ty k -> IO ()
@@ -135,7 +135,7 @@ benchmark_comp :: (Typeable ty, PrimeField k) => (SimplParam, Comp ty k, [k], k)
 benchmark_comp (simpl, prog, inputs, res) =
   let print_ln = print_ln_to_file stdout
       print_ln_to_file h s = (Control.Monad.>>) (hPrint h s) (hFlush h)
-   in case execute [simpl] prog inputs of
+   in case execute [simpl] prog inputs mempty of
         r@(Result True _ _ res' _ _) ->
           unless (res == res') $
             print_ln $
@@ -157,14 +157,14 @@ proofgen_comp filePrefix simpl c inputs = runCMD $ CreateProof "scripts" filePre
 r1csgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> IO ()
 r1csgen_comp filePrefix simpl c =
   do
-    let (r1cs, _) = compileCompToR1CS [simpl] c
+    let (r1cs, _, _) = compileCompToR1CS [simpl] c
         r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
     writeFileWithDir r1cs_file $ toJSONLines r1cs
 
 witgen_comp :: (Typeable ty, PrimeField k) => String -> SimplParam -> Comp ty k -> [k] -> IO ()
 witgen_comp filePrefix simpl c inputs = do
-  let (r1cs, cs) = compileCompToR1CS [simpl] c
-      wit = wit_of_cs inputs cs
+  let (r1cs, cs, _) = compileCompToR1CS [simpl] c
+      wit = wit_of_cs inputs mempty cs
       r1cs_file = "scripts/" ++ filePrefix ++ "-r1cs.jsonl"
       wits_file = "scripts/" ++ filePrefix ++ "-witness.jsonl"
   writeFileWithDir r1cs_file $ toJSONLines r1cs

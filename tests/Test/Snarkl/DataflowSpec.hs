@@ -47,7 +47,7 @@ exampleConstraintSystem =
   ConstraintSystem
     { cs_constraints = Set.fromList [constraint1, constraint2, constraint3],
       cs_num_vars = 3,
-      cs_in_vars = [Var 1, Var 2],
+      cs_public_in_vars = [Var 1, Var 2],
       cs_out_vars = [Var 3]
     }
 

@@ -32,12 +32,14 @@
                   lib = flake.packages."snarkl:lib:snarkl";
                   print = flake.packages."snarkl:exe:print-examples";
                   benchmarks = flake.packages."snarkl:bench:criterion";
+                  # tutorial = flake.packages."tutorial:exe:sudoku";
                   all = pkgs.symlinkJoin {
                     name = "all";
                     paths = with packages;
                       [ lib
                         print
                         benchmarks
+                        # tutorial
                       ];
                   };
                   default = packages.all;
@@ -55,6 +57,7 @@
                       haskellPackages.hspec-discover
                       haskellPackages.graphmod
                       haskellPackages.hlint
+                      haskellPackages.markdown-unlit
                     ];
                   };
                };

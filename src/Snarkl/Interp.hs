@@ -11,9 +11,9 @@ import Data.Field.Galois (GaloisField)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Sequence (pattern Empty, pattern (:|>))
+import Snarkl.AST (Exp (..), TExp, Variable, expOfTExp)
 import Snarkl.Common (Op (..), UnOp (ZEq))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Language (Exp (..), TExp, Variable, expOfTExp)
 
 type Env a = Map Variable (Maybe a)
 

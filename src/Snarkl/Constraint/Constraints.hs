@@ -131,7 +131,7 @@ type ConstraintSet a = Set.Set (Constraint a)
 data ConstraintSystem a = ConstraintSystem
   { cs_constraints :: ConstraintSet a,
     cs_num_vars :: Int,
-    cs_in_vars :: [Var],
+    cs_public_in_vars :: [Var],
     cs_out_vars :: [Var]
   }
   deriving (Show, Eq)
@@ -230,7 +230,7 @@ instance (PrimeField k) => ToJSONLines (SimplifiedConstraintSystem k) where
             extension_degree = toInteger $ deg (undefined :: a),
             n_constraints = Set.size cs_constraints,
             n_variables = cs_num_vars,
-            input_variables = cs_in_vars,
+            input_variables = cs_public_in_vars,
             output_variables = cs_out_vars
           }
 
@@ -242,7 +242,7 @@ instance (PrimeField k) => FromJSONLines (SimplifiedConstraintSystem k) where
         ConstraintSystem
           { cs_constraints = Set.fromList cs,
             cs_num_vars = fromIntegral n_variables,
-            cs_in_vars = input_variables,
+            cs_public_in_vars = input_variables,
             cs_out_vars = output_variables
           }
 
@@ -255,7 +255,7 @@ r1cs_of_cs (SimplifiedConstraintSystem cs) =
   R1CS
     (go $ Set.toList $ cs_constraints cs)
     (cs_num_vars cs)
-    (cs_in_vars cs)
+    (cs_public_in_vars cs)
     (cs_out_vars cs)
   where
     go [] = []
@@ -298,15 +298,15 @@ renumber_constraints cs =
   (renum_f, ConstraintSystem new_cs (Map.size var_map) new_in_vars new_out_vars)
   where
     new_cs = Set.map renum_constr $ cs_constraints cs
-    new_in_vars = map renum_f $ cs_in_vars cs
+    new_in_vars = map renum_f $ cs_public_in_vars cs
     new_out_vars = map renum_f $ cs_out_vars cs
 
     var_map =
       Map.fromList $
-        zip (cs_in_vars cs ++ filter isnt_input all_vars) (Var <$> [0 ..])
+        zip (cs_public_in_vars cs <> filter isnt_input all_vars) (Var <$> [0 ..])
       where
         isnt_input = not . flip Set.member in_vars_set
-        in_vars_set = Set.fromList $ cs_in_vars cs
+        in_vars_set = Set.fromList $ cs_public_in_vars cs
         all_vars = constraint_vars $ cs_constraints cs
 
     renum_f x =

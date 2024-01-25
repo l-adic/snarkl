@@ -16,7 +16,7 @@ import Data.JSONLines (FromJSONLines (fromJSONLines), ToJSONLines (toJSONLines),
 import qualified Data.Map as Map
 import Snarkl.Backend.R1CS.Poly
 import Snarkl.Common
-import Text.PrettyPrint.Leijen.Text (Pretty (..), (<+>))
+import Text.PrettyPrint.Leijen.Text (Pretty (..), vsep, (<+>))
 
 ----------------------------------------------------------------
 --                Rank-1 Constraint Systems                   --
@@ -49,7 +49,7 @@ instance (Pretty a) => Pretty (R1C a) where
 data R1CS a = R1CS
   { r1cs_clauses :: [R1C a],
     r1cs_num_vars :: Int,
-    r1cs_in_vars :: [Var],
+    r1cs_public_in_vars :: [Var],
     r1cs_out_vars :: [Var]
   }
   deriving (Show)
@@ -63,9 +63,12 @@ instance (PrimeField k) => ToJSONLines (R1CS k) where
             extension_degree = toInteger $ deg (undefined :: a),
             n_constraints = num_constraints cs,
             n_variables = r1cs_num_vars cs,
-            input_variables = r1cs_in_vars cs,
+            input_variables = r1cs_public_in_vars cs,
             output_variables = r1cs_out_vars cs
           }
+
+instance (Pretty a) => Pretty (R1CS a) where
+  pretty (R1CS {..}) = vsep (pretty <$> r1cs_clauses)
 
 instance (PrimeField k) => FromJSONLines (R1CS k) where
   fromJSONLines ls = do
@@ -74,7 +77,7 @@ instance (PrimeField k) => FromJSONLines (R1CS k) where
       R1CS
         { r1cs_clauses = cs,
           r1cs_num_vars = fromIntegral n_variables,
-          r1cs_in_vars = input_variables,
+          r1cs_public_in_vars = input_variables,
           r1cs_out_vars = output_variables
         }
 
@@ -85,6 +88,10 @@ data Witness k = Witness
     witness_num_vars :: Int
   }
   deriving (Show)
+
+instance (Pretty k) => Pretty (Witness k) where
+  pretty (Witness {..}) =
+    pretty witness_assgn
 
 instance Functor Witness where
   fmap f w = w {witness_assgn = fmap f (witness_assgn w)}

@@ -28,5 +28,8 @@ mkWitnessFilePath rootDir name = rootDir <> "/" <> name <> "-witness.jsonl"
 mkInputsFilePath :: FilePath -> String -> FilePath
 mkInputsFilePath rootDir name = rootDir <> "/" <> name <> "-inputs.jsonl"
 
+mkAssignmentsFilePath :: FilePath -> String -> FilePath
+mkAssignmentsFilePath rootDir name = rootDir <> "/" <> name <> "-assignments.jsonl"
+
 mkConstraintsFilePath :: FilePath -> String -> FilePath
 mkConstraintsFilePath rootDir name = rootDir <> "/" <> name <> "-constraints.jsonl"

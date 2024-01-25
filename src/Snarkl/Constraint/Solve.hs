@@ -8,7 +8,7 @@ import qualified Data.Map as Map
 import Data.Set (member)
 import Snarkl.Common (Assgn (Assgn), Var (..))
 import Snarkl.Constraint.Constraints
-  ( ConstraintSystem (cs_in_vars, cs_num_vars, cs_out_vars),
+  ( ConstraintSystem (cs_num_vars, cs_out_vars, cs_public_in_vars),
   )
 import Snarkl.Constraint.Simplify (do_simplify)
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
@@ -27,7 +27,7 @@ solve ::
   -- | Resulting assignment
   Assgn a
 solve cs env =
-  let pinned_vars = cs_in_vars cs ++ cs_out_vars cs
+  let pinned_vars = cs_public_in_vars cs ++ cs_out_vars cs
       -- NOTE: This looks really bad, but actually the only time that solve is called
       -- is right after renumber_constraints, which ensures that the variables are
       -- numbered from 0 to n-1, where n is the number of variables.

@@ -15,7 +15,7 @@ import Snarkl.Constraint.Constraints
   ( CoeffList (CoeffList, asList),
     Constraint (..),
     ConstraintSet,
-    ConstraintSystem (cs_constraints, cs_in_vars, cs_out_vars),
+    ConstraintSystem (cs_constraints, cs_out_vars, cs_public_in_vars),
     cadd,
     constraint_vars,
   )
@@ -192,7 +192,7 @@ do_simplify in_solve_mode (Assgn env) cs =
   --   - magic vars (those that appear in magic constraints, used to
   --   resolve nondeterministic inputs)
   -- Pinned vars are never optimized away.
-  let pinned_vars = cs_in_vars cs ++ cs_out_vars cs ++ magic_vars (cs_constraints cs)
+  let pinned_vars = cs_public_in_vars cs ++ cs_out_vars cs ++ magic_vars (cs_constraints cs)
       do_solve = if in_solve_mode then UseMagic else JustSimplify
       new_state = SEnv (UF.empty {UF.extras = env}) do_solve
    in evalState (go pinned_vars) new_state
