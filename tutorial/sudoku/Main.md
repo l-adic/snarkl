@@ -67,11 +67,11 @@ Now we need to generate the witness, which involves solving a sudoku puzzle. We 
 > cabal run exe:sudoku-solver 
 ```
 
-from the tutorial root directory, everything should glue with the output of the previous command and generate a file `./snarkl-output/sudoku-assignments.snarkl`. If you inspect this file, you should see the assignments for the initial puzzle state as well as a complete solution. In general solving may not involve directly using the filesystem like this, but for this stand alone example it is the easiest way to proceed.
+from the tutorial root directory, everything should glue with the output of the previous command to generate a file `./snarkl-output/sudoku-assignments.snarkl`. If you inspect this file, you should see the assignments for the initial puzzle state as well as a complete solution to the r1cs. In general solving may not involve directly using the filesystem like this, but for this stand alone example it is the easiest way to proceed.
 
 ## Generate a Witness
 
-Now that we have the all of the input assignments, we can generate a witness file our r1cs:
+Now that we have the all of the input assignments, we can generate a witness file for our r1cs:
 
 ```
 > cabal run exe:sudoku -- solve --assignments-dir snarkl-output
@@ -83,7 +83,7 @@ which should produce the following output:
 Wrote witness to ./snarkl-output/sudoku-witness.jsonl
 ```
 
-If you inspect this file, you should recognize the assignments that were provided by the inputs (`sudoku-assignments.jsonl`). You should also verify the variable listed as `output_variables` in the files header has the assigned value `1` (indicating the programs result value that the solution is valid). At the time of writing this tutorial, the relevant portions of this file are
+If you inspect this file, you should recognize the assignments that were provided by (`sudoku-assignments.jsonl`). You should also check the variable listed as `output_variables` in the file header has the assigned value `1` (indicating the program's result value, where the field element `1` indicates `true`). At the time of writing this tutorial, the relevant portions of this file are
 
 ```json
 { "output_variables":[1486] ... }

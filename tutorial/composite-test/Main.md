@@ -7,6 +7,8 @@ More formally, the program will accept
 -  1 public input `n`, which is the number to be factored
 -  2 private inputs `a` and `b` which have the property that `a * b == n`
 
+The caveat here is the `n` must be smaller than the size of the underlying prime field.
+
 ## Setup
 
 The following import statements and language extensions are required:
@@ -33,7 +35,7 @@ import Snarkl.Toplevel (Result(..), execute)
 import Text.PrettyPrint.Leijen.Text (Pretty (..))
 ```
 
-For an explaination of the intro pragmas, see the [note on rebindable syntax](../README.md#rebindablesyntax-extension-etc).
+For an explanation of the intro pragmas, see the [note on rebindable syntax](../README.md#rebindablesyntax-extension-etc).
 
 
 ## Core Logic
@@ -49,11 +51,11 @@ verifyFactors ::
 verifyFactors a b n = (a * b) `eq` n
 ```
 
-For an explaination on why `'TField` and `'TBool` (as well as other primitive types) use "tick marks", see [this note](../README.md/#types-with-tick-marks)
+For an explanation on why `'TField` and `'TBool` (as well as other primitive types) use "tick marks", see [this note](../README.md/#types-with-tick-marks)
 
 ## Building the Program
 
-At the top level we need to gather input then verify. 
+The core logic is simple -- we need to gather input then verify the relation: 
 
 ```haskell
 compositeTest :: Comp 'TBool k
@@ -64,9 +66,7 @@ compositeTest = do
    return $ verifyFactors a b n
 ```
 
-## Run The program
-
-We can run the program by supplying the public and private input:
+We can run the program by supplying the public and private inputs:
 
 ```haskell
 runCompositeTest :: 
@@ -88,7 +88,7 @@ main = print $ pretty $ runCompositeTest @F_BN128 10 (2,5)
 - Notice that the private input arguments must be named with the same names which introduced
   the variables.
 
-For an explaination on the `PrimeField` constraint, see the note on [Galois Fields](../README.md#galois-fields).
+For an explanation on the `PrimeField` constraint, see the note on [Galois Fields](../README.md#galois-fields).
 
 The definition of `Result k` is given as
 
