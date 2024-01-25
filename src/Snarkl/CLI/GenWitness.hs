@@ -12,6 +12,7 @@ import qualified Data.Aeson as A
 import Data.Field.Galois (PrimeField)
 import Data.JSONLines (FromJSONLines (fromJSONLines), ToJSONLines (toJSONLines))
 import qualified Data.Map as Map
+import Data.Maybe (catMaybes)
 import qualified Data.String.Conversions as CS
 import Data.Typeable (Typeable)
 import Options.Applicative (Parser, help, long, showDefault, strOption, value)
@@ -22,13 +23,15 @@ import Snarkl.Backend.R1CS
     sat_r1cs,
   )
 import Snarkl.CLI.Common (mkAssignmentsFilePath, mkWitnessFilePath, readFileLines, writeFileWithDir)
+import Snarkl.CLI.Compile (OptimizeOpts (..), optimizeOptsParser)
 import Snarkl.Common (Assgn (Assgn), splitInputAssignments)
 import Snarkl.Constraint (ConstraintSystem (..), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Errors (ErrMsg (ErrMsg), failWith)
-import Snarkl.Toplevel (comp_interp, compileCompToR1CS, wit_of_cs)
+import Snarkl.Toplevel (SimplParam (RemoveUnreachable, Simplify), comp_interp, compileCompToR1CS, wit_of_cs)
 
 data GenWitnessOpts = GenWitnessOpts
-  { constraintsInput :: FilePath,
+  { optimizeOpts :: OptimizeOpts,
+    constraintsInput :: FilePath,
     r1csInput :: FilePath,
     assignments :: FilePath,
     witnessOutput :: FilePath
@@ -37,7 +40,8 @@ data GenWitnessOpts = GenWitnessOpts
 genWitnessOptsParser :: Parser GenWitnessOpts
 genWitnessOptsParser =
   GenWitnessOpts
-    <$> strOption
+    <$> optimizeOptsParser
+    <*> strOption
       ( long "constraints-input-dir"
           <> help "the directory where the constraints.jsonl artifact is located"
           <> value "./snarkl-output"
@@ -69,8 +73,13 @@ genWitness ::
   Comp ty k ->
   IO ()
 genWitness GenWitnessOpts {..} name comp = do
+  let simpl =
+        catMaybes
+          [ if simplify optimizeOpts then Just Simplify else Nothing,
+            if removeUnreachable optimizeOpts then Just RemoveUnreachable else Nothing
+          ]
   --  parse the constraints file
-  let (r1cs, constraints, _) = compileCompToR1CS [] comp
+  let (r1cs, constraints, _) = compileCompToR1CS simpl comp
   let [out_var] = cs_out_vars (unSimplifiedConstraintSystem constraints)
   -- parse the inputs, either from cli or from file
   (pubInputs, privInputs) <- do
@@ -97,10 +106,6 @@ genWitness GenWitnessOpts {..} name comp = do
           ++ show out_interp
           ++ " differs from actual result "
           ++ show out
-  -- r1cs <- do
-  --  let r1csFP = mkR1CSFilePath r1csInput name
-  --  eConstraints <- fromJSONLines <$> readFileLines r1csFP
-  --  either (failWith . ErrMsg) pure eConstraints
   let satisfies = sat_r1cs witness r1cs
   unless satisfies $
     failWith $

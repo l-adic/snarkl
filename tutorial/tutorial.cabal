@@ -1,15 +1,15 @@
-cabal-version:   3.0
-name:            tutorial
-version:         0.1.0.0
+cabal-version: 3.0
+name:          tutorial
+version:       0.1.0.0
 
 -- synopsis:
 -- description:
-license:         BSD-2-Clause
-author:          Martin Allen
-maintainer:      martyall@protonmail.com
+license:       BSD-2-Clause
+author:        Martin Allen
+maintainer:    martyall@protonmail.com
 
 -- copyright:
-build-type:      Simple
+build-type:    Simple
 
 -- extra-source-files:
 
@@ -33,7 +33,7 @@ executable sudoku-solver
   default-language: Haskell2010
 
 executable sudoku
-  import:             warnings
+  import:           warnings
   build-depends:
     , base          ^>=4.15.1.0
     , containers
@@ -41,24 +41,26 @@ executable sudoku
     , galois-field
     , snarkl
 
-  hs-source-dirs:     sudoku
-  main-is:            Main.lhs
-  other-modules:      Sudoku
-  default-language:   Haskell2010
- --  build-tool-depends: markdown-unlit:markdown-unlit
-  ghc-options:        -pgmL markdown-unlit
+  hs-source-dirs:   sudoku
+  main-is:          Main.lhs
+  other-modules:    Sudoku
+  default-language: Haskell2010
+
+  --  build-tool-depends: markdown-unlit:markdown-unlit
+  ghc-options:      -pgmL markdown-unlit
 
 executable composite-test
-  import:             warnings
+  import:           warnings
   build-depends:
-    , base          ^>=4.15.1.0
+    , base            ^>=4.15.1.0
     , containers
     , galois-field
     , snarkl
     , wl-pprint-text
 
-  hs-source-dirs:     composite-test
-  main-is:            Main.lhs
-  default-language:   Haskell2010
- --  build-tool-depends: markdown-unlit:markdown-unlit
-  ghc-options:        -pgmL markdown-unlit
+  hs-source-dirs:   composite-test
+  main-is:          Main.lhs
+  default-language: Haskell2010
+
+  --  build-tool-depends: markdown-unlit:markdown-unlit
+  ghc-options:      -pgmL markdown-unlit

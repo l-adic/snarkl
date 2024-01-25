@@ -19,7 +19,6 @@ import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Debug.Trace (trace)
 import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
 import Snarkl.AST (Comp, InputVariable (PrivateInput))
 import Snarkl.CLI.Common (mkConstraintsFilePath, mkInputsFilePath, mkR1CSFilePath, writeFileWithDir)

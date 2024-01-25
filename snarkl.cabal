@@ -56,8 +56,8 @@ library
     Snarkl.Errors
     Snarkl.Field
     Snarkl.Interp
-    Snarkl.Language.Prelude
     Snarkl.Language.Matrix
+    Snarkl.Language.Prelude
     Snarkl.Language.Vector
     Snarkl.Toplevel
 
