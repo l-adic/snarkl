@@ -11,6 +11,7 @@ import Snarkl.Backend.R1CS.R1CS (witnessInputs)
 import Snarkl.CLI.Common (mkInputsFilePath, mkR1CSFilePath, mkWitnessFilePath)
 import Snarkl.Common (Assgn (Assgn), FieldElem (FieldElem))
 import Snarkl.Compile (SimplParam, compileCompToR1CS)
+import Snarkl.Constraint (ConstraintSystem (cs_public_in_vars), SimplifiedConstraintSystem (unSimplifiedConstraintSystem))
 import Snarkl.Toplevel (wit_of_cs)
 import qualified System.Exit as GHC
 import System.Process (createProcess, shell, waitForProcess)
@@ -37,6 +38,7 @@ runCMD (CreateTrustedSetup rootDir name simpl c) = do
   waitForProcess hdl
 runCMD (CreateProof rootDir name simpl c inputs) = do
   let (r1cs, simplifiedCS, _) = compileCompToR1CS simpl c
+  let public_in_vars = cs_public_in_vars (unSimplifiedConstraintSystem simplifiedCS)
       witness = wit_of_cs inputs Map.empty simplifiedCS
       r1csFilePath = mkR1CSFilePath rootDir name
       witsFilePath = mkWitnessFilePath rootDir name

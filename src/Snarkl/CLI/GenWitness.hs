@@ -82,13 +82,20 @@ genWitness GenWitnessOpts {..} name comp = do
   let (r1cs, constraints, _) = compileCompToR1CS simpl comp
   let [out_var] = cs_out_vars (unSimplifiedConstraintSystem constraints)
   -- parse the inputs, either from cli or from file
-  (pubInputs, privInputs) <- do
+  (pubInputs, privInputs, outputs) <- do
     let assignmentsFP = mkAssignmentsFilePath assignments name
     eInput <- fromJSONLines <$> readFileLines assignmentsFP
     let inputAssignments = either (failWith . ErrMsg) id eInput
     pure $ splitInputAssignments inputAssignments
-  let out_interp = comp_interp comp pubInputs (Map.mapKeys fst privInputs)
-  let witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs pubInputs (Map.mapKeys snd privInputs) constraints
+  let mOut = case outputs of
+        [(v, k)] ->
+          if v /= out_var
+            then failWith $ ErrMsg $ "derived output variable " <> show out_var <> " does not match provided output variable " <> show v
+            else Just (v, k)
+        [] -> Nothing
+        _ -> failWith $ ErrMsg $ "expected one output variable, got " <> show outputs
+      initAssignments = Map.mapKeys snd privInputs <> maybe mempty (uncurry Map.singleton) mOut
+  let witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs pubInputs initAssignments constraints
       out = case Map.lookup out_var m of
         Nothing ->
           failWith $
@@ -99,12 +106,13 @@ genWitness GenWitnessOpts {..} name comp = do
                   ++ show witness
               )
         Just out_val -> out_val
+      out_interp = comp_interp comp pubInputs (Map.mapKeys fst privInputs)
   unless (out_interp == out) $
     failWith $
       ErrMsg $
         "interpreter result "
           ++ show out_interp
-          ++ " differs from actual result "
+          ++ " differs from result computed from constraints"
           ++ show out
   let satisfies = sat_r1cs witness r1cs
   unless satisfies $

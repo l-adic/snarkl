@@ -66,13 +66,20 @@ runAll RunAllOpts {..} name comp = do
       (r1cs, cs, _) = compileTExpToR1CS simpl texpPkg
   let [out_var] = r1cs_out_vars r1cs
   -- parse the inputs, either from cli or from file
-  (pubInputs, privInputs) <- do
+  (pubInputs, privInputs, outputs) <- do
     let assignmentsFP = mkAssignmentsFilePath assignments name
     eInput <- fromJSONLines <$> readFileLines assignmentsFP
     let inputAssignments = either (failWith . ErrMsg) id eInput
     pure $ splitInputAssignments inputAssignments
-  let out_interp = comp_interp comp pubInputs (Map.mapKeys fst privInputs)
-      witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs pubInputs (Map.mapKeys snd privInputs) cs
+  let mOut = case outputs of
+        [(v, k)] ->
+          if v /= out_var
+            then failWith $ ErrMsg $ "derived output variable " <> show out_var <> " does not match provided output variable " <> show v
+            else Just (v, k)
+        [] -> Nothing
+        _ -> failWith $ ErrMsg $ "expected one output variable, got " <> show outputs
+      initAssignments = Map.mapKeys snd privInputs <> maybe mempty (uncurry Map.singleton) mOut
+  let witness@(Witness {witness_assgn = Assgn m}) = wit_of_cs pubInputs initAssignments cs
       out = case Map.lookup out_var m of
         Nothing ->
           failWith $
@@ -83,6 +90,7 @@ runAll RunAllOpts {..} name comp = do
                   ++ show witness
               )
         Just out_val -> out_val
+      out_interp = comp_interp comp pubInputs (Map.mapKeys fst privInputs)
   unless (out_interp == out) $
     failWith $
       ErrMsg $

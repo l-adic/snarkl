@@ -10,4 +10,4 @@ import qualified Test.Snarkl.Unit.Programs as Programs
 import Prelude hiding (return, (+), (>>=))
 
 main :: IO ()
-main = defaultMain "prog" (Programs.prog2 1 :: Comp 'TField F_BN128)
+main = defaultMain "prog" (return $ Programs.pow 4 (fromField 3) :: Comp 'TField F_BN128)
