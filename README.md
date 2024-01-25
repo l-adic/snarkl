@@ -2,6 +2,7 @@
 
 ![CI](https://github.com/torsion-labs/snarkl/actions/workflows/nix-ci.yml/badge.svg)
 
+
 Snårkl ("Snorkel") is a high-level language and compiler for verifiable computing. It is capable of compiling an embedded DSL to a system of arithmetic constraints and solving for a satisfying witness. These programs can be embedded in larger Haskell programs or used as standalone applications via the CLI bindings.
 
 ## Tutorial
