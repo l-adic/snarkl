@@ -17,7 +17,7 @@ jobs:
     - name: Install arkworks-bridge
       uses: jaxxstorm/action-install-gh-release@v1.10.0
       with:
-        repo: torsion-labs/arkworks-bridge
+        repo: l-adic/arkworks-bridge
         tag: v1.0.0-rc2
 
     - uses: cachix/install-nix-action@v24

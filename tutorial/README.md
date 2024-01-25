@@ -42,4 +42,4 @@ for `GaloisField` as this would require speciying the basis order.
 
 ### arkworks-bridge
 
-Snarkl is used to arithmetize programs, ultimately compiling programs to an r1cs and solve for a witness. It cannot do other necessary steps in generating zk snarks, such as creating a trusted setup, generating proofs, or verifying them. For these steps you can use [arkworks-bridge](https://github.com/torsion-labs/arkworks-bridge) which is designed to pick up where Snarkl leaves off.
+Snarkl is used to arithmetize programs, ultimately compiling programs to an r1cs and solve for a witness. It cannot do other necessary steps in generating zk snarks, such as creating a trusted setup, generating proofs, or verifying them. For these steps you can use [arkworks-bridge](https://github.com/l-adic/arkworks-bridge) which is designed to pick up where Snarkl leaves off.
