@@ -62,7 +62,7 @@ mkAssignments publicInputs privateInputs m =
             (pos, value) <- Map.toList m,
             mkVarName pos == name
         ]
-      publicAssignments = zipWith PublicInputAssignment (Var <$> [1 ..]) publicInputs
+      publicAssignments = zipWith PublicInputAssignment (Var <$> [0 ..]) publicInputs
    in fmap fromIntegral <$> publicAssignments <> privateAssignments
 
 mkPuzzleMap :: [Int] -> Map.Map (Int, Int) Int
