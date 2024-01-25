@@ -41,10 +41,10 @@ defaultMain ::
 defaultMain inputsFP assignmentsFP publicInputs = do
   putStrLn $ "Reading inputs from " <> inputsFP
   eInputs <- fromJSONLines <$> readFileLines inputsFP
-  let (_, privateInputs) = either error splitInputVars eInputs
+  let (_, privateInputs, [out]) = either error splitInputVars eInputs
   putStrLn "Solving puzzle..."
   m <- solvePuzzle publicInputs
-  let assignments = mkAssignments @F_BN128 publicInputs privateInputs m
+  let assignments = mkAssignments @F_BN128 publicInputs privateInputs m out
   writeFileWithDir assignmentsFP (toJSONLines $ NoHeader assignments)
   putStrLn $ "Writing assignments to " <> assignmentsFP
 
@@ -53,8 +53,9 @@ mkAssignments ::
   [Int] ->
   Map.Map String Var ->
   Map.Map (Int, Int) Int ->
+  Var ->
   [InputAssignment k]
-mkAssignments publicInputs privateInputs m =
+mkAssignments publicInputs privateInputs m out =
   let mkVarName (i, j) = "x_" <> show (i, j)
       privateAssignments =
         [ PrivateInputAssignment name var value
@@ -63,7 +64,7 @@ mkAssignments publicInputs privateInputs m =
             mkVarName pos == name
         ]
       publicAssignments = zipWith PublicInputAssignment (Var <$> [0 ..]) publicInputs
-   in fmap fromIntegral <$> publicAssignments <> privateAssignments
+   in fmap fromIntegral <$> publicAssignments <> privateAssignments <> [OutputAssignment out 1]
 
 mkPuzzleMap :: [Int] -> Map.Map (Int, Int) Int
 mkPuzzleMap xs = Map.fromList $ zip [(x, y) | x <- [0 .. 8], y <- [0 .. 8]] xs

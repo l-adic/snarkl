@@ -22,7 +22,7 @@ import Data.Typeable (Typeable)
 import Options.Applicative (CommandFields, Mod, Parser, command, execParser, fullDesc, header, help, helper, info, long, progDesc, showDefault, strOption, subparser, switch, value, (<**>))
 import Snarkl.AST (Comp, InputVariable (PrivateInput))
 import Snarkl.CLI.Common (mkConstraintsFilePath, mkInputsFilePath, mkR1CSFilePath, writeFileWithDir)
-import Snarkl.Common (InputVar (PrivateInputVar, PublicInputVar))
+import Snarkl.Common (InputVar (OutputVar, PrivateInputVar, PublicInputVar))
 import Snarkl.Compile
   ( SimplParam (RemoveUnreachable, Simplify),
     TExpPkg (TExpPkg),
@@ -100,9 +100,10 @@ compile CompileOpts {..} name comp = do
       (r1cs, scs, privateInputMap) = compileTExpToR1CS simpl texpPkg
       publicInputs = map PublicInputVar . cs_public_in_vars . unSimplifiedConstraintSystem $ scs
       privateInputs = map (uncurry PrivateInputVar) $ Map.toList privateInputMap
+      outputs = map OutputVar . cs_out_vars . unSimplifiedConstraintSystem $ scs
   let r1csFP = mkR1CSFilePath r1csOutput name
   writeFileWithDir r1csFP $ toJSONLines r1cs
   putStrLn $ "Wrote R1CS to " <> r1csFP
   let inputsFP = mkInputsFilePath inputsOutput name
-  writeFileWithDir inputsFP $ toJSONLines (publicInputs <> privateInputs)
+  writeFileWithDir inputsFP $ toJSONLines (publicInputs <> privateInputs <> outputs)
   putStrLn $ "Wrote inputs to " <> inputsFP

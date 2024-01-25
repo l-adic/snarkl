@@ -161,6 +161,7 @@ instance A.FromJSON ConstraintHeader where
 data InputVar
   = PublicInputVar Var
   | PrivateInputVar String Var
+  | OutputVar Var
 
 instance A.ToJSON InputVar where
   toJSON (PublicInputVar v) =
@@ -174,16 +175,22 @@ instance A.ToJSON InputVar where
         "name" A..= name,
         "var" A..= v
       ]
+  toJSON (OutputVar v) =
+    A.object
+      [ "tag" A..= ("output" :: String),
+        "var" A..= v
+      ]
 
-splitInputVars :: [InputVar] -> ([Var], Map.Map String Var)
+splitInputVars :: [InputVar] -> ([Var], Map.Map String Var, [Var])
 splitInputVars =
   foldr
-    ( \iv (pubs, privs) ->
+    ( \iv (pubs, privs, outputs) ->
         case iv of
-          PublicInputVar v -> (v : pubs, privs)
-          PrivateInputVar name v -> (pubs, Map.insert name v privs)
+          PublicInputVar v -> (v : pubs, privs, outputs)
+          PrivateInputVar name v -> (pubs, Map.insert name v privs, outputs)
+          OutputVar v -> (pubs, privs, v : outputs)
     )
-    ([], Map.empty)
+    ([], Map.empty, [])
 
 instance A.FromJSON InputVar where
   parseJSON = A.withObject "InputVar" $ \v -> do
@@ -191,15 +198,19 @@ instance A.FromJSON InputVar where
     case tag of
       ("public" :: String) -> PublicInputVar <$> v A..: "var"
       ("private" :: String) -> PrivateInputVar <$> v A..: "name" <*> v A..: "var"
+      ("output" :: String) -> OutputVar <$> v A..: "var"
       _ -> fail $ "unknown tag: " <> tag
 
 data InputAssignment k
   = PublicInputAssignment Var k
   | PrivateInputAssignment String Var k
+  | OutputAssignment Var k
+  deriving (Show)
 
 instance Functor InputAssignment where
   fmap f (PublicInputAssignment v k) = PublicInputAssignment v (f k)
   fmap f (PrivateInputAssignment name v k) = PrivateInputAssignment name v (f k)
+  fmap f (OutputAssignment v k) = OutputAssignment v (f k)
 
 instance (PrimeField k) => A.ToJSON (InputAssignment k) where
   toJSON (PublicInputAssignment v k) =
@@ -215,6 +226,12 @@ instance (PrimeField k) => A.ToJSON (InputAssignment k) where
         "var" A..= v,
         "value" A..= FieldElem k
       ]
+  toJSON (OutputAssignment v k) =
+    A.object
+      [ "tag" A..= ("output" :: String),
+        "var" A..= v,
+        "value" A..= FieldElem k
+      ]
 
 instance (PrimeField k) => A.FromJSON (InputAssignment k) where
   parseJSON = A.withObject "InputAssignment" $ \v -> do
@@ -222,14 +239,16 @@ instance (PrimeField k) => A.FromJSON (InputAssignment k) where
     case tag of
       ("public" :: String) -> PublicInputAssignment <$> v A..: "var" <*> (unFieldElem <$> v A..: "value")
       ("private" :: String) -> PrivateInputAssignment <$> v A..: "name" <*> v A..: "var" <*> (unFieldElem <$> v A..: "value")
+      ("output" :: String) -> OutputAssignment <$> v A..: "var" <*> (unFieldElem <$> v A..: "value")
       _ -> fail $ "unknown tag: " <> tag
 
-splitInputAssignments :: [InputAssignment k] -> ([k], Map.Map (String, Var) k)
+splitInputAssignments :: [InputAssignment k] -> ([k], Map.Map (String, Var) k, [(Var, k)])
 splitInputAssignments =
   foldr
-    ( \ia (pubs, privs) ->
+    ( \ia (pubs, privs, outputs) ->
         case ia of
-          PublicInputAssignment _ k -> (k : pubs, privs)
-          PrivateInputAssignment name v k -> (pubs, Map.insert (name, v) k privs)
+          PublicInputAssignment _ k -> (k : pubs, privs, outputs)
+          PrivateInputAssignment name v k -> (pubs, Map.insert (name, v) k privs, outputs)
+          OutputAssignment var val -> (pubs, privs, (var, val) : outputs)
     )
-    ([], Map.empty)
+    ([], Map.empty, [])
