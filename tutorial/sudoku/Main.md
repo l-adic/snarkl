@@ -91,3 +91,6 @@ If you inspect this file, you should recognize the assignments that were provide
 [1486,"1"]
 
 ```
+
+## Proof Validation on Ethereum
+If you would like to use these artifacts for Ethereum compatible proof and verification, checkout out the sample at [purescript-zk](https://github.com/l-adic/purescript-zk). That example is using artifacts from this tutorial.
