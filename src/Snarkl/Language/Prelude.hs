@@ -404,6 +404,11 @@ instance (Typeable ty, Derive ty k) => Derive ('TArr ty) k where
       _ <- set (a, 0) v
       return a
 
+instance (Typeable ty, Derive ty k) => Derive ('TVec n ty) k where
+  derive n = do
+    a :: TExp ('TArr ty) k <- derive n
+    return $ unsafe_cast a
+
 instance
   ( Typeable ty1,
     Derive ty1 k,
