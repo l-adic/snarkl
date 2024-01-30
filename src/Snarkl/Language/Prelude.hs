@@ -599,6 +599,9 @@ instance
       return $ TEApp e2 x
     zip_vals b y1 y2
 
+instance Zippable ('TVec n ty) k where
+  zip_vals _ x _ = return x
+
 ----------------------------------------------------
 --
 -- Recursive Types
