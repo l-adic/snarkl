@@ -17,6 +17,8 @@ module Snarkl.Language.Vector
     transpose,
     all,
     any,
+    unzip,
+    zip,
   )
 where
 
@@ -27,7 +29,7 @@ import Data.Typeable (Proxy (Proxy), Typeable)
 import Snarkl.AST.TExpr (TExp (TEApp))
 import Snarkl.Language.Prelude
   ( Comp,
-    Ty (TArr, TBool, TFun, TUnit, TVec),
+    Ty (TArr, TBool, TFun, TProd, TUnit, TVec),
     apply,
     arr,
     arr2,
@@ -35,8 +37,11 @@ import Snarkl.Language.Prelude
     false,
     forall,
     forall2,
+    fst_pair,
     lambda,
+    pair,
     return,
+    snd_pair,
     true,
     unsafe_cast,
     (&&),
@@ -44,7 +49,7 @@ import Snarkl.Language.Prelude
     (||),
   )
 import qualified Snarkl.Language.Prelude as Snarkl
-import Prelude hiding (all, any, concat, foldl, map, return, traverse, (&&), (*), (>>=), (||))
+import Prelude hiding (all, any, concat, foldl, map, return, traverse, unzip, zip, (&&), (*), (>>=), (||))
 import qualified Prelude as P
 
 type Vector = 'TVec
@@ -239,3 +244,39 @@ any as = do
     lambda $ \x ->
       return $ acc || x
   foldl f false as
+
+unzip ::
+  forall (n :: Nat) a b k.
+  (SNatI n) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  (Typeable n) =>
+  TExp (Vector n ('TProd a b)) k ->
+  Comp ('TProd (Vector n a) (Vector n b)) k
+unzip ps = do
+  as <- vec @n
+  bs <- vec @n
+  _ <- forall (universe @n) $ \i -> do
+    p <- get (ps, i)
+    a <- fst_pair p
+    b <- snd_pair p
+    _ <- set (as, i) a
+    set (bs, i) b
+  pair as bs
+
+zip ::
+  forall (n :: Nat) a b k.
+  (SNatI n) =>
+  (Typeable a) =>
+  (Typeable b) =>
+  TExp (Vector n a) k ->
+  TExp (Vector n b) k ->
+  Comp (Vector n ('TProd a b)) k
+zip as bs = do
+  ps <- vec @n
+  _ <- forall (universe @n) $ \i -> do
+    a <- get (as, i)
+    b <- get (bs, i)
+    p <- pair a b
+    set (ps, i) p
+  return ps
