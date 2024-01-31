@@ -58,11 +58,8 @@ type SudokuSet = Vector Nat9 'TField
 
 -- | Smart constructor to build the set [1..9]
 mkSudokuSet :: (GaloisField k) => Comp SudokuSet k
-mkSudokuSet = do
-  ss <- Vec.vec
-  forall (universe @Nat9) $ \i ->
-    Vec.set (ss, i) (fromField $ 1 P.+ fromIntegral i)
-  return ss
+mkSudokuSet = Vec.tabulate $ \i ->
+  return $ fromField (fromIntegral i P.+ 1)
 
 -- | Check that a number belongs to the valid range of numbers,
 -- e.g. [1 .. 9]

@@ -19,6 +19,7 @@ module Snarkl.Language.Vector
     any,
     unzip,
     zip,
+    tabulate,
   )
 where
 
@@ -99,7 +100,7 @@ map ::
   Comp (Vector n b) k
 map f a = do
   b <- vec
-  _ <- forall (universe @n) $ \i -> do
+  _ <- forall universe $ \i -> do
     ai <- get (a, i)
     bi <- apply f ai
     set (b, i) bi
@@ -115,7 +116,7 @@ foldl ::
   TExp (Vector n a) k ->
   Comp b k
 foldl f b0 as = do
-  go (universe @n) b0
+  go universe b0
   where
     go ns acc = case ns of
       [] -> return acc
@@ -134,7 +135,7 @@ traverse ::
   Comp (Vector n b) k
 traverse f as = do
   bs <- vec
-  _ <- forall (universe @n) $ \i -> do
+  _ <- forall universe $ \i -> do
     ai <- get (as, i)
     bi <- f ai
     set (bs, i) bi
@@ -150,7 +151,7 @@ traverseWithIndex ::
   Comp (Vector n b) k
 traverseWithIndex f as = do
   bs <- vec
-  _ <- forall (universe @n) $ \i -> do
+  _ <- forall universe $ \i -> do
     ai <- get (as, i)
     bi <- f i ai
     set (bs, i) bi
@@ -164,7 +165,7 @@ traverse_ ::
   TExp (Vector n a) k ->
   Comp 'TUnit k
 traverse_ f as = do
-  forall (universe @n) $ \i -> do
+  forall universe $ \i -> do
     ai <- get (as, i)
     f ai
 
@@ -256,7 +257,7 @@ unzip ::
 unzip ps = do
   as <- vec @n
   bs <- vec @n
-  _ <- forall (universe @n) $ \i -> do
+  _ <- forall universe $ \i -> do
     p <- get (ps, i)
     a <- fst_pair p
     b <- snd_pair p
@@ -273,10 +274,23 @@ zip ::
   TExp (Vector n b) k ->
   Comp (Vector n ('TProd a b)) k
 zip as bs = do
-  ps <- vec @n
-  _ <- forall (universe @n) $ \i -> do
+  ps <- vec
+  _ <- forall universe $ \i -> do
     a <- get (as, i)
     b <- get (bs, i)
     p <- pair a b
     set (ps, i) p
   return ps
+
+tabulate ::
+  forall (n :: Nat) a k.
+  (SNatI n) =>
+  (Typeable a) =>
+  (Fin n -> Comp a k) ->
+  Comp (Vector n a) k
+tabulate f = do
+  as <- vec
+  _ <- forall universe $ \i -> do
+    a <- f i
+    set (as, i) a
+  return as
